@@ -135,6 +135,24 @@ adb shell "appops set com.byd.mapsoverlay START_FOREGROUND allow"
 
 ---
 
+### 📱 วิธีปลุก Service โดยไม่ต้องใช้คอมพิวเตอร์ (เมื่อมีการ Cold Reboot จอ)
+> **💡 ต้องทำตอนไหน?**  
+> ในการใช้งานประจำวันปกติ (ดับรถ, จอดรถ, ล็อครถ) จอรถจะเข้าสู่โหมด Sleep / Suspend to RAM ข้อมูลและ Service จะยังคงทำงานอยู่ **ไม่ต้องรันใหม่**  
+> หากวันใดมีการ **Cold Reboot จอ** (เช่น กดลูกกลิ้งพวงมาลัยค้าง 10 วิเพื่อ Restart จอ หรือรถอัปเดต OTA ใหม่) สามารถใช้สมาร์ทโฟน Android สั่งปลุก Service ได้ในไม่กี่วินาทีโดยไม่ต้องใช้คอมพิวเตอร์:
+
+1. ติดตั้งแอปฟรี **[Bugjaeger Mobile ADB](https://play.google.com/store/apps/details?id=eu.sisik.hackendebug)** จาก Google Play Store บนมือถือ Android
+2. ให้มือถือต่อ Wi-Fi หรือ Hotspot เดียวกันกับจอรถ
+3. เปิดแอป Bugjaeger &rarr; แตะไอคอนปลั๊ก (Connect) &rarr; ใส่ IP ของจอรถ (เช่น `10.51.77.234:5555`) แล้วกด **Connect**
+4. ไปที่แท็บ **Commands** (หรือ **Interactive Shell**) วางคำสั่งนี้แล้วกด Run:
+   ```bash
+   CLASSPATH=$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &
+   ```
+   *(แนะนำให้กดบันทึกคำสั่งไว้เป็น Favorite ในแอป Bugjaeger เพื่อความสะดวกรวดเร็วในการแตะใช้งาน)*
+
+---
+
+---
+
 > **หมายเหตุ:** หากต้องการลากแถบลอยไปวางตำแหน่งที่ต้องการหรือทดสอบขนาด สามารถกดปุ่ม **"👁️ แสดง/ทดสอบแถบลอย"** ในหน้าแอปได้ทันที
 
 ---

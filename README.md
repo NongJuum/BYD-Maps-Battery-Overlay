@@ -135,6 +135,24 @@ adb shell "appops set com.byd.mapsoverlay START_FOREGROUND allow"
 
 ---
 
+### 📱 Reactivation Without a PC (Using Android Smartphone)
+> **💡 When is this needed?**  
+> During regular daily use (parking, locking the vehicle), BYD DiLink enters deep sleep (Suspend to RAM) with all processes retained in memory—**no reactivation required**.  
+> If you perform a complete **cold reboot** of the head unit (e.g., holding the steering wheel scroll wheel for 10 seconds or following an OTA system update), you can easily revive the daemon in seconds using your Android smartphone without a PC:
+
+1. Install the free **[Bugjaeger Mobile ADB](https://play.google.com/store/apps/details?id=eu.sisik.hackendebug)** app from Google Play Store on your Android phone.
+2. Connect your smartphone to the same Wi-Fi network or vehicle hotspot.
+3. Open Bugjaeger &rarr; tap the **Connect** icon &rarr; enter the vehicle head unit's IP (e.g. `10.51.77.234:5555`) and tap **Connect**.
+4. Go to the **Commands** or **Interactive Shell** tab, paste the command below, and press Run:
+   ```bash
+   CLASSPATH=$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &
+   ```
+   *(You can save this command to your Favorites in Bugjaeger for one-tap execution in the future).*
+
+---
+
+---
+
 > **Tip:** You can test or position the overlay anytime by tapping **"👁️ Test / Show Overlay"** in the app settings screen.
 
 ---
