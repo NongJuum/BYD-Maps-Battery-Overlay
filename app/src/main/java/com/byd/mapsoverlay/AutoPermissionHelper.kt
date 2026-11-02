@@ -1,17 +1,12 @@
 package com.byd.mapsoverlay
 
-import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.util.Log
-import dadb.AdbKeyPair
-import dadb.Dadb
-import java.io.File
 
 /**
  * AutoPermissionHelper:
@@ -32,95 +27,59 @@ import java.io.File
 object AutoPermissionHelper {
     private const val TAG = "AutoPermissionHelper"
 
-    private val bydHardwarePermissions = arrayOf(
-        "android.permission.BYDAUTO_STATISTIC_COMMON",
-        "android.permission.BYDAUTO_STATISTIC_GET",
-        "android.permission.BYDAUTO_INSTRUMENT_COMMON",
-        "android.permission.BYDAUTO_INSTRUMENT_GET",
-        "android.permission.BYDAUTO_POWER_COMMON",
-        "android.permission.BYDAUTO_POWER_GET",
-        "android.permission.BYDAUTO_ENERGY_COMMON",
-        "android.permission.BYDAUTO_ENERGY_GET",
-        "android.permission.BYDAUTO_CHARGING_COMMON",
-        "android.permission.BYDAUTO_CHARGING_GET",
-        "android.permission.BYDAUTO_SPEED_COMMON",
-        "android.permission.BYDAUTO_SPEED_GET",
-        "android.permission.BYDAUTO_BODYWORK_COMMON",
-        "android.permission.BYDAUTO_GEARBOX_COMMON",
-        "com.byd.permission.BYDAUTO_COMMON"
-    )
-
+    /**
+     * ขอเฉพาะสิทธิ์ Android ที่แอปจัดการได้จริง
+     *
+     * BYDAUTO_*_GET เป็น signature permission บน firmware ที่ตรวจสอบแล้ว
+     * จึงไม่แสดง permission dialog และไม่พยายาม pm grant จากแอปทั่วไป
+     */
     fun grantAllPermissionsSilently(context: Context, onStatusUpdated: ((Boolean) -> Unit)? = null) {
-        // 1. ขอ Runtime Permissions สำหรับฮาร์ดแวร์รถ BYD
-        if (context is Activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                val missing = bydHardwarePermissions.filter {
-                    context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
-                }
-                if (missing.isNotEmpty()) {
-                    context.requestPermissions(missing.toTypedArray(), 9001)
-                }
-            } catch (_: Exception) {}
-        }
-
         val packageName = context.packageName
-        val commands = mutableListOf(
+        val commands = listOf(
             "appops set $packageName SYSTEM_ALERT_WINDOW allow",
-            "cmd notification allow_listener $packageName/com.byd.mapsoverlay.MapsNotificationListener",
             "cmd notification allow_listener $packageName/.MapsNotificationListener",
-            "pm grant $packageName android.permission.READ_LOGS",
-            "pm grant $packageName android.permission.POST_NOTIFICATIONS",
             "dumpsys deviceidle whitelist +$packageName"
         )
-        bydHardwarePermissions.forEach { perm ->
-            commands.add("pm grant $packageName $perm")
-        }
 
         Thread {
-            var grantedViaLocalAdb = false
-
-            // 2. เชื่อมต่อ Local Loopback ADB (127.0.0.1:5555) ภายในตัวรถเอง (เหมือนที่ OverDrive และ Dudu ใช้ปลดล็อกตัวเอง!)
-            try {
-                val keyFile = File(context.filesDir, "adbkey")
-                val keyPair = if (keyFile.exists()) {
-                    AdbKeyPair.read(keyFile, File(context.filesDir, "adbkey.pub"))
-                } else {
-                    AdbKeyPair.generate(keyFile, File(context.filesDir, "adbkey.pub"))
-                    AdbKeyPair.read(keyFile, File(context.filesDir, "adbkey.pub"))
-                }
-
-                val portsToTry = listOf(5555, 5556, 5037)
-                for (port in portsToTry) {
-                    try {
-                        Dadb.create("127.0.0.1", port, keyPair).use { dadb ->
-                            for (cmd in commands) {
-                                runCatching { dadb.shell(cmd) }
-                            }
-                            grantedViaLocalAdb = true
-                            Log.d(TAG, "Successfully granted all permissions via Local Loopback ADB (127.0.0.1:$port)")
-                        }
-                        if (grantedViaLocalAdb) break
-                    } catch (_: Throwable) {}
-                }
-            } catch (e: Throwable) {
-                Log.w(TAG, "Local ADB loopback not active yet: ${e.message}")
-            }
-
-            // 3. ลองรันผ่าน su / sh กรณีเครื่องมี Root หรือ Shell พิเศษ
-            if (!grantedViaLocalAdb) {
-                for (cmd in commands) {
-                    try {
-                        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-                        val exitVal = process.waitFor()
-                        if (exitVal != 0) {
-                            Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd)).waitFor()
-                        }
-                    } catch (_: Exception) {}
+            var shellAvailable = false
+            for (cmd in commands) {
+                try {
+                    val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
+                    val exitCode = process.waitFor()
+                    if (exitCode == 0) shellAvailable = true
+                    else Log.w(TAG, "Shell command failed (exit=$exitCode): $cmd")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Shell command unavailable: $cmd", e)
                 }
             }
 
+            logBydPermissionState(context)
+            Log.i(TAG, "Permission setup finished; shellAvailable=$shellAvailable")
             onStatusUpdated?.invoke(isAllPermissionsReady(context))
         }.start()
+    }
+
+    /**
+     * แสดงสถานะจริงของ BYD signature permissions ใน logcat
+     * การติดตั้ง permission ใน Manifest ไม่ได้แปลว่าระบบอนุญาตให้แอปใช้
+     */
+    fun logBydPermissionState(context: Context) {
+        val names = listOf(
+            "BYDAUTO_STATISTIC_GET",
+            "BYDAUTO_INSTRUMENT_GET",
+            "BYDAUTO_POWER_GET",
+            "BYDAUTO_ENERGY_GET"
+        )
+        names.forEach { name ->
+            val permission = "android.permission.$name"
+            val granted = try {
+                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+            } catch (e: Exception) {
+                false
+            }
+            Log.i(TAG, "$permission=${if (granted) "GRANTED" else "DENIED"}")
+        }
     }
 
     /**
