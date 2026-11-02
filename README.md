@@ -79,6 +79,8 @@
 
 ## 📥 Installation Guide for BYD Vehicles
 
+**DUDU Launcher is mandatory.** Install DUDU Launcher (`com.dudu.autoui`) on the vehicle head unit before opening BYD Maps Battery. The app now blocks startup when DUDU is absent. This is the prerequisite gate only; the DUDU Shell telemetry transport is still being integrated and is not yet complete.
+
 1. Download the prebuilt **[BYD-Maps-Battery-Overlay-Universal.apk (Direct Download)](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/download/v1.0.0/BYD-Maps-Battery-Overlay-Universal.apk)** from [GitHub Releases](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest).
 2. Copy the `.apk` file to a USB flash drive (FAT32 or NTFS formatted).
 3. Plug the USB flash drive into the BYD infotainment USB port in your car.
