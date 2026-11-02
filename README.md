@@ -93,14 +93,7 @@
 This project was developed and open-sourced to give all BYD EV drivers around the world a safer, more reliable road trip experience. If this app helps your journeys, feel free to support future development with a cup of coffee! ❤️
 
 ### 🌐 International Supporters (Skrill)
-- **Skrill Account:** `canon.non.7@gmail.com`
-
-### 📱 Thailand Supporters (PromptPay QR)
-<p align="center">
-  <img src="app/src/main/res/drawable/qr_promptpay.jpg" width="260" alt="PromptPay QR Code" /><br>
-  <b>MR NONTARAT HASITAPONG (นาย นนทรัฐ หะสิตะพงษ์)</b><br>
-  <i>(Scan with any mobile banking app in Thailand)</i>
-</p>
+- **Skrill Account:** `canon.non.7@gmail.com
 
 ---
 
