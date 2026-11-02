@@ -73,7 +73,7 @@ object AutoPermissionHelper {
                 AdbKeyPair.read(privateKey, publicKey)
             }
 
-            Dadb.create("127.0.0.1", 5555, keyPair, 2_000, 5_000).use { adb ->
+            Dadb.create("127.0.0.1", 5555, keyPair).use { adb ->
                 val command = """
                     APK_PATH=${'$'}(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then echo APK_NOT_FOUND; exit 21; fi
