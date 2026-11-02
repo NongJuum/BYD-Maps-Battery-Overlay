@@ -266,30 +266,42 @@ class BydVehicleBridge(
 
     private fun fetchOptionalOverDriveStatus() {
         try {
-            val url = URL("http://127.0.0.1:8080/status")
+            // Read our shell-UID telemetry daemon, not an assumed OverDrive HTTP endpoint.
+            val url = URL("http://127.0.0.1:19878/status")
             val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 600
-            conn.readTimeout = 600
+            conn.connectTimeout = 800
+            conn.readTimeout = 800
             conn.requestMethod = "GET"
+            conn.setRequestProperty("Cache-Control", "no-cache")
+            try {
+                if (conn.responseCode != 200) return
+                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val socObject = json.optJSONObject("soc")
+                val soc = socObject?.optDouble("percent", -1.0) ?: -1.0
+                if (soc in 0.0..100.0) currentSoc = soc
 
-            if (conn.responseCode == 200) {
-                val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                val json = JSONObject(reader.readText())
-                reader.close()
+                val rangeObject = json.optJSONObject("range")
+                val range = rangeObject?.optInt("elecRangeKm", 0) ?: 0
+                if (range > 0) elecRangeKm = range
 
-                if (currentSoc <= 0.0 && json.has("soc")) {
-                    currentSoc = json.getJSONObject("soc").optDouble("percent", currentSoc)
+                val remain = json.optDouble("remainEnergyKwh", -1.0)
+                if (remain in 0.1..150.0) remainEnergyKwh = remain
+
+                val consumptionObject = json.optJSONObject("consumption")
+                val consumption = consumptionObject?.optDouble("kwhPer100km", -1.0) ?: -1.0
+                if (consumption in 1.0..60.0) currentConsumption = consumption
+
+                if (soc >= 0.0 || range > 0 || remain > 0.0) {
+                    diagnosticStatus = "Shell telemetry daemon: ${json.optString("status")} (uid=${json.optInt("uid", -1)})"
+                    recalculateRealTelemetry()
+                    notifyUpdate()
                 }
-
-                if (elecRangeKm <= 0 && json.has("range")) {
-                    elecRangeKm = json.getJSONObject("range").optInt("elecRangeKm", elecRangeKm)
-                }
-
-                recalculateRealTelemetry()
-                notifyUpdate()
+            } finally {
+                conn.disconnect()
             }
         } catch (e: Exception) {
-            Log.w(tag, "OverDrive status endpoint unavailable: ${e.javaClass.simpleName}: ${e.message}")
+            // Daemon may still be starting or ADB authorization may be pending.
+            Log.w(tag, "Shell telemetry daemon not ready: ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
