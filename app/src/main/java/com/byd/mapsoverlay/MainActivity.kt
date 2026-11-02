@@ -26,6 +26,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // DUDU Launcher is a mandatory prerequisite for this vehicle-specific app.
+        if (!isDuduLauncherInstalled()) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("ต้องติดตั้ง DUDU Launcher ก่อน")
+                .setMessage("BYD Maps Battery ต้องมี DUDU Launcher (com.dudu.autoui) ติดตั้งอยู่บนหน้าจอรถก่อนจึงจะใช้งานได้")
+                .setCancelable(false)
+                .setPositiveButton("ปิดแอป") { _, _ -> finish() }
+                .show()
+            return
+        }
+
         AutoPermissionHelper.grantAllPermissionsSilently(this)
 
         // Start overlay floating service automatically
@@ -229,6 +240,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         tvStatus.text = "กำลังเชื่อมต่อ BYD telemetry ผ่าน local ADB shell..."
+    }
+
+    private fun isDuduLauncherInstalled(): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(
+                    "com.dudu.autoui",
+                    android.content.pm.PackageManager.PackageInfoFlags.of(0)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo("com.dudu.autoui", 0)
+            }
+            true
+        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+            false
+        }
     }
 
     private fun showDonateDialog() {
