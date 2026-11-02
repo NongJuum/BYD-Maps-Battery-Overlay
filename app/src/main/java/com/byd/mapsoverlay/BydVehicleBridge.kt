@@ -277,7 +277,11 @@ class BydVehicleBridge(
             conn.requestMethod = "GET"
             conn.setRequestProperty("Cache-Control", "no-cache")
             try {
-                if (conn.responseCode != 200) return
+                if (conn.responseCode != 200) {
+                    diagnosticStatus = "Telemetry daemon HTTP ${conn.responseCode}"
+                    return
+                }
+                val previousStatus = diagnosticStatus
                 val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                 val daemonStatus = json.optString("status", "UNKNOWN")
                 val daemonError = json.optString("error", "")
@@ -301,16 +305,23 @@ class BydVehicleBridge(
                 val consumption = consumptionObject?.optDouble("kwhPer100km", -1.0) ?: -1.0
                 if (consumption in 1.0..60.0) currentConsumption = consumption
 
-                if (soc >= 0.0 || range > 0 || remain > 0.0) {
+                val hasVehicleData = soc >= 0.0 || range > 0 || remain > 0.0 || consumption > 0.0
+                if (hasVehicleData) {
                     recalculateRealTelemetry()
+                    notifyUpdate()
+                } else if (diagnosticStatus != previousStatus) {
                     notifyUpdate()
                 }
             } finally {
                 conn.disconnect()
             }
         } catch (e: Exception) {
-            // Daemon may still be starting or ADB authorization may be pending.
-            Log.w(tag, "Shell telemetry daemon not ready: ${e.javaClass.simpleName}: ${e.message}")
+            // Daemon may still be starting or local ADB authorization may be pending.
+            val newStatus = "Telemetry daemon unavailable: ${e.javaClass.simpleName}: ${e.message}"
+            val changed = diagnosticStatus != newStatus
+            diagnosticStatus = newStatus
+            Log.w(tag, newStatus)
+            if (changed) notifyUpdate()
         }
     }
 
