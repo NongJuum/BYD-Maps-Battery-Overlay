@@ -93,6 +93,8 @@ public final class BydTelemetryDaemon {
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
 
                 Double soc = number(statistic, "getElecPercentageValue");
+                Double statisticRemaining = number(statistic, "getStatisticRemainingBatteryPower");
+                Double lastConsumption = number(statistic, "getLastElecConPHMValue");
                 Integer range = integer(statistic, "getElecDrivingRangeValue");
                 Double remain = number(power, "getBatteryRemainPowerEV");
                 Double consumption = number(instrument, "getLast50KmPowerConsume");
@@ -107,6 +109,8 @@ public final class BydTelemetryDaemon {
                     data.put("range", rangeObject);
                 }
                 if (remain != null && remain > 0 && remain < 200) data.put("remainEnergyKwh", remain);
+                if (statisticRemaining != null) data.put("statisticRemainingBatteryPowerRaw", statisticRemaining);
+                if (lastConsumption != null) data.put("lastElecConPHMRaw", lastConsumption);
                 if (consumption != null && consumption > 0 && consumption < 100) {
                     JSONObject consumptionObject = new JSONObject();
                     consumptionObject.put("kwhPer100km", consumption);
@@ -121,7 +125,9 @@ public final class BydTelemetryDaemon {
                             + ", soc=" + (soc == null ? "null" : soc)
                             + ", range=" + (range == null ? "null" : range)
                             + ", remainKwh=" + (remain == null ? "null" : remain)
-                            + ", consumption=" + (consumption == null ? "null" : consumption));
+                            + ", consumption=" + (consumption == null ? "null" : consumption)
+                            + ", statisticRemainingRaw=" + (statisticRemaining == null ? "null" : statisticRemaining)
+                            + ", lastElecConPHMRaw=" + (lastConsumption == null ? "null" : lastConsumption));
                     lastLog = now;
                 }
             } catch (Throwable t) {
@@ -137,8 +143,22 @@ public final class BydTelemetryDaemon {
     private static Object getDevice(String className, Context context) {
         try {
             Class<?> cls = Class.forName(className);
-            Method factory = cls.getMethod("getInstance", Context.class);
-            return factory.invoke(null, context);
+            // DUDU launcher on DiLink 3 uses BYDAutoStatisticDevice.self(), not
+            // getInstance(Context). Prefer the firmware singleton API first.
+            try {
+                Method self = cls.getMethod("self");
+                if (java.lang.reflect.Modifier.isStatic(self.getModifiers())) {
+                    Object value = self.invoke(null);
+                    if (value != null) return value;
+                }
+            } catch (NoSuchMethodException ignored) {}
+            try {
+                Method factory = cls.getMethod("getInstance", Context.class);
+                return factory.invoke(null, context);
+            } catch (NoSuchMethodException ignored) {
+                Method factory = cls.getMethod("getInstance");
+                return factory.invoke(null);
+            }
         } catch (Throwable t) {
             log("getInstance failed for " + className + ": " + t);
             return null;
