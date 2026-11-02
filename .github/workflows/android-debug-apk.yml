@@ -29,8 +29,10 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
           mkdir -p "$HOME/.android"
-          test -f "$HOME/.android/debug.keystore"
-          for APK in app/build/outputs/apk/debug/app-debug.apk BYD-Maps-Battery-Overlay-Universal.apk; do
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkey -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          for APK in app/build/outputs/apk/debug/app-debug.apk; do
             "$APKSIGNER" sign \
               --ks "$HOME/.android/debug.keystore" \
               --ks-pass pass:android \
@@ -40,6 +42,7 @@ jobs:
               --v2-signing-enabled true \
               --out "${APK}.signed" "$APK"
             mv "${APK}.signed" "$APK"
+            cp "$APK" BYD-Maps-Battery-Overlay-Universal.apk
             "$APKSIGNER" verify --verbose --print-certs "$APK"
           done
       - name: Upload APK
