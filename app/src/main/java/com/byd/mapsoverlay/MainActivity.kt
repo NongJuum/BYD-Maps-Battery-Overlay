@@ -179,6 +179,24 @@ class MainActivity : AppCompatActivity() {
                 tvStatus.text = vehicleBridge.diagnosticStatus
             }
         }
+        val etOverDriveUrl = findViewById<EditText>(R.id.et_overdrive_url)
+        val etOverDriveToken = findViewById<EditText>(R.id.et_overdrive_token)
+        val btnSaveOverDrive = findViewById<Button>(R.id.btn_save_overdrive)
+        etOverDriveUrl.setText(vehicleBridge.overDriveBaseUrl())
+        btnSaveOverDrive.setOnClickListener {
+            val baseUrl = etOverDriveUrl.text.toString().trim()
+            val deviceToken = etOverDriveToken.text.toString().trim()
+            try {
+                vehicleBridge.saveOverDriveConnection(baseUrl, deviceToken)
+                etOverDriveToken.text.clear()
+                tvStatus.text = "บันทึก Token แบบเข้ารหัสแล้ว กำลังเชื่อม OverDrive..."
+                Toast.makeText(this, "บันทึกและเริ่มเชื่อมต่อ OverDrive แล้ว", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                tvStatus.text = "OverDrive settings error: ${e.message ?: e.javaClass.simpleName}"
+                Toast.makeText(this, tvStatus.text, Toast.LENGTH_LONG).show()
+            }
+        }
+
         vehicleBridge.startListening()
         vehicleBridge.notifyUpdate()
 
