@@ -44,11 +44,58 @@ public final class BydTelemetryDaemon {
     private static Context createBydContext() throws Exception {
         Class<?> at = Class.forName("android.app.ActivityThread");
         Object thread = null;
-        try { thread = at.getMethod("currentActivityThread").invoke(null); } catch (Throwable ignored) {}
-        if (thread == null) thread = at.getMethod("systemMain").invoke(null);
+
+        // app_process does not always have an ActivityThread attached to the
+        // current thread. OverDrive uses a bounded systemMain bootstrap to
+        // avoid hanging the telemetry daemon during ActivityThread creation.
+        try {
+            thread = at.getMethod("currentActivityThread").invoke(null);
+        } catch (Throwable ignored) {}
+
+        if (thread == null) {
+            final Object[] result = new Object[1];
+            Thread bootstrap = new Thread(() -> {
+                try {
+                    result[0] = at.getMethod("systemMain").invoke(null);
+                } catch (Throwable t) {
+                    log("ActivityThread.systemMain failed: " + t);
+                }
+            }, "BydActivityThreadBootstrap");
+            bootstrap.setDaemon(true);
+            bootstrap.start();
+            bootstrap.join(10_000L);
+            if (bootstrap.isAlive()) {
+                bootstrap.interrupt();
+                log("ActivityThread.systemMain timed out");
+            } else {
+                thread = result[0];
+            }
+        }
+
+        // Last-resort fallback for vendor builds where systemMain cannot be
+        // invoked from app_process. Keep the fallback bounded and diagnostic.
+        if (thread == null) {
+            try {
+                try { android.os.Looper.prepareMainLooper(); } catch (Throwable ignored) {}
+                java.lang.reflect.Constructor<?> ctor = at.getDeclaredConstructor();
+                ctor.setAccessible(true);
+                thread = ctor.newInstance();
+                try {
+                    java.lang.reflect.Field current = at.getDeclaredField("sCurrentActivityThread");
+                    current.setAccessible(true);
+                    current.set(null, thread);
+                } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                log("Manual ActivityThread fallback failed: " + t);
+            }
+        }
+
+        if (thread == null) throw new IllegalStateException("ActivityThread unavailable");
         Context system = (Context) at.getMethod("getSystemContext").invoke(thread);
         if (system == null) throw new IllegalStateException("system context is null");
-        Context app = system.createPackageContext("com.byd.mapsoverlay",
+
+        Context app = system.createPackageContext(
+                "com.byd.mapsoverlay",
                 Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
         return new PermissionBypassContext(app);
     }
@@ -116,7 +163,8 @@ public final class BydTelemetryDaemon {
                     consumptionObject.put("kwhPer100km", consumption);
                     data.put("consumption", consumptionObject);
                 }
-                data.put("status", soc != null ? "OK" : "WAITING_FOR_SOC");
+                boolean validSoc = soc != null && soc >= 0.0 && soc <= 100.0;
+                data.put("status", validSoc ? "OK" : "WAITING_FOR_SOC");
                 snapshot = data;
 
                 long now = SystemClock.elapsedRealtime();
@@ -145,22 +193,46 @@ public final class BydTelemetryDaemon {
             Class<?> cls = Class.forName(className);
             // DUDU launcher on DiLink 3 uses BYDAutoStatisticDevice.self(), not
             // getInstance(Context). Prefer the firmware singleton API first.
+            // DUDU's DiLink 3 wrapper uses self(); OverDrive's public
+            // DiLink 3 implementation uses getInstance(Context). Try both
+            // without allowing one failed factory to suppress the other.
             try {
                 Method self = cls.getMethod("self");
                 if (java.lang.reflect.Modifier.isStatic(self.getModifiers())) {
                     Object value = self.invoke(null);
-                    if (value != null) return value;
+                    if (value != null) {
+                        log("Using " + className + ".self()");
+                        return value;
+                    }
                 }
-            } catch (NoSuchMethodException ignored) {}
+            } catch (Throwable t) {
+                log(className + ".self() unavailable: " + t.getClass().getSimpleName());
+            }
+
             try {
                 Method factory = cls.getMethod("getInstance", Context.class);
-                return factory.invoke(null, context);
-            } catch (NoSuchMethodException ignored) {
-                Method factory = cls.getMethod("getInstance");
-                return factory.invoke(null);
+                Object value = factory.invoke(null, context);
+                if (value != null) {
+                    log("Using " + className + ".getInstance(Context)");
+                    return value;
+                }
+            } catch (Throwable t) {
+                log(className + ".getInstance(Context) unavailable: " + t);
             }
+
+            try {
+                Method factory = cls.getMethod("getInstance");
+                Object value = factory.invoke(null);
+                if (value != null) {
+                    log("Using " + className + ".getInstance()");
+                    return value;
+                }
+            } catch (Throwable t) {
+                log(className + ".getInstance() unavailable: " + t);
+            }
+            return null;
         } catch (Throwable t) {
-            log("getInstance failed for " + className + ": " + t);
+            log("BYD device factory failed for " + className + ": " + t);
             return null;
         }
     }
