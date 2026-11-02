@@ -100,7 +100,6 @@
 
 ### 🌐 ช่องทางสำหรับผู้สนับสนุนต่างประเทศ (International Donation):
 - **Skrill Email:** `canon.non.7@gmail.com`
-
 ---
 
 ## 📄 License & Attribution
