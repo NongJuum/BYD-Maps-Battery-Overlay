@@ -79,6 +79,8 @@
 
 ## 📥 วิธีติดตั้งลงบนหน้าจอรถ BYD (Installation Guide)
 
+**ต้องติดตั้ง DUDU Launcher ก่อนเท่านั้น** โดยต้องมีแพ็กเกจ `com.dudu.autoui` อยู่บนหน้าจอรถก่อนเปิด BYD Maps Battery หากไม่พบ DUDU แอปจะไม่เริ่มทำงาน หมายเหตุ: ส่วนนี้เป็นการบังคับตรวจสอบ DUDU ก่อนเริ่มแอป ส่วนระบบเชื่อมต่อ DUDU Shell เพื่ออ่านข้อมูล BMS ยังอยู่ระหว่างพัฒนาและยังไม่เสร็จสมบูรณ์
+
 1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Universal.apk (ลิงก์ตรง)](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/download/v1.0.0/BYD-Maps-Battery-Overlay-Universal.apk)** หรือเข้าผ่านหน้า [Releases ล่าสุด](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest)
 2. ก๊อปปี้ไฟล์ `.apk` ใส่แฟลชไดรฟ์ USB (ฟอร์แมต FAT32 หรือ NTFS)
 3. นำแฟลชไดรฟ์ไปเสียบที่พอร์ต USB ของตัวรถ BYD
