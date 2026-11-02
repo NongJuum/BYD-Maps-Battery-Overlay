@@ -121,3 +121,6 @@ Distributed under the MIT License.
 
 
 <!-- CI rebuild trigger: validate v1/v2 signing for Android 10 IVI. -->
+
+
+<!-- CI trigger 2026-11-02: rebuild APK after confirming dual v1/v2 debug signing config. -->
