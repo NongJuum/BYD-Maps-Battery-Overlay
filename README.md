@@ -1,6 +1,12 @@
 # ⚡ BYD Smart EV Route & Battery Overlay
 
 <p align="center">
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest">
+    <img src="https://img.shields.io/badge/Download-Latest%20APK%20(v1.0.0)-00C853?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+</p>
+
+<p align="center">
   <a href="README.md"><b>English</b></a> | <a href="README_TH.md"><b>🇹🇭 ภาษาไทย</b></a>
 </p>
 
@@ -69,7 +75,7 @@
 
 ## 📥 Installation Guide for BYD Vehicles
 
-1. Download the prebuilt **`BYD-Maps-Battery-Overlay-Universal.apk`** from the [Repository Root](BYD-Maps-Battery-Overlay-Universal.apk).
+1. Download the prebuilt **[BYD-Maps-Battery-Overlay-Universal.apk (Direct Download)](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/download/v1.0.0/BYD-Maps-Battery-Overlay-Universal.apk)** from [GitHub Releases](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest).
 2. Copy the `.apk` file to a USB flash drive (FAT32 or NTFS formatted).
 3. Plug the USB flash drive into the BYD infotainment USB port in your car.
 4. Open the built-in **File Manager** on the BYD screen and tap the APK to install.
