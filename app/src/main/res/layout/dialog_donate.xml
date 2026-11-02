@@ -14,9 +14,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="☕ ร่วมสนับสนุนผู้พัฒนา (Donate)"
+            android:text="☕ Support &amp; Donate (ร่วมสนับสนุนผู้พัฒนา)"
             android:textColor="#FFD54F"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
@@ -33,9 +33,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:gravity="center"
-            android:text="หากแอปนี้ช่วยให้คุณเดินทางได้สะดวกและมั่นใจขึ้น\nสามารถสนับสนุนค่าน้ำชา/กาแฟเป็นกำลังใจได้ครับ ❤️"
+            android:text="If this app helps your journeys, feel free to support future development!\nหากแอปนี้ช่วยให้เดินทางสะดวกและมั่นใจขึ้น ร่วมสนับสนุนค่าน้ำชา/กาแฟได้ครับ ❤️"
             android:textColor="#CFD8DC"
-            android:textSize="12sp" />
+            android:textSize="11sp" />
 
         <View
             android:layout_width="match_parent"
@@ -56,7 +56,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📱 สแกนผ่านแอปธนาคาร (PromptPay QR)"
+                android:text="📱 Thai PromptPay QR (Scan via Mobile Banking)"
                 android:textColor="#69F0AE"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -75,7 +75,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="ชื่อบัญชี: นาย นนทรัฐ หะสิตะพงษ์\n(MR NONTARAT HASITAPONG)"
+                android:text="Account: MR NONTARAT HASITAPONG\n(นาย นนทรัฐ หะสิตะพงษ์)"
                 android:gravity="center"
                 android:textColor="#FFFFFF"
                 android:textSize="12sp"
@@ -122,7 +122,7 @@
                     android:layout_height="36dp"
                     android:layout_marginStart="8dp"
                     android:backgroundTint="#7B1FA2"
-                    android:text="คัดลอก"
+                    android:text="Copy / คัดลอก"
                     android:textSize="11sp" />
             </LinearLayout>
         </LinearLayout>
@@ -133,7 +133,7 @@
             android:layout_height="40dp"
             android:layout_marginTop="14dp"
             android:backgroundTint="#37474F"
-            android:text="ปิดหน้าต่าง"
+            android:text="Close / ปิด"
             android:textColor="#FFFFFF"
             android:textSize="12sp" />
 

@@ -1,8 +1,12 @@
 # ⚡ BYD Smart EV Route & Battery Overlay
 
 <p align="center">
-  <b>แอปพลิเคชันแถบลอยอัจฉริยะ (Floating Overlay) แสดง % แบตเตอรี่ปลายทาง และระยะวิ่งจริงแบบ Real-Time สำหรับรถยนต์ไฟฟ้า BYD ทุกรุ่น</b><br>
-  ทำงานร่วมกับ Google Maps และซิงค์ข้อมูลสดจากกล่องควบคุมรถ (OBD / BMS) โดยไม่ต้องซื้ออุปกรณ์ฮาร์ดแวร์เสริม
+  <a href="README.md"><b>English</b></a> | <a href="README_TH.md"><b>🇹🇭 ภาษาไทย</b></a>
+</p>
+
+<p align="center">
+  <b>A smart, real-time floating overlay application that predicts destination battery percentage (SoC %) and actual remaining range for all BYD electric vehicles.</b><br>
+  Works seamlessly alongside Google Maps and directly reads telemetry from vehicle internal systems (OBD / BMS / CAN bus) without requiring any extra OBD dongles or external hardware.
 </p>
 
 <p align="center">
@@ -15,85 +19,86 @@
 
 ---
 
-### 👨‍💻 ข้อมูลผู้พัฒนา (Author & Developer)
-- **ผู้พัฒนา (Developer):** นาย นนทรัฐ หะสิตะพงษ์ (Nontarat Hasitapong)
-- **อีเมลติดต่อ / Support:** [canon.non.7@gmail.com](mailto:canon.non.7@gmail.com)
+### 👨‍💻 Developer & Author
+- **Developer:** Nontarat Hasitapong (นาย นนทรัฐ หะสิตะพงษ์)
+- **Contact / Support Email:** [canon.non.7@gmail.com](mailto:canon.non.7@gmail.com)
 
 ---
 
-## 🌟 ฟีเจอร์เด่น (Key Features)
+## 🌟 Key Features
 
-- **🏁🔋 คำนวณ % แบตเตอรี่ปลายทางล่วงหน้า (Destination SoC %)**:
-  - คำนวณจากพลังงานคงเหลือจริงในแบตเตอรี่ (kWh) จาก BMS + อัตรากินไฟเฉลี่ย 50 กม. ล่าสุด (Past 50 km) + ระยะทางรวมถึงจุดหมายจาก Google Maps
-  - แสดงผลเป็น **ช่วงคาดการณ์ปลอดภัย (เผื่อ Safety Buffer 2%)** เช่น `88-90%` หรือ `48-50%` เพื่อรองรับกรณีรถติด แอร์สู้แดด หรือการขับขึ้นทางชัน
-  - คำนวณใหม่ทันทีแบบเรียลไทม์เมื่อมีการเปลี่ยนเส้นทาง (Reroute) หรือเลี้ยวผิด
-- **🚗 ระยะทางวิ่งได้จริงคงเหลือ (Real Remaining Range)**:
-  - บอกระยะกิโลเมตรที่รถวิ่งได้จริงตามสภาพการขับขี่ปัจจุบัน (ไม่ใช่ตัวเลข NEDC หลอกตาบนหน้าปัด)
-- **⚠️ ระบบแจ้งเตือนอัจฉริยะ (Smart Tri-Color Alert)**:
-  - 🟢 **เขียว**: แบตเตอรี่เพียงพอต่อการเดินทาง
-  - 🟡 **เหลือง (`⚠️🪫`)**: เตือนล่วงหน้าเมื่อแบตเตอรี่ปัจจุบันหรือที่ปลายทางจะเหลือต่ำกว่า 20%
-  - 🔴 **แดง (`⚠️🔌`)**: เตือนทันทีเมื่อแบตเตอรี่ไม่พอถึงปลายทาง (หรือเหลือน้อยกว่า 2%) แนะนำให้หาจุดชาร์จระหว่างทาง
-- **📡 เชื่อมต่อ OBD / BMS ของรถโดยตรง**:
-  - ดึงข้อมูลจากระบบรถยนต์ BYD โดยตรง ไม่ต้องเสียบดองเกิล OBD2 เพิ่มเติม
-  - รองรับรถ BYD ทุกรุ่น (Dolphin Standard/Extended, Atto 3, Seal, M6, Sealion 6 DM-i, Sealion 7 ฯลฯ)
-  - มีเมนูเลือกรุ่นรถ หรือระบุขนาดแบตเตอรี่ (kWh) และค่าสุขภาพแบตเตอรี่ (SOH) ได้เอง
-- **🗺️ รองรับ Google Maps ทุกเวอร์ชัน**:
-  - Google Play Store, Aurora Store, Morphe, Vanced / ReVanced, MicroG, GBox, Gspace, GPad
-  - รองรับทั้งหน้าจอเดิมติดรถ (DiLink) และหน้าจอแต่ง **Dudu Launcher (รวมถึงโหมด PIP ย่อหน้าต่าง)**
-- **🖐️ หน้าต่างลอยปรับแต่งอิสระ (Movable & Pinch-to-Scale)**:
-  - สัญลักษณ์มินิมอล ไม่บดบังแผนที่
-  - แตะลากวางตำแหน่งใดก็ได้บนหน้าจอ (รวมถึงวางทับแถบ Status Bar ด้านบน)
-  - ใช้ 2 นิ้วถ่างเข้า-ออกเพื่อย่อ/ขยายขนาดแถบลอยได้อิสระ
+- **🏁🔋 Destination Battery Prediction (Destination SoC %)**:
+  - Calculated using actual remaining battery energy (kWh) from the BMS + real-time rolling average consumption of the last 50 km (Past 50 km) + remaining distance from Google Maps turn-by-turn navigation.
+  - Displays as a **safe prediction range (with a built-in 2% safety buffer)**, e.g. `88-90%` or `48-50%`, accounting for traffic jams, heavy AC usage, and uphill driving conditions.
+  - Automatically recalculates in real-time on route changes, traffic reroutes, or missed turns.
+- **🚗 Real-World Remaining Range**:
+  - Displays accurate kilometers based on actual recent driving style and consumption, avoiding misleading dashboard NEDC figures.
+- **⚠️ Smart Tri-Color Alert System**:
+  - 🟢 **Green**: Battery is well sufficient for the planned route.
+  - 🟡 **Yellow (`⚠️🪫`)**: Warning when current or destination battery is expected to drop below 20%.
+  - 🔴 **Red (`⚠️🔌`)**: Critical alert when battery is insufficient to reach the destination (<2% at arrival), urging the driver to plan a charging stop.
+- **📡 Direct OBD / BMS Integration**:
+  - Communicates directly with the BYD vehicle subsystem without needing third-party OBD2 Bluetooth/Wi-Fi adapters.
+  - Supports all BYD models: **Dolphin** (Standard/Extended), **Atto 3**, **Seal** (Dynamic/Premium/Performance), **M6**, **Sealion 6 DM-i**, **Sealion 7**, and more.
+  - Includes presets for various battery capacities as well as custom battery size (kWh) and Battery Health (SOH %) override.
+- **🗺️ Universal Google Maps Compatibility**:
+  - Compatible with Google Play Store, Aurora Store, Morphe, Vanced/ReVanced, MicroG, GBox, Gspace, and GPad.
+  - Works on standard BYD DiLink infotainment screens and custom launchers like **DUDUOS Launcher (including Picture-in-Picture / PIP mode)**.
+- **🖐️ Fully Customizable Floating Pill (Movable & Pinch-to-Scale)**:
+  - Clean, minimal floating pill that doesn't obstruct navigation.
+  - Drag and drop anywhere on the screen (even over the top system status bar).
+  - Use 2-finger pinch gesture to resize smoothly.
 
 ---
 
-## 📊 ความหมายของสัญลักษณ์บนแถบลอย (Pill Overlay)
+## 📊 Floating Pill Symbol Guide
 
 > `⠿` | `🏁🔋 88-90%` | `🚗 410 km` | `📍 25.4 km` | `⚡ 10.2` | `⚠️🔌`
 
-| สัญลักษณ์ | ความหมาย |
+| Symbol | Description |
 | :---: | :--- |
-| **`⠿`** | จุดจับสำหรับแตะลากย้ายตำแหน่งแถบลอย |
-| **`🏁🔋`** | เปอร์เซ็นต์แบตเตอรี่ที่จะเหลือเมื่อถึงจุดหมายปลายทาง (พร้อม Safety Buffer 2%) |
-| **`🚗`** | ระยะทางที่รถสามารถวิ่งได้จริงคงเหลือในขณะนี้ (คำนวณจาก BMS + Past 50km) |
-| **`📍`** | ระยะทางรวมจากตำแหน่งปัจจุบันไปยังจุดหมายปลายทาง (จาก Google Maps) |
-| **`⚡`** | อัตรากินไฟเฉลี่ย 50 กม. ล่าสุดของตัวรถ (kWh/100km) ดึงสดจากหน้าปัด |
-| **`⚠️🪫`** | ป้ายเตือนสีเหลือง: แบตเตอรี่ต่ำกว่า 20% |
-| **`⚠️🔌`** | ป้ายเตือนสีแดง: พลังงานไม่เพียงพอถึงจุดหมาย กรุณาวางแผนแวะชาร์จระหว่างทาง |
+| **`⠿`** | Drag handle: touch and drag to reposition the overlay anywhere on screen |
+| **`🏁🔋`** | Expected battery level at destination with a 2% safety margin |
+| **`🚗`** | Real-world remaining driving range based on BMS data and recent 50km consumption |
+| **`📍`** | Remaining distance to destination provided live by Google Maps |
+| **`⚡`** | Vehicle's average energy consumption for the last 50 km (kWh/100km) |
+| **`⚠️🪫`** | Yellow Warning: Battery is below 20% |
+| **`⚠️🔌`** | Red Warning: Insufficient power to reach destination. Charging stop needed! |
 
 ---
 
-## 📥 วิธีติดตั้งลงบนหน้าจอรถ BYD (Installation Guide)
+## 📥 Installation Guide for BYD Vehicles
 
-1. ดาวน์โหลดไฟล์ **`BYD-Maps-Battery-Overlay-Universal.apk`** จากแท็บ [Releases](../../releases)
-2. ก๊อปปี้ไฟล์ `.apk` ใส่แฟลชไดรฟ์ USB (ฟอร์แมต FAT32 หรือ NTFS)
-3. นำแฟลชไดรฟ์ไปเสียบที่พอร์ต USB ของตัวรถ BYD
-4. เปิดแอป **จัดการไฟล์ (File Manager)** บนหน้าจอรถ แล้วกดติดตั้ง APK
-5. เปิดแอป **BYD Maps Battery** ขึ้นมา:
-   - ระบบจะดำเนินการขอและเปิดสิทธิ์การวางทับหน้าจอ (Overlay) และสิทธิ์อ่านแจ้งเตือน Google Maps อัตโนมัติ
-   - เลือกรุ่นรถของคุณ หรือปล่อยเป็นค่าเริ่มต้น **"📡 อัตโนมัติ: ดึงขนาดแบตและรุ่นรถจาก OBD / BMS โดยตรง"**
-6. เปิด Google Maps แล้วกดเริ่มนำทาง แถบลอยจะปรากฏขึ้นมาบนหน้าจอทันที!
+1. Download the prebuilt **`BYD-Maps-Battery-Overlay-Universal.apk`** from the [Repository Root](BYD-Maps-Battery-Overlay-Universal.apk).
+2. Copy the `.apk` file to a USB flash drive (FAT32 or NTFS formatted).
+3. Plug the USB flash drive into the BYD infotainment USB port in your car.
+4. Open the built-in **File Manager** on the BYD screen and tap the APK to install.
+5. Launch **BYD Maps Battery**:
+   - The app automatically grants and requests system overlay permission and Google Maps notification listener access.
+   - Choose your vehicle model, or leave default as **"📡 Auto: Direct OBD / BMS Sync (Recommended)"**.
+6. Open Google Maps and start navigation — the battery overlay pill will appear automatically!
 
-> **หมายเหตุ:** หากต้องการลากแถบลอยไปวางตำแหน่งที่ต้องการหรือทดสอบขนาด สามารถกดปุ่ม **"👁️ แสดง/ทดสอบแถบลอย"** ในหน้าแอปได้ทันที
+> **Tip:** You can test or position the overlay anytime by tapping **"👁️ Test / Show Overlay"** in the app settings screen.
 
 ---
 
-## ☕ ร่วมสนับสนุนผู้พัฒนา (Support & Donate)
+## ☕ Support & Donations
 
-โปรเจกต์นี้พัฒนาขึ้นเพื่อแบ่งปันให้เพื่อนๆ ผู้ขับขี่รถยนต์ไฟฟ้า BYD ทุกท่านได้ใช้งานเดินทางท่องเที่ยวได้อย่างมั่นใจ หากแอปพลิเคชันนี้มีประโยชน์และช่วยให้คุณวางแผนการเดินทางได้สะดวกขึ้น สามารถร่วมสนับสนุนค่าน้ำชา / กาแฟ เพื่อเป็นกำลังใจในการพัฒนาต่อไปได้ครับ ❤️
+This project was developed and open-sourced to give all BYD EV drivers around the world a safer, more reliable road trip experience. If this app helps your journeys, feel free to support future development with a cup of coffee! ❤️
 
+### 🌐 International Supporters (Skrill)
+- **Skrill Account:** `canon.non.7@gmail.com`
+
+### 📱 Thailand Supporters (PromptPay QR)
 <p align="center">
-  <img src="app/src/main/res/drawable/qr_promptpay.jpg" width="280" alt="PromptPay QR Code" /><br>
-  <b>นาย นนทรัฐ หะสิตะพงษ์ (MR NONTARAT HASITAPONG)</b><br>
-  <i>(สแกนผ่านแอปธนาคารทุกธนาคารในไทย)</i>
+  <img src="app/src/main/res/drawable/qr_promptpay.jpg" width="260" alt="PromptPay QR Code" /><br>
+  <b>MR NONTARAT HASITAPONG (นาย นนทรัฐ หะสิตะพงษ์)</b><br>
+  <i>(Scan with any mobile banking app in Thailand)</i>
 </p>
-
-### 🌐 ช่องทางสำหรับผู้สนับสนุนต่างประเทศ (International Donation):
-- **Skrill Email:** `canon.non.7@gmail.com`
 
 ---
 
 ## 📄 License & Attribution
 
-Copyright (c) 2026 Nontarat Hasitapong.  
-Distributed under the MIT License.
+- **Developer:** Nontarat Hasitapong
+- **License:** MIT License. Free for personal EV community use.

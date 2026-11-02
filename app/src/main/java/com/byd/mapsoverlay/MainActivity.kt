@@ -140,31 +140,31 @@ class MainActivity : AppCompatActivity() {
                     String.format(" (OBD BMS %.1f kWh)", vehicleBridge.remainEnergyKwh)
                 } else ""
                 tvLiveSoc.text = if (soc > 0.0) {
-                    String.format("🔋 แบตเตอรี่ปัจจุบัน (OBD SoC): %.0f%%%s", soc, remainKwhText)
+                    String.format("🔋 Battery (OBD SoC): %.0f%%%s", soc, remainKwhText)
                 } else {
-                    "🔋 แบตเตอรี่ปัจจุบัน (OBD SoC): รอซิงค์สัญญาณจากรถ..."
+                    "🔋 Battery (OBD SoC): Waiting for car telemetry..."
                 }
 
                 tvBatteryHealth.text = String.format(
-                    "🩺 ความจุแบตที่ใช้คำนวณ (หัก SOH %d%%): %.1f kWh (จากสเปก %.2f kWh)",
+                    "🩺 Usable Capacity (SOH %d%%): %.1f kWh (Spec: %.2f kWh)",
                     vehicleBridge.sohPercent,
                     vehicleBridge.estimatedCapacityKwh,
                     vehicleBridge.nominalCapacityKwh
                 )
 
                 tvLiveConsumptionReal.text = if (consumption > 0.0) {
-                    String.format("⚡ อัตรากินไฟ 50 กม. ล่าสุด (OBD Past 50km): %.1f kWh/100km", consumption)
+                    String.format("⚡ Past 50km Avg (OBD): %.1f kWh/100km", consumption)
                 } else {
-                    "⚡ อัตรากินไฟ 50 กม. ล่าสุด (OBD Past 50km): รอซิงค์สัญญาณจากรถ..."
+                    "⚡ Past 50km Avg (OBD): Waiting for OBD sync..."
                 }
 
                 tvRealRange.text = if (vehicleBridge.realRangeKm > 0.0) {
-                    String.format("🎯 ระยะทางวิ่งได้จริงคงเหลือ: ~%.0f กม.", vehicleBridge.realRangeKm)
+                    String.format("🎯 Real Remaining Range (ระยะวิ่งจริง): ~%.0f km", vehicleBridge.realRangeKm)
                 } else {
-                    "🎯 ระยะทางวิ่งได้จริงคงเหลือ: รอข้อมูล SoC และอัตรากินไฟจาก OBD..."
+                    "🎯 Real Remaining Range (ระยะวิ่งจริง): Waiting for SoC & OBD data..."
                 }
 
-                tvNedcRange.text = String.format("📋 ระยะทางบนหน้าปัดรถ (Dashboard Range): %d กม.", vehicleBridge.elecRangeKm)
+                tvNedcRange.text = String.format("📋 Dashboard NEDC Range: %d km", vehicleBridge.elecRangeKm)
             }
         }
         vehicleBridge.startListening()
@@ -175,23 +175,23 @@ class MainActivity : AppCompatActivity() {
             sendBroadcast(Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
                 putExtra(OverlayService.EXTRA_DISTANCE_KM, testDist)
             })
-            Toast.makeText(this, "แสดงแถบลอยบนหน้าจอแล้ว (ลากเปลี่ยนตำแหน่งได้เลย)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Overlay visible! You can drag to move or pinch to resize.\n(แสดงแถบลอยแล้ว ลากเปลี่ยนตำแหน่งได้เลย)", Toast.LENGTH_SHORT).show()
         }
 
         btnResetPosition.setOnClickListener {
             sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION))
-            Toast.makeText(this, "รีเซ็ตตำแหน่งและขนาดแถบลอยกลับตรงกลางเรียบร้อย", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Overlay position and scale reset to center.\n(รีเซ็ตตำแหน่งกลับค่าเริ่มต้นแล้ว)", Toast.LENGTH_SHORT).show()
         }
 
         btnOverlay.setOnClickListener {
-            AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
+            AutoPermissionHelper.grantAllPermissionsSilently(this) { _ ->
                 runOnUiThread {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                        Toast.makeText(this, "✅ เปิดสิทธิ์วางทับหน้าจอเรียบร้อยแล้ว!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "✅ Overlay permission granted! (เปิดสิทธิ์เรียบร้อย)", Toast.LENGTH_SHORT).show()
                     } else if (!AutoPermissionHelper.openOverlayPermissionScreen(this)) {
                         Toast.makeText(
                             this,
-                            "💡 กรุณาเปิดสวิตช์ ADB / Wireless Debugging ในหน้าตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง ระบบจะปลดล็อกสิทธิ์ให้อัตโนมัติทันที",
+                            "💡 Please enable ADB / Wireless Debugging in car settings, then tap this button again.\n(กรุณาเปิดสวิตช์ ADB ในตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง)",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -203,11 +203,11 @@ class MainActivity : AppCompatActivity() {
             AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
                 runOnUiThread {
                     if (ready) {
-                        Toast.makeText(this, "✅ เชื่อมต่อสิทธิ์ Google Maps และ OBD ครบถ้วนแล้ว!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "✅ Google Maps & OBD permissions active! (เชื่อมต่อสิทธิ์เรียบร้อย)", Toast.LENGTH_SHORT).show()
                     } else if (!AutoPermissionHelper.openNotificationPermissionScreen(this)) {
                         Toast.makeText(
                             this,
-                            "💡 กรุณาเปิดสวิตช์ ADB / Wireless Debugging ในหน้าตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง ระบบจะปลดล็อกสิทธิ์ให้อัตโนมัติทันที",
+                            "💡 Please enable ADB / Wireless Debugging in car settings, then tap this button again.\n(กรุณาเปิดสวิตช์ ADB ในตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง)",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -216,17 +216,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnObdPermission.setOnClickListener {
-            Toast.makeText(this, "🔄 กำลังขอสิทธิ์ OBD และรีเซ็ตการเชื่อมต่อข้อมูลรถ...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "🔄 Requesting OBD permissions... (กำลังขอสิทธิ์ OBD)", Toast.LENGTH_SHORT).show()
             AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
                 runOnUiThread {
                     vehicleBridge.restartConnection()
                     sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
                     val msg = if (ready) {
-                        "✅ ซ่อมสิทธิ์ทั้งหมดและเชื่อมต่อท่อข้อมูล OBD / Google Maps ใหม่สำเร็จ!"
+                        "✅ All permissions and OBD connections repaired! (ซ่อมสิทธิ์สำเร็จ)"
                     } else {
-                        "✅ ส่งคำขอสิทธิ์ OBD และรีสตาร์ทตัวดึงข้อมูลรถเรียบร้อยแล้ว!"
+                        "✅ OBD permission requested & vehicle bridge restarted! (รีสตาร์ทตัวอ่านข้อมูลสำเร็จ)"
                     }
                     Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                    vehicleBridge.notifyUpdate()
                 }
             }
         }
