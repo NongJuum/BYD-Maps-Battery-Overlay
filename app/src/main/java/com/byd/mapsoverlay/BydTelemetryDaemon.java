@@ -2,7 +2,6 @@ package com.byd.mapsoverlay;
 
 import android.content.Context;
 import android.content.ContextWrapper;
-import android.net.LocalServerSocket;
 import android.os.SystemClock;
 
 import org.json.JSONObject;
@@ -71,6 +70,7 @@ public final class BydTelemetryDaemon {
     private static void pollLoop(Context context) {
         Object statistic = null;
         Object power = null;
+        Object instrument = null;
         long lastLog = 0;
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -82,6 +82,10 @@ public final class BydTelemetryDaemon {
                     power = getDevice("android.hardware.bydauto.power.BYDAutoPowerDevice", context);
                     log("Power device " + (power == null ? "unavailable" : "initialized"));
                 }
+                if (instrument == null) {
+                    instrument = getDevice("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", context);
+                    log("Instrument device " + (instrument == null ? "unavailable" : "initialized"));
+                }
 
                 JSONObject data = new JSONObject();
                 data.put("uid", android.os.Process.myUid());
@@ -91,6 +95,7 @@ public final class BydTelemetryDaemon {
                 Double soc = number(statistic, "getElecPercentageValue");
                 Integer range = integer(statistic, "getElecDrivingRangeValue");
                 Double remain = number(power, "getBatteryRemainPowerEV");
+                Double consumption = number(instrument, "getLast50KmPowerConsume");
                 if (soc != null && soc >= 0 && soc <= 100) {
                     JSONObject socObject = new JSONObject();
                     socObject.put("percent", soc);
@@ -102,6 +107,11 @@ public final class BydTelemetryDaemon {
                     data.put("range", rangeObject);
                 }
                 if (remain != null && remain > 0 && remain < 200) data.put("remainEnergyKwh", remain);
+                if (consumption != null && consumption > 0 && consumption < 100) {
+                    JSONObject consumptionObject = new JSONObject();
+                    consumptionObject.put("kwhPer100km", consumption);
+                    data.put("consumption", consumptionObject);
+                }
                 data.put("status", soc != null ? "OK" : "WAITING_FOR_SOC");
                 snapshot = data;
 
@@ -110,7 +120,8 @@ public final class BydTelemetryDaemon {
                     log("Telemetry status=" + data.optString("status")
                             + ", soc=" + (soc == null ? "null" : soc)
                             + ", range=" + (range == null ? "null" : range)
-                            + ", remainKwh=" + (remain == null ? "null" : remain));
+                            + ", remainKwh=" + (remain == null ? "null" : remain)
+                            + ", consumption=" + (consumption == null ? "null" : consumption));
                     lastLog = now;
                 }
             } catch (Throwable t) {
