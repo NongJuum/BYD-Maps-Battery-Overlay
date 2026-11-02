@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/byd-native-api-diagnostics
+      - main
   pull_request:
     branches:
       - main
