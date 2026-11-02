@@ -7,6 +7,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import android.util.Log
+import dadb.AdbKeyPair
+import dadb.Dadb
+import java.io.File
 
 /**
  * จัดการเฉพาะสิทธิ์ overlay และ notification listener ที่แอปตรวจสอบ/ตั้งค่าได้
@@ -44,7 +47,8 @@ object AutoPermissionHelper {
             }
 
             logBydPermissionState(context)
-            Log.i(TAG, "Permission setup finished; shellAvailable=$shellAvailable")
+            val daemonStarted = launchTelemetryDaemon(context)
+            Log.i(TAG, "Permission setup finished; shellAvailable=$shellAvailable, telemetryDaemon=$daemonStarted")
             onStatusUpdated?.invoke(isAllPermissionsReady(context))
         }.start()
     }
@@ -53,6 +57,44 @@ object AutoPermissionHelper {
      * แสดงสถานะจริงของ BYD signature permissions ใน logcat
      * การติดตั้ง permission ใน Manifest ไม่ได้แปลว่าระบบอนุญาตให้แอปใช้
      */
+    /**
+     * Start the vehicle reader in an ADB shell app_process (UID 2000), following
+     * OverDrive's DiLink 3 architecture. The normal app process cannot obtain the
+     * vehicle SDK's signature-level access on this firmware.
+     */
+    private fun launchTelemetryDaemon(context: Context): Boolean {
+        return try {
+            val privateKey = File(context.filesDir, "adbkey")
+            val publicKey = File(context.filesDir, "adbkey.pub")
+            val keyPair = if (privateKey.exists() && publicKey.exists()) {
+                AdbKeyPair.read(privateKey, publicKey)
+            } else {
+                AdbKeyPair.generate(privateKey, publicKey)
+                AdbKeyPair.read(privateKey, publicKey)
+            }
+
+            Dadb.create("127.0.0.1", 5555, keyPair, 2_000, 5_000).use { adb ->
+                val command = """
+                    APK_PATH=\$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
+                    if [ -z "\$APK_PATH" ]; then echo APK_NOT_FOUND; exit 21; fi
+                    if pidof byd_maps_telemetry_daemon >/dev/null 2>&1; then
+                      echo ALREADY_RUNNING
+                    else
+                      CLASSPATH="\$APK_PATH" app_process /system/bin --nice-name=byd_maps_telemetry_daemon com.byd.mapsoverlay.BydTelemetryDaemon >/data/local/tmp/byd_maps_telemetry_daemon.log 2>&1 &
+                      sleep 1
+                      if pidof byd_maps_telemetry_daemon >/dev/null 2>&1; then echo STARTED; else cat /data/local/tmp/byd_maps_telemetry_daemon.log 2>/dev/null; exit 22; fi
+                    fi
+                """.trimIndent()
+                val output = adb.shell(command)
+                Log.i(TAG, "Telemetry daemon launch response: $output")
+                output.contains("STARTED") || output.contains("ALREADY_RUNNING")
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Could not launch telemetry daemon through local ADB. Check Wireless ADB authorization.", e)
+            false
+        }
+    }
+
     fun logBydPermissionState(context: Context) {
         val names = listOf(
             "BYDAUTO_STATISTIC_GET",
