@@ -55,6 +55,7 @@ class BydVehicleBridge(
         private set
 
     private var executor: ScheduledExecutorService? = null
+    private val overDriveClient = OverDriveClient(context)
 
     fun startListening() {
         applyUserVehicleProfile()
@@ -62,7 +63,7 @@ class BydVehicleBridge(
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
-            pollDirectBydHardwareApi()
+            if (!pollOverDriveTelemetry()) pollDirectBydHardwareApi()
         }, 0, 2, TimeUnit.SECONDS)
     }
 
