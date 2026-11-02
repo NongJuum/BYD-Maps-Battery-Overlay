@@ -88,7 +88,7 @@
 
 ### ขั้นตอนที่ 2: ปลดล็อกการอ่านข้อมูลรถ (One-Time Activation via ADB)
 > ⚠️ **ทำไมต้องทำขั้นตอนนี้?**  
-> บนระบบของ BYD (DiLink 3.0 / 4.0 / 5.0) สิทธิ์การอ่านข้อมูลแบตเตอรี่และ CAN-Bus (`BYDAUTO_STATISTIC_GET`) ถูกล็อกไว้เป็น **Signature Permission** ของโรงงาน BYD (เช่นเดียวกับแอปชื่อดังอย่าง **OverDrive** และ **DUDU Launcher**) จึงต้องรัน Service ผ่าน ADB Shell (UID 2000) ครั้งแรก:
+> บนระบบของ BYD (DiLink 3.0 / 4.0 / 5.0) สิทธิ์การอ่านข้อมูลแบตเตอรี่และ CAN-Bus (`BYDAUTO_STATISTIC_GET`) ถูกล็อกไว้เป็น **Signature Permission** ของโรงงาน BYD (เช่นเดียวกับแอปชื่อดังอย่าง **OverDrive** และ **DUDU Launcher**) จึงต้องรัน Service ผ่าน ADB Shell (UID 2000) เพื่อเชื่อมต่อข้อมูล:
 
 1. ให้คอมพิวเตอร์และหน้าจอรถเชื่อมต่อ Wi-Fi วงเดียวกัน (หรือแชร์ Wi-Fi Hotspot)
 2. ดู IP Address ของจอรถในการตั้งค่า Wi-Fi ของรถ (เช่น `10.51.77.234` หรือ `192.168.1.xxx`)
@@ -100,8 +100,29 @@
 4. ที่หน้าจอรถ ข้อมูล % แบตเตอรี่ (SoC), ระยะทางวิ่งจริง และอัตรากินไฟเฉลี่ยจะเริ่มซิงค์สดทันที!
 
 > **💡 หมายเหตุ:**
-> - สามารถเปิดใช้งานร่วมกับ **OverDrive** ได้โดยไม่มีปัญหาพอร์ตชนกัน (แยกพอร์ต 19890 อิสระ)
+> - แอปใช้พอร์ต **19890** จึงสามารถเปิดทำงานพร้อมกันกับ **OverDrive** (พอร์ต 19878) ได้อย่างราบรื่นโดยไม่ชนกัน
 > - เมื่อเปิด Google Maps ระบบจะคำนวณและแสดงแถบลอยบนหน้าจออัตโนมัติ
+
+---
+
+### ขั้นตอนที่ 3: ตั้งค่าให้แอปเริ่มทำงานอัตโนมัติและไม่ถูกระบบปิด (Auto Start & Background Keep-Alive)
+เพื่อให้แอปทำงานได้อย่างต่อเนื่องเมื่อสตาร์ตรถ และไม่ถูกระบบประหยัดพลังงานของ BYD DiLink ปิดการทำงานในพื้นหลัง:
+
+#### 1. อนุญาตผ่านคำสั่ง ADB (รวดเร็วที่สุดในคำสั่งเดียว)
+รันคำสั่งต่อไปนี้ใน Terminal / PowerShell:
+```bash
+adb shell "dumpsys deviceidle whitelist +com.byd.mapsoverlay"
+adb shell "appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow"
+adb shell "appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow"
+adb shell "appops set com.byd.mapsoverlay START_FOREGROUND allow"
+```
+
+#### 2. เปิดสิทธิ์เริ่มทำงานอัตโนมัติในหน้าจอรถ (BYD App Start Management)
+1. เปิดเมนู **การตั้งค่ารถ (Vehicle Settings)** -> **การจัดการแอปพลิเคชัน (App Management)** -> **การจัดการเริ่มทำงานอัตโนมัติ (App Start Management)**
+2. เลื่อนหาแอป **BYD Maps Battery** แล้วแตะเปิดสวิตช์อนุญาต (Allow Auto Start)
+   *(หรือสามารถเปิดหน้านี้ผ่าน ADB ได้ทันทีด้วยคำสั่ง: `adb shell "am start -n com.byd.appstartmanagement/.frame.AppStartManagement"`)*
+
+---
 
 > **หมายเหตุ:** หากต้องการลากแถบลอยไปวางตำแหน่งที่ต้องการหรือทดสอบขนาด สามารถกดปุ่ม **"👁️ แสดง/ทดสอบแถบลอย"** ในหน้าแอปได้ทันที
 

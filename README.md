@@ -100,8 +100,29 @@
 4. Check the head unit screen: live Battery SoC %, real range, and 50km power consumption will immediately start updating!
 
 > **💡 Notes:**
-> - Fully compatible alongside **OverDrive** (operates on dedicated port 19890 with zero port collisions).
+> - Fully compatible alongside **OverDrive** (operates on dedicated port **19890** with zero port collisions).
 > - Whenever Google Maps navigation starts, the pill overlay displays automatically.
+
+---
+
+### Step 3: Configure Auto-Start & Background Keep-Alive
+To ensure the overlay service starts reliably and is not terminated by DiLink's aggressive power management:
+
+#### 1. Whitelist via ADB (Recommended)
+Run the following commands in Terminal / PowerShell:
+```bash
+adb shell "dumpsys deviceidle whitelist +com.byd.mapsoverlay"
+adb shell "appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow"
+adb shell "appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow"
+adb shell "appops set com.byd.mapsoverlay START_FOREGROUND allow"
+```
+
+#### 2. Enable in BYD App Start Management
+1. Navigate to **Vehicle Settings** -> **App Management** -> **App Start Management** (or Auto-Start Management).
+2. Find **BYD Maps Battery** and toggle the switch to **Allow Auto-Start**.
+   *(You can also launch this screen directly via ADB: `adb shell "am start -n com.byd.appstartmanagement/.frame.AppStartManagement"`)*
+
+---
 
 > **Tip:** You can test or position the overlay anytime by tapping **"👁️ Test / Show Overlay"** in the app settings screen.
 
