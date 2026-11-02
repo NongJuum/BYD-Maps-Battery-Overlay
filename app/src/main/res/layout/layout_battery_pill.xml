@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pill_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_pill_modern"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="6dp"
+    android:elevation="10dp">
+
+    <!-- จุดจับลาก (Drag Handle) -->
+    <TextView
+        android:id="@+id/tv_drag_handle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⠿"
+        android:textColor="#66FFFFFF"
+        android:textSize="16sp"
+        android:paddingEnd="8dp" />
+
+    <!-- 1. แบตเตอรี่ที่เหลือเมื่อถึงปลายทาง (SoC Destination) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🏁🔋"
+            android:textSize="13sp"
+            android:paddingEnd="4dp" />
+
+        <TextView
+            android:id="@+id/tv_destination_soc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--%"
+            android:textColor="#69F0AE"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- เส้นคั่น 1 -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#26FFFFFF" />
+
+    <!-- 2. ระยะที่รถวิ่งได้จริงคงเหลือ (Real Remaining Range) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚗"
+            android:textSize="13sp"
+            android:paddingEnd="4dp" />
+
+        <TextView
+            android:id="@+id/tv_real_range"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-- km"
+            android:textColor="#40C4FF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- เส้นคั่น 2 -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#26FFFFFF" />
+
+    <!-- 3. ระยะทางรวมไปจุดปลายทางตาม Google Maps (Total Nav Distance) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📍"
+            android:textSize="13sp"
+            android:paddingEnd="4dp" />
+
+        <TextView
+            android:id="@+id/tv_maps_distance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-- km"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- เส้นคั่น 3 -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#26FFFFFF" />
+
+    <!-- 4. อัตราสิ้นเปลืองปัจจุบัน 50km (Consumption) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚡"
+            android:textSize="13sp"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_consumption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#FFD54F"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- สัญลักษณ์แจ้งเตือนแวะชาร์จ / แบตเตอรี่ต่ำ -->
+    <TextView
+        android:id="@+id/tv_warning_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:background="@drawable/bg_alert_badge"
+        android:paddingStart="7dp"
+        android:paddingTop="3dp"
+        android:paddingEnd="7dp"
+        android:paddingBottom="3dp"
+        android:text="⚠️🔌"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+</LinearLayout>

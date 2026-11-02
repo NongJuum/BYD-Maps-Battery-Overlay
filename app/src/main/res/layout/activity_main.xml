@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F1115"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="18dp">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚡ BYD Smart EV Route &amp; Battery Overlay"
+            android:textColor="#FFFFFF"
+            android:textSize="21sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Developed by Nontarat Hasitapong"
+            android:textColor="#80D8FF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_detected_model"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="🚗 BYD Dolphin Standard / Thai Spec (50.25 kWh)"
+            android:textColor="#69F0AE"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- ส่วนที่ 1: ตั้งค่ารุ่นรถและขนาดแบตเตอรี่ด้วยตัวเอง (ป้องกันการดึงขนาดแบตผิดพลาด) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="14dp"
+            android:background="#1A1F29"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚙️ 1. โหมดข้อมูลรุ่นรถและแบตเตอรี่ (ค่าเริ่มต้น: ดึงจาก OBD อัตโนมัติ)"
+                android:textColor="#FFD54F"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="พื้นฐานแอปจะดึงข้อมูลจาก OBD ของรถโดยตรงก่อนเสมอ แต่หากรถรุ่นใดดึงขนาดแบตคลาดเคลื่อน สามารถเลือกเปลี่ยนเป็นรุ่นรถของคุณหรือกรอกขนาดแบตเองด้านล่างนี้ได้ครับ"
+                android:textColor="#90A4AE"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/spinner_car_model"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="10dp"
+                android:background="#263238"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp" />
+
+            <!-- กล่องกรอกเอง (แสดงเมื่อเลือก Custom หรือแก้ไขค่า) -->
+            <LinearLayout
+                android:id="@+id/layout_custom_inputs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/et_custom_model_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:layout_marginEnd="8dp"
+                    android:hint="ชื่อรุ่นรถ (เช่น BYD Seal)"
+                    android:inputType="text"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#78909C"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/et_custom_battery_kwh"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="ความจุแบต (kWh)"
+                    android:inputType="numberDecimal"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#78909C"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="สุขภาพแบตเตอรี่ (SOH %):"
+                    android:textColor="#CFD8DC"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/et_soh_percent"
+                    android:layout_width="70dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:gravity="center"
+                    android:inputType="number"
+                    android:text="98"
+                    android:textColor="#69F0AE"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="% (ค่าเริ่มต้น 95-100%)"
+                    android:textColor="#78909C"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_save_vehicle_profile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:backgroundTint="#FF8F00"
+                    android:text="💾 บันทึกข้อมูลรถ"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ส่วนที่ 2: การ์ดข้อมูล Live OBD / CAN Bus Telemetry -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_pill_modern"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📊 2. ข้อมูลสดจาก OBD / CAN Bus ของรถ (อัปเดตเรียลไทม์)"
+                android:textColor="#40C4FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="10dp"
+                android:background="#26FFFFFF" />
+
+            <TextView
+                android:id="@+id/tv_live_soc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔋 แบตเตอรี่ปัจจุบัน (OBD SoC): กำลังอ่านจากรถ..."
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_battery_health"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="🩺 ความจุแบตเตอรี่ที่ใช้คำนวณ: -- kWh"
+                android:textColor="#FFD54F"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tv_live_consumption_real"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="⚡ อัตรากินไฟเฉลี่ย 50 กม. ล่าสุด (OBD Past 50km): กำลังอ่าน..."
+                android:textColor="#69F0AE"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_real_range"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="🎯 ระยะทางวิ่งได้จริงคงเหลือ (Real Range): กำลังคำนวณ..."
+                android:textColor="#40C4FF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_nedc_range"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="📋 ระยะทางบนหน้าปัดรถ (Dashboard Range): -- กม."
+                android:textColor="#9E9E9E"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- คำอธิบายสัญลักษณ์บนหน้าต่างลอย (Icon Legend) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="10dp"
+            android:background="#1A1D24"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💡 ความหมายสัญลักษณ์บนแถบลอย (Floating Overlay)"
+                android:textColor="#FFD54F"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="• 🏁🔋 88-90% = แบตที่จะเหลือเมื่อถึงปลายทาง (เผื่อ Safety Buffer 2%)  |  🚗 = ระยะวิ่งจริงคงเหลือ\n• 📍 = ระยะทางรวมถึงจุดหมาย (Google Maps)  |  ⚡ = อัตรากินไฟ 50km (kWh/100km)\n• ⚠️🪫 (สีเหลือง) = แบตต่ำกว่า 20%  |  ⚠️🔌 (สีแดง) = แบตไม่พอถึงปลายทาง แนะนำแวะชาร์จ!"
+                android:textColor="#B0BEC5"
+                android:lineSpacingExtra="2dp"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- ปุ่มควบคุมและทดสอบสำหรับผู้ใช้ทั่วไป -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/btn_test_overlay"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#00C853"
+                android:text="👁️ แสดง/ทดสอบแถบลอย"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_reset_position"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:backgroundTint="#0288D1"
+                android:text="🔄 รีเซ็ตตำแหน่งแถบลอย"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
+
+            <Button
+                android:id="@+id/btn_permission_overlay"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#37474F"
+                android:text="1. สิทธิ์วางทับหน้าจอ"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_permission_notification"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:backgroundTint="#37474F"
+                android:text="2. สิทธิ์เชื่อมต่อ Google Maps"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- ปุ่มขอสิทธิ์เชื่อมต่อ OBD / ซ่อมสิทธิ์ทั้งหมดในคลิกเดียว (เผื่อกรณีสิทธิ์หลุดหลังอัปเดต OTA รถ) -->
+        <Button
+            android:id="@+id/btn_permission_obd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:backgroundTint="#6A1B9A"
+            android:text="🔌 3. ขอสิทธิ์เชื่อมต่อ OBD / ซ่อมสิทธิ์ทั้งหมดอัตโนมัติ (กดเมื่อสิทธิ์หลุด)"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- ปุ่ม Donate / ร่วมสนับสนุนผู้พัฒนา -->
+        <Button
+            android:id="@+id/btn_donate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#FF6F00"
+            android:text="☕ สนับสนุนผู้พัฒนา (Donate / ค่าน้ำชา)"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="#81C784"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+</ScrollView>

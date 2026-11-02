@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BYD Maps Battery</string>
+    <string name="app_title">BYD Maps Battery Overlay</string>
+    <string name="btn_notification_permission">2. อนุญาตสิทธิ์อ่าน Notification (Google Maps)</string>
+    <string name="btn_overlay_permission">1. อนุญาตสิทธิ์แสดงผลลอยทับ (Overlay)</string>
+    <string name="car_model_info">BYD Dolphin Standard Range (50.25 kWh)</string>
+    <string name="tv_overlay_permission_granted">สิทธิ์ Overlay เปิดใช้งานแล้ว</string>
+    <string name="tv_status_ready">สถานะ: พร้อมทำงานเบื้องหลัง\nเมื่อเปิดนำทางใน Google Maps แถบแบตเตอรี่จะแสดงอัตโนมัติ</string>
+</resources>

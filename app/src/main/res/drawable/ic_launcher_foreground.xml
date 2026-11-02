@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- เงาด้านหลังไอคอน -->
+    <path
+        android:fillColor="#44000000"
+        android:pathData="M54,22 C39.6,22 28,33.6 28,48 C28,66.5 54,88 54,88 C54,88 80,66.5 80,48 C80,33.6 68.4,22 54,22 Z" />
+
+    <!-- ตัวหมุดนำทาง Google Maps ทรงหยดน้ำไล่เฉดเขียวมรกต-ฟ้านีออน (EV Navigation Pin) -->
+    <path
+        android:pathData="M54,20 C39.6,20 28,31.6 28,46 C28,64.5 54,86 54,86 C54,86 80,64.5 80,46 C80,31.6 68.4,20 54,20 Z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#80FFFFFF">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="32"
+                android:startY="22"
+                android:endX="76"
+                android:endY="82"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF00E676" />
+                <item android:offset="0.55" android:color="#FF00BFA5" />
+                <item android:offset="1.0" android:color="#FF00B0FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- วงกลมสีเข้มด้านในหมุดนำทาง -->
+    <path
+        android:fillColor="#FF0D1622"
+        android:pathData="M54,46m-19,0a19,19 0,1 1,38 0a19,19 0,1 1,-38 0" />
+
+    <!-- กรอบแบตเตอรี่ภายในวงกลม -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF69F0AE"
+        android:strokeWidth="2.0"
+        android:pathData="M43,38 L61,38 C62.1,38 63,38.9 63,40 L63,52 C63,53.1 62.1,54 61,54 L43,54 C41.9,54 41,53.1 41,52 L41,40 C41,38.9 41.9,38 43,38 Z" />
+
+    <!-- ขั้วบวกแบตเตอรี่ด้านขวา -->
+    <path
+        android:fillColor="#FF69F0AE"
+        android:pathData="M64.2,43 L66.5,43 C67.1,43 67.5,43.4 67.5,44 L67.5,48 C67.5,48.6 67.1,49 66.5,49 L64.2,49 Z" />
+
+    <!-- แถบพลังงานในแบตเตอรี่ -->
+    <path
+        android:fillColor="#4400E676"
+        android:pathData="M43.5,40.5h17v11h-17z" />
+
+    <!-- สายฟ้าสีทองสว่างตรงกลางแบตเตอรี่ (EV Power Bolt) -->
+    <path
+        android:fillColor="#FFFFD600"
+        android:strokeColor="#FF0D1622"
+        android:strokeWidth="0.8"
+        android:pathData="M54.5,33.5 L46.5,46.5 L52.0,46.5 L49.5,58.5 L59.5,44.5 L53.5,44.5 Z" />
+
+</vector>
