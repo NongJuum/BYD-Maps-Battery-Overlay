@@ -23,6 +23,10 @@
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" />
 </p>
 
+<p align="center">
+  <img src="assets/hero_banner.jpg" alt="BYD Smart EV Route &amp; Battery Overlay Hero Banner" width="100%" style="border-radius: 12px;" />
+</p>
+
 ---
 
 ### 👨‍💻 Developer & Author
@@ -90,10 +94,12 @@
 
 ## ☕ Support & Donations
 
-This project was developed and open-sourced to give all BYD EV drivers around the world a safer, more reliable road trip experience. If this app helps your journeys, feel free to support future development with a cup of coffee! ❤️
+> **💡 Open Source & Community Spirit:**  
+> Anyone is welcome to use, fork, modify, or improve this project freely!  
+> However, if you find this project valuable and would like to show some kindness, treating the developer to a small **candy, treat, or coffee** is always warmly welcomed and deeply appreciated! 🙏🍬☕❤️
 
-### 🌐 International Supporters (Skrill)
-- **Skrill Account:** `canon.non.7@gmail.com
+- **International Supporters (Skrill):** `canon.non.7@gmail.com`
+- **Thailand Supporters (PromptPay):** In-app PromptPay QR Code is available directly inside the app under the Donate menu (*MR NONTARAT HASITAPONG*)
 
 ---
 
