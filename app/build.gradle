@@ -15,7 +15,19 @@ android {
         versionName '1.0.0'
     }
 
+    signingConfigs {
+        debug {
+            // Some vendor IVI package installers only accept legacy JAR (v1)
+            // signatures. Keep modern APK signing too for Android 7+.
+            enableV1Signing true
+            enableV2Signing true
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
