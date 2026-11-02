@@ -62,7 +62,6 @@ class BydVehicleBridge(
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
-            pollDirectBydHardwareApi()
             fetchOptionalOverDriveStatus()
         }, 0, 2, TimeUnit.SECONDS)
     }
