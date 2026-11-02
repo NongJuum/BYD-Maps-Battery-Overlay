@@ -58,15 +58,11 @@ class BydVehicleBridge(
 
     fun startListening() {
         applyUserVehicleProfile()
-        AutoPermissionHelper.ensureTelemetryDaemon(context)
-
+        diagnosticStatus = "กำลังอ่านข้อมูลจาก BYD Vehicle SDK (เส้นทางเดียวกับ DUDU Vehicle Information)"
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
-            // Self-heal if the shell daemon died or ADB was temporarily
-            // unavailable. The helper rate-limits reconnect attempts.
-            AutoPermissionHelper.ensureTelemetryDaemon(context)
-            fetchOptionalOverDriveStatus()
+            pollDirectBydHardwareApi()
         }, 0, 2, TimeUnit.SECONDS)
     }
 
@@ -231,12 +227,15 @@ class BydVehicleBridge(
     )
 
     private fun obtainDeviceInstance(clazz: Class<*>, diagnostics: MutableList<String>): Any? {
-        val factory = (clazz.methods + clazz.declaredMethods)
-            .firstOrNull {
-                it.name == "getInstance" &&
-                    Modifier.isStatic(it.modifiers) &&
-                    (it.parameterTypes.contentEquals(arrayOf(Context::class.java)) || it.parameterCount == 0)
-            }
+        val allMethods = (clazz.methods + clazz.declaredMethods).distinctBy { methodSignature(it) }
+        // DUDU's Vehicle Information widget uses BYDAutoStatisticDevice.self().
+        // Prefer the same firmware singleton before optional getInstance factories.
+        val factory = allMethods.firstOrNull {
+            it.name == "self" && Modifier.isStatic(it.modifiers) && it.parameterCount == 0
+        } ?: allMethods.firstOrNull {
+            it.name == "getInstance" && Modifier.isStatic(it.modifiers) &&
+                (it.parameterTypes.contentEquals(arrayOf(Context::class.java)) || it.parameterCount == 0)
+        }
 
         if (factory == null) {
             diagnostics += "${clazz.simpleName}: INSTANCE_FACTORY_NOT_FOUND"
@@ -253,13 +252,13 @@ class BydVehicleBridge(
             if (instance == null) {
                 diagnostics += "${clazz.simpleName}: GET_INSTANCE_RETURNED_NULL"
             } else {
-                diagnostics += "${clazz.simpleName}: INSTANCE_OK"
+                diagnostics += "${clazz.simpleName}: ${factory.name}() INSTANCE_OK"
             }
             instance
         } catch (e: Throwable) {
             val cause = e.cause ?: e
             diagnostics += "${clazz.simpleName}: GET_INSTANCE_FAILED (${cause.javaClass.simpleName}: ${cause.message})"
-            Log.e(tag, "BYD API getInstance failed: ${clazz.name}", cause)
+            Log.e(tag, "BYD API ${factory.name} failed: ${clazz.name}", cause)
             null
         }
     }
