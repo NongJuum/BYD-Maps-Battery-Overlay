@@ -210,8 +210,11 @@ class BydVehicleBridge(
             "$shortName=${if (granted) "GRANTED" else "DENIED"}"
         }
         diagnostics += "permissions: ${permissionResults.joinToString()}"
-        diagnosticStatus = diagnostics.joinToString(" | ")
-        Log.i(tag, "BYD native API diagnostic: $diagnosticStatus")
+        val newDiagnosticStatus = diagnostics.joinToString(" | ")
+        if (newDiagnosticStatus != diagnosticStatus) {
+            diagnosticStatus = newDiagnosticStatus
+            Log.i(tag, "BYD native API diagnostic: $diagnosticStatus")
+        }
 
         if (updated) {
             recalculateRealTelemetry()
