@@ -147,6 +147,10 @@ object AutoPermissionHelper {
      * activities. Use the already-authorized local ADB shell to enable the
      * Maps notification listener and overlay app-op directly, then verify.
      */
+    /**
+     * IVI firmware may not implement standard Android Settings permission screens.
+     * Configure the Maps listener and overlay through the local ADB shell instead.
+     */
     fun enableMapsAndOverlayAccess(context: Context, onResult: (String) -> Unit) {
         val appContext = context.applicationContext ?: context
         Thread({
@@ -155,86 +159,26 @@ object AutoPermissionHelper {
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
                     val command = """
                         COMPONENT=com.byd.mapsoverlay/com.byd.mapsoverlay.MapsNotificationListener
-                        cmd notification allow_listener \$COMPONENT >/dev/null 2>&1
-                        LISTENERS=\$(settings get secure enabled_notification_listeners)
-                        case ":\$LISTENERS:" in
-                          *":\$COMPONENT:"*) ;;
+                        cmd notification allow_listener \${'$'}COMPONENT >/dev/null 2>&1
+                        LISTENERS=\${'$'}(settings get secure enabled_notification_listeners)
+                        case ":\${'$'}LISTENERS:" in
+                          *":\${'$'}COMPONENT:"*) ;;
                           *)
-                            if [ "\$LISTENERS" = "null" ] || [ -z "\$LISTENERS" ]; then
-                              settings put secure enabled_notification_listeners "\$COMPONENT"
+                            if [ "\${'$'}LISTENERS" = "null" ] || [ -z "\${'$'}LISTENERS" ]; then
+                              settings put secure enabled_notification_listeners "\${'$'}COMPONENT"
                             else
-                              settings put secure enabled_notification_listeners "\$LISTENERS:\$COMPONENT"
+                              settings put secure enabled_notification_listeners "\${'$'}LISTENERS:\${'$'}COMPONENT"
                             fi
                             ;;
                         esac
                         appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
                         for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                          pm grant com.byd.mapsoverlay android.permission.\${'
-        listOf(
-            "BYDAUTO_STATISTIC_GET",
-            "BYDAUTO_INSTRUMENT_GET",
-            "BYDAUTO_POWER_GET",
-            "BYDAUTO_ENERGY_GET"
-        ).forEach { name ->
-            val permission = "android.permission.$name"
-            val granted = try {
-                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
-            } catch (_: Exception) {
-                false
-            }
-            // These checks describe the ordinary app UID, not the shell daemon.
-            Log.i(TAG, "$permission appUid=${if (granted) "GRANTED" else "DENIED"}")
-        }
-    }
-
-    fun isAllPermissionsReady(context: Context): Boolean {
-        val overlayOk = Settings.canDrawOverlays(context)
-        val enabledListeners = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners"
-        ) ?: ""
-        return overlayOk && enabledListeners.contains(context.packageName)
-    }
-
-    fun openOverlayPermissionScreen(context: Context): Boolean {
-        val intents = listOf(
-            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
-            Intent().setComponent(ComponentName("com.byd.carsettings", "com.byd.carsettings.permission.PermissionManageActivity")),
-            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}AppDrawOverlaySettingsActivity")),
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-        )
-        for (intent in intents) {
-            try {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-                return true
-            } catch (_: Exception) {}
-        }
-        return false
-    }
-
-    fun openNotificationPermissionScreen(context: Context): Boolean {
-        val intents = listOf(
-            Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
-            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}NotificationAccessSettingsActivity")),
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-        )
-        for (intent in intents) {
-            try {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-                return true
-            } catch (_: Exception) {}
-        }
-        return false
-    }
-}
-}PERMISSION >/dev/null 2>&1 || true
+                          pm grant com.byd.mapsoverlay android.permission.\${'$'}PERMISSION >/dev/null 2>&1 || true
                         done
-                        VERIFIED=\$(settings get secure enabled_notification_listeners)
-                        OVERLAY=\$(appops get com.byd.mapsoverlay SYSTEM_ALERT_WINDOW)
-                        echo "LISTENER=\$VERIFIED"
-                        echo "OVERLAY=\$OVERLAY"
+                        VERIFIED=\${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=\${'$'}(appops get com.byd.mapsoverlay SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=\${'$'}VERIFIED"
+                        echo "OVERLAY=\${'$'}OVERLAY"
                     """.trimIndent()
                     val response = adb.shell(command)
                     val output = response.output
@@ -245,8 +189,8 @@ object AutoPermissionHelper {
                         !output.contains("OVERLAY=ignore")
                     when {
                         listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
-                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: \$output"
-                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: \$output"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: \${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: \${output}"
                     }
                 }
             } catch (t: Throwable) {
@@ -270,7 +214,6 @@ object AutoPermissionHelper {
             AdbKeyPair.read(privateKey, publicKey)
         }
     }
-
     fun logBydPermissionState(context: Context) {
         listOf(
             "BYDAUTO_STATISTIC_GET",
