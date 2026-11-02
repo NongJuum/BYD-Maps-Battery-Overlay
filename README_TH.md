@@ -26,7 +26,7 @@
 ---
 
 ### 👨‍💻 ข้อมูลผู้พัฒนา (Author & Developer)
-- **ผู้พัฒนา (Developer):** นาย นนทรัฐ หะสิตะพงษ์ (Nontarat Hasitapong)
+- **ผู้พัฒนา (Developer):** Nontarat Hasitapong
 - **อีเมลติดต่อ / Support:** [canon.non.7@gmail.com](mailto:canon.non.7@gmail.com)
 
 ---
