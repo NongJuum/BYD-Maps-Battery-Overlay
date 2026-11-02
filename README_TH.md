@@ -118,3 +118,6 @@
 
 Copyright (c) 2026 Nontarat Hasitapong.  
 Distributed under the MIT License.
+
+
+<!-- Rebuild trigger: verify legacy APK signature compatibility for Android 10 IVI installers. -->
