@@ -59,11 +59,11 @@ object AutoPermissionHelper {
     }
 
     /**
-     * This does not claim signature permissions were granted. It starts the
-     * shell-UID reader and reports overlay/notification-listener state only.
+     * Vehicle telemetry is read through the same BYD SDK singleton path used by
+     * DUDU Vehicle Information. Do not start the legacy shell daemon here.
+     * ADB remains isolated to the optional IVI permission-setup actions below.
      */
     fun grantAllPermissionsSilently(context: Context, onStatusUpdated: ((Boolean) -> Unit)? = null) {
-        ensureTelemetryDaemon(context)
         logBydPermissionState(context)
         onStatusUpdated?.invoke(isAllPermissionsReady(context))
     }
