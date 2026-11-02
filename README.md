@@ -26,7 +26,7 @@
 ---
 
 ### 👨‍💻 Developer & Author
-- **Developer:** Nontarat Hasitapong (นาย นนทรัฐ หะสิตะพงษ์)
+- **Developer:** Nontarat Hasitapong
 - **Contact / Support Email:** [canon.non.7@gmail.com](mailto:canon.non.7@gmail.com)
 
 ---
