@@ -9,20 +9,9 @@ import android.provider.Settings
 import android.util.Log
 
 /**
- * AutoPermissionHelper:
- * ปลดล็อกสิทธิ์ทั้งหมดของรถ BYD อัตโนมัติเพื่อให้ผู้ใช้คนอื่นที่ได้ไฟล์ APK ไปติดตั้ง
- * สามารถใช้งานได้เหมือนเครื่องต้นแบบ 100% โดยไม่ต้องต่อคอมพิวเตอร์:
- *
- * 1. Runtime Permission Request สำหรับ `android.permission.BYDAUTO_*`
- * 2. Built-in Local Loopback ADB Client (`127.0.0.1:5555` via Dadb):
- *    เมื่อผู้ใช้เปิด Wireless Debugging / ADB บนจอรถ ตัวแอปจะเชื่อมต่อเข้า `127.0.0.1:5555` ของตัวเองโดยอัตโนมัติ
- *    เพื่อรันคำสั่งปลดล็อกทุกสิทธิ์ที่ถูกระบบ BYD บล็อกหน้าตั้งค่า:
- *    - `appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow` (สิทธิ์วางทับหน้าจอ)
- *    - `cmd notification allow_listener com.byd.mapsoverlay/.MapsNotificationListener` (สิทธิ์อ่านระยะทาง Google Maps)
- *    - `pm grant com.byd.mapsoverlay android.permission.READ_LOGS` (สิทธิ์อ่าน CAN Bus / OBD Stream)
- *    - `pm grant com.byd.mapsoverlay android.permission.BYDAUTO_*` (สิทธิ์อ่านกล่อง BMS รถโดยตรง)
- * 3. Root / Shell Fallback (`su` / `sh`)
- * 4. BYD DiLink Custom Permission Manager Intents (กรณีผู้ใช้กดปุ่มตั้งค่าด้วยตัวเอง)
+ * จัดการเฉพาะสิทธิ์ overlay และ notification listener ที่แอปตรวจสอบ/ตั้งค่าได้
+ * ส่วน BYDAUTO_*_GET เป็น signature permissions ต้องได้รับอนุญาตจาก firmware
+ * ไม่สามารถยกระดับสิทธิ์ด้วย runtime dialog หรือ pm grant จากแอปทั่วไปได้
  */
 object AutoPermissionHelper {
     private const val TAG = "AutoPermissionHelper"
@@ -86,9 +75,7 @@ object AutoPermissionHelper {
      * ตรวจสอบว่าสิทธิ์สำคัญครบทั้ง Overlay และ Notification Listener หรือยัง
      */
     fun isAllPermissionsReady(context: Context): Boolean {
-        val overlayOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(context)
-        } else true
+        val overlayOk = Settings.canDrawOverlays(context)
 
         val enabledListeners = Settings.Secure.getString(
             context.contentResolver,
