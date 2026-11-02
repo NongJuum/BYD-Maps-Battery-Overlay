@@ -253,6 +253,66 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
+        <!-- OverDrive remote telemetry connection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="12dp"
+            android:background="#1A1F29"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OverDrive Remote Telemetry"
+                android:textColor="#40C4FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="เชื่อมข้อมูลรถผ่าน OverDrive Tunnel โดยตรง ไม่ต้องตั้ง MQTT Broker เพิ่ม"
+                android:textColor="#90A4AE"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/et_overdrive_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="OverDrive HTTPS URL"
+                android:inputType="textUri"
+                android:singleLine="true"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#78909C"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/et_overdrive_token"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:hint="OverDrive Device Token"
+                android:inputType="textPassword"
+                android:singleLine="true"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#78909C"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btn_save_overdrive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:backgroundTint="#00796B"
+                android:text="Save &amp; Connect OverDrive"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
         <!-- ปุ่มควบคุมและทดสอบสำหรับผู้ใช้ทั่วไป -->
         <LinearLayout
             android:layout_width="match_parent"
