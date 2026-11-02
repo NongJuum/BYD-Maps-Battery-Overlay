@@ -3,6 +3,7 @@ package com.byd.mapsoverlay;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.os.SystemClock;
+import android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener;
 
 import org.json.JSONObject;
 
@@ -23,6 +24,36 @@ public final class BydTelemetryDaemon {
     private static final String TAG = "BydTelemetryDaemon";
     private static final int PORT = 19878;
     private static volatile JSONObject snapshot = unavailable("Starting");
+    private static volatile double callbackSoc = -1.0;
+    private static volatile int callbackRangeKm = -1;
+    private static volatile float callbackRemainKwh = -1.0f;
+    private static volatile Object registeredStatisticDevice;
+
+    // A concrete subclass is required: BYD does not reliably dispatch SoC
+    // events through a generic java.lang.reflect.Proxy.
+    private static final AbsBYDAutoStatisticListener STATISTIC_LISTENER =
+            new AbsBYDAutoStatisticListener() {
+        @Override public void onElecPercentageChanged(double percentage) {
+            if (percentage >= 0.0 && percentage <= 100.0) {
+                callbackSoc = percentage;
+                log("BYD callback onElecPercentageChanged=" + percentage);
+            } else {
+                log("Ignoring out-of-range SoC callback=" + percentage);
+            }
+        }
+        @Override public void onElecDrivingRangeChanged(int rangeKm) {
+            if (rangeKm >= 0 && rangeKm <= 1500) {
+                callbackRangeKm = rangeKm;
+                log("BYD callback onElecDrivingRangeChanged=" + rangeKm);
+            }
+        }
+        @Override public void onEVRemainingBatteryPowerChanged(float remainingKwh) {
+            if (remainingKwh >= 0.0f && remainingKwh <= 200.0f) {
+                callbackRemainKwh = remainingKwh;
+                log("BYD callback onEVRemainingBatteryPowerChanged=" + remainingKwh);
+            }
+        }
+    };
 
     private BydTelemetryDaemon() {}
 
@@ -124,6 +155,7 @@ public final class BydTelemetryDaemon {
                 if (statistic == null) {
                     statistic = getDevice("android.hardware.bydauto.statistic.BYDAutoStatisticDevice", context);
                     log("Statistic device " + (statistic == null ? "unavailable" : "initialized"));
+                    if (statistic != null) registerStatisticListener(statistic);
                 }
                 if (power == null) {
                     power = getDevice("android.hardware.bydauto.power.BYDAutoPowerDevice", context);
@@ -139,11 +171,14 @@ public final class BydTelemetryDaemon {
                 data.put("source", "BYD SDK via app_process");
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
 
-                Double soc = number(statistic, "getElecPercentageValue");
+                Double polledSoc = number(statistic, "getElecPercentageValue");
+                Double soc = callbackSoc >= 0.0 ? callbackSoc : polledSoc;
                 Double statisticRemaining = number(statistic, "getStatisticRemainingBatteryPower");
                 Double lastConsumption = number(statistic, "getLastElecConPHMValue");
-                Integer range = integer(statistic, "getElecDrivingRangeValue");
-                Double remain = number(power, "getBatteryRemainPowerEV");
+                Integer polledRange = integer(statistic, "getElecDrivingRangeValue");
+                Integer range = callbackRangeKm >= 0 ? callbackRangeKm : polledRange;
+                Double polledRemain = number(power, "getBatteryRemainPowerEV");
+                Double remain = callbackRemainKwh >= 0.0f ? (double) callbackRemainKwh : polledRemain;
                 Double consumption = number(instrument, "getLast50KmPowerConsume");
                 if (soc != null && soc >= 0 && soc <= 100) {
                     JSONObject socObject = new JSONObject();
@@ -185,6 +220,36 @@ public final class BydTelemetryDaemon {
             try { Thread.sleep(2000); } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+        }
+    }
+
+    private static synchronized void registerStatisticListener(Object device) {
+        if (registeredStatisticDevice == device) return;
+        try {
+            Class<?> listenerType = Class.forName(
+                    "android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener",
+                    true,
+                    device.getClass().getClassLoader());
+            Method register = device.getClass().getMethod("registerListener", listenerType);
+            register.invoke(device, STATISTIC_LISTENER);
+            registeredStatisticDevice = device;
+            log("Registered concrete BYD AbsBYDAutoStatisticListener successfully");
+        } catch (NoSuchMethodException missingSingleArg) {
+            try {
+                Class<?> listenerType = Class.forName(
+                        "android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener",
+                        true,
+                        device.getClass().getClassLoader());
+                Method register = device.getClass().getMethod(
+                        "registerListener", listenerType, int[].class);
+                register.invoke(device, STATISTIC_LISTENER, new int[0]);
+                registeredStatisticDevice = device;
+                log("Registered concrete BYD listener using subscribe-all overload");
+            } catch (Throwable t) {
+                log("BYD listener registration failed: " + t);
+            }
+        } catch (Throwable t) {
+            log("BYD listener registration failed: " + t);
         }
     }
 

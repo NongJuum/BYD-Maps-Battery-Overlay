@@ -185,37 +185,28 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnOverlay.setOnClickListener {
-            AutoPermissionHelper.grantAllPermissionsSilently(this) { _ ->
+            tvStatus.text = "กำลังเปิดสิทธิ์ Overlay ผ่าน IVI ADB..."
+            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
                 runOnUiThread {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                        Toast.makeText(this, "✅ Overlay permission granted! (เปิดสิทธิ์เรียบร้อย)", Toast.LENGTH_SHORT).show()
-                    } else if (!AutoPermissionHelper.openOverlayPermissionScreen(this)) {
-                        Toast.makeText(
-                            this,
-                            "💡 Please enable ADB / Wireless Debugging in car settings, then tap this button again.\n(กรุณาเปิดสวิตช์ ADB ในตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง)",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                    tvStatus.text = result
+                    Toast.makeText(this, result, Toast.LENGTH_LONG).show()
                 }
             }
         }
 
         btnNotification.setOnClickListener {
-            AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
+            tvStatus.text = "กำลังเปิดสิทธิ์อ่านการนำทาง Google Maps ผ่าน IVI ADB..."
+            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
                 runOnUiThread {
-                    if (ready) {
-                        Toast.makeText(this, "✅ Google Maps & OBD permissions active! (เชื่อมต่อสิทธิ์เรียบร้อย)", Toast.LENGTH_SHORT).show()
-                    } else if (!AutoPermissionHelper.openNotificationPermissionScreen(this)) {
-                        Toast.makeText(
-                            this,
-                            "💡 Please enable ADB / Wireless Debugging in car settings, then tap this button again.\n(กรุณาเปิดสวิตช์ ADB ในตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง)",
-                            Toast.LENGTH_LONG
-                        ).show()
+                    tvStatus.text = result
+                    Toast.makeText(this, result, Toast.LENGTH_LONG).show()
+                    if (result.contains("สำเร็จ")) {
+                        vehicleBridge.restartConnection()
+                        vehicleBridge.notifyUpdate()
                     }
                 }
             }
         }
-
         btnObdPermission.setOnClickListener {
             Toast.makeText(this, "🔄 Requesting OBD permissions... (กำลังขอสิทธิ์ OBD)", Toast.LENGTH_SHORT).show()
             AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->

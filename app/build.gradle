@@ -52,11 +52,35 @@ android {
     }
 }
 
+// Build the OEM listener declaration as a compile-only jar. It must NOT be
+// packaged: on the head unit the class is supplied by BYD's installed SDK.
+tasks.register('compileBydSdkStubs', JavaCompile) {
+    source = fileTree('stubs-bydauto') { include '**/*.java' }
+    destinationDirectory = layout.buildDirectory.dir('byd-sdk-stubs/classes')
+    classpath = files()
+    options.release = 8
+}
+tasks.register('packageBydSdkStubs', Jar) {
+    dependsOn tasks.named('compileBydSdkStubs')
+    archiveFileName = 'bydauto-stubs.jar'
+    destinationDirectory = layout.buildDirectory.dir('byd-sdk-stubs')
+    from(layout.buildDirectory.dir('byd-sdk-stubs/classes'))
+}
+
+configurations {
+    bydSdkCompileOnly
+}
+
 dependencies {
+    compileOnly files(layout.buildDirectory.file('byd-sdk-stubs/bydauto-stubs.jar'))
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'dev.mobile:dadb:1.2.8'
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('packageBydSdkStubs')
 }
 
 afterEvaluate {

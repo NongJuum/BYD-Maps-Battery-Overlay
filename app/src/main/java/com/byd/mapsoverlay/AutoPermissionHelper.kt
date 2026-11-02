@@ -142,6 +142,78 @@ object AutoPermissionHelper {
         }
     }
 
+    /**
+     * IVI builds may not implement the standard Android permission-settings
+     * activities. Use the already-authorized local ADB shell to enable the
+     * Maps notification listener and overlay app-op directly, then verify.
+     */
+    /**
+     * IVI firmware may not implement standard Android Settings permission screens.
+     * Configure the Maps listener and overlay through the local ADB shell instead.
+     */
+    fun enableMapsAndOverlayAccess(context: Context, onResult: (String) -> Unit) {
+        val appContext = context.applicationContext ?: context
+        Thread({
+            val result = try {
+                val keyPair = loadOrCreateAdbKeyPair(appContext)
+                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
+                    val command = """
+                        COMPONENT=com.byd.mapsoverlay/com.byd.mapsoverlay.MapsNotificationListener
+                        cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
+                        LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
+                        case ":${'$'}LISTENERS:" in
+                          *":${'$'}COMPONENT:"*) ;;
+                          *)
+                            if [ "${'$'}LISTENERS" = "null" ] || [ -z "${'$'}LISTENERS" ]; then
+                              settings put secure enabled_notification_listeners "${'$'}COMPONENT"
+                            else
+                              settings put secure enabled_notification_listeners "${'$'}LISTENERS:${'$'}COMPONENT"
+                            fi
+                            ;;
+                        esac
+                        appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        done
+                        VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=${'$'}(appops get com.byd.mapsoverlay SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("com.byd.mapsoverlay.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun loadOrCreateAdbKeyPair(context: Context): AdbKeyPair {
+        val privateKey = File(context.filesDir, "adbkey")
+        val publicKey = File(context.filesDir, "adbkey.pub")
+        return if (privateKey.exists() && publicKey.exists()) {
+            AdbKeyPair.read(privateKey, publicKey)
+        } else {
+            AdbKeyPair.generate(privateKey, publicKey)
+            AdbKeyPair.read(privateKey, publicKey)
+        }
+    }
     fun logBydPermissionState(context: Context) {
         listOf(
             "BYDAUTO_STATISTIC_GET",
