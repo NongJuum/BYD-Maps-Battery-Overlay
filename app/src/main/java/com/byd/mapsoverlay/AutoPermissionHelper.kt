@@ -112,6 +112,10 @@ object AutoPermissionHelper {
                 }
 
                 val command = """
+                    # Grant only the runtime COMMON permissions requested by this app.
+                    for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                      pm grant com.byd.mapsoverlay android.permission.$PERMISSION >/dev/null 2>&1 || true
+                    done
                     APK_PATH=$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then
                       echo APK_NOT_FOUND
