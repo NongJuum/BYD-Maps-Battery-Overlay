@@ -1,12 +1,12 @@
 package com.byd.mapsoverlay
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
-import android.content.pm.PackageManager
+import android.util.Log
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
-import android.util.Log
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -21,7 +21,7 @@ import kotlin.math.roundToInt
  * BydVehicleBridge:
  * - รุ่นรถและขนาดความจุแบตเตอรี่ตั้งต้น: อ่านจาก VehicleProfileManager ที่ผู้ใช้เลือกรุ่นรถหรือกรอกเองเป็นหลัก
  *   (ป้องกันปัญหาบางรุ่นดึงขนาดแบตผิดพลาด) และหาก BMS ส่งค่า kWh จริงมา ก็ใช้ประกอบได้
- * - ข้อมูลการขับขี่สด (Live Telemetry): ดึงจาก OBD / CAN Bus ของรถโดยตรง 100%:
+ * - ทดลองอ่าน telemetry ผ่าน BYD native API; จะถือว่าอ่านสำเร็จต่อเมื่อ API คืนค่าจริงเท่านั้น:
  *   1. % แบตเตอรี่ปัจจุบัน (SoC) -> BYDAutoStatisticDevice.getElecPercentageValue
  *   2. อัตราการกินไฟเฉลี่ย 50 กม. ล่าสุด (Past 50 km) -> BYDAutoInstrumentDevice.getLast50KmPowerConsume / getLastElecConPHMValue
  *   3. พลังงานคงเหลือจริง (kWh) และระยะทางหน้าปัด -> BYDAutoPowerDevice.getBatteryRemainPowerEV / getElecDrivingRangeValue
@@ -55,8 +55,6 @@ class BydVehicleBridge(
         private set
 
     private var executor: ScheduledExecutorService? = null
-    private var isStreamingCan = false
-    private var canLogcatProcess: Process? = null
 
     fun startListening() {
         applyUserVehicleProfile()
@@ -70,15 +68,12 @@ class BydVehicleBridge(
     }
 
     fun stopListening() {
-        isStreamingCan = false
-        canLogcatProcess?.destroy()
-        canLogcatProcess = null
         executor?.shutdownNow()
         executor = null
     }
 
     /**
-     * รีสตาร์ทการเชื่อมต่อท่อข้อมูล OBD / CAN Bus ใหม่ทันที (ใช้เมื่อกดปุ่มขอสิทธิ์/ซ่อมสิทธิ์ในแอป)
+     * เริ่มรอบตรวจสอบ BYD native API ใหม่ทันที
      */
     fun restartConnection() {
         stopListening()
