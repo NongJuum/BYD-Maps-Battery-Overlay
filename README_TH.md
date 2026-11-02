@@ -19,7 +19,7 @@
   <img src="https://img.shields.io/badge/Developer-Nontarat%20Hasitapong-00E676?style=for-the-badge&logo=android" />
   <img src="https://img.shields.io/badge/Platform-BYD%20DiLink%20%7C%20Android-green?style=for-the-badge&logo=android" />
   <img src="https://img.shields.io/badge/Google%20Maps-Supported-blue?style=for-the-badge&logo=googlemaps" />
-  <img src="https://img.shields.io/badge/Hardware-Direct%20CAN%20%2F%20OBD-orange?style=for-the-badge" />
+  <a href="https://www.buymeacoffee.com/nongjuum"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-nongjuum-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" /></a>
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" />
 </p>
 
@@ -98,7 +98,16 @@
 > ใครจะนำโปรเจกต์นี้ โค้ด หรือตัวแอปไปใช้งาน ดัดแปลง แก้ไข หรือนำไปพัฒนาปรับปรุงต่อ **สามารถนำไปใช้ได้อย่างอิสระเต็มที่เลยครับ!**  
 > แต่หากมีความเมตตา และเห็นว่าสิ่งนี้มีประโยชน์ อยากแบ่งปัน **ค่าขนม / ค่าลูกอม / ค่าน้ำชา** ให้ผมสักนิดเพื่อเป็นกำลังใจเล็กๆ น้อยๆ ในการสร้างสรรค์ผลงานต่อไป ก็ยินดีและขอบพระคุณจากใจจริงครับ 🙏🍬❤️
 
-- **พร้อมเพย์ (PromptPay):** สามารถเปิดสแกน PromptPay QR Code ผ่านเมนู Donate ในตัวแอปได้โดยตรง (*ชื่อบัญชี: นาย นนทรัฐ หะสิตะพงษ์*)
+<p align="center">
+  <a href="https://www.buymeacoffee.com/nongjuum" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" />
+  </a><br><br>
+  <img src="assets/qr_buymeacoffee.png" width="180" alt="Buy Me A Coffee QR Code" /><br>
+  <b><a href="https://www.buymeacoffee.com/nongjuum">buymeacoffee.com/nongjuum</a></b><br>
+  <i>(รองรับทั้งบัตรเครดิต/เดบิต, Apple Pay, Google Pay ทั่วโลก ปลอดภัย 100%)</i>
+</p>
+
+### 🌐 ช่องทางอื่นๆ:
 - **Skrill (ต่างประเทศ / International):** `canon.non.7@gmail.com`
 ---
 

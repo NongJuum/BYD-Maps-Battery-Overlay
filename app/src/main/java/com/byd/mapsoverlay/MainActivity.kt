@@ -247,6 +247,22 @@ class MainActivity : AppCompatActivity() {
 
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
+        dialogView.findViewById<Button>(R.id.btn_open_bmc)?.setOnClickListener {
+            try {
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.buymeacoffee.com/nongjuum"))
+                startActivity(browserIntent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "https://www.buymeacoffee.com/nongjuum", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        dialogView.findViewById<Button>(R.id.btn_copy_bmc)?.setOnClickListener {
+            val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("Buy Me a Coffee", "https://www.buymeacoffee.com/nongjuum")
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "คัดลอกลิงก์ buymeacoffee.com/nongjuum เรียบร้อยแล้ว", Toast.LENGTH_SHORT).show()
+        }
+
         dialogView.findViewById<Button>(R.id.btn_copy_skrill)?.setOnClickListener {
             val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("Skrill Email", "canon.non.7@gmail.com")
