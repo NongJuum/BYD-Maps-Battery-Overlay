@@ -80,7 +80,7 @@ object AutoPermissionHelper {
                     if pidof byd_maps_telemetry_daemon >/dev/null 2>&1; then
                       echo ALREADY_RUNNING
                     else
-                      CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=byd_maps_telemetry_daemon com.byd.mapsoverlay.BydTelemetryDaemon >/data/local/tmp/byd_maps_telemetry_daemon.log 2>&1 &
+                      CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=byd_maps_telemetry_daemon com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/data/local/tmp/byd_maps_telemetry_daemon.log 2>&1 &
                       sleep 1
                       if pidof byd_maps_telemetry_daemon >/dev/null 2>&1; then echo STARTED; else cat /data/local/tmp/byd_maps_telemetry_daemon.log 2>/dev/null; exit 22; fi
                     fi
