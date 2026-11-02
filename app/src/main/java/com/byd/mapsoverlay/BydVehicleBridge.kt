@@ -58,10 +58,14 @@ class BydVehicleBridge(
 
     fun startListening() {
         applyUserVehicleProfile()
+        AutoPermissionHelper.ensureTelemetryDaemon(context)
 
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
+            // Self-heal if the shell daemon died or ADB was temporarily
+            // unavailable. The helper rate-limits reconnect attempts.
+            AutoPermissionHelper.ensureTelemetryDaemon(context)
             fetchOptionalOverDriveStatus()
         }, 0, 2, TimeUnit.SECONDS)
     }
@@ -275,6 +279,13 @@ class BydVehicleBridge(
             try {
                 if (conn.responseCode != 200) return
                 val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val daemonStatus = json.optString("status", "UNKNOWN")
+                val daemonError = json.optString("error", "")
+                diagnosticStatus = if (daemonError.isNotBlank()) {
+                    "Shell telemetry daemon: $daemonStatus ($daemonError)"
+                } else {
+                    "Shell telemetry daemon: $daemonStatus (uid=${json.optInt("uid", -1)})"
+                }
                 val socObject = json.optJSONObject("soc")
                 val soc = socObject?.optDouble("percent", -1.0) ?: -1.0
                 if (soc in 0.0..100.0) currentSoc = soc
@@ -291,7 +302,6 @@ class BydVehicleBridge(
                 if (consumption in 1.0..60.0) currentConsumption = consumption
 
                 if (soc >= 0.0 || range > 0 || remain > 0.0) {
-                    diagnosticStatus = "Shell telemetry daemon: ${json.optString("status")} (uid=${json.optInt("uid", -1)})"
                     recalculateRealTelemetry()
                     notifyUpdate()
                 }
