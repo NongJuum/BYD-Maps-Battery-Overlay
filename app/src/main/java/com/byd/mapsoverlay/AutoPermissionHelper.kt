@@ -114,7 +114,290 @@ object AutoPermissionHelper {
                 val command = """
                     # Grant only the runtime COMMON permissions requested by this app.
                     for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                      pm grant com.byd.mapsoverlay android.permission.$PERMISSION >/dev/null 2>&1 || true
+                      pm grant com.byd.mapsoverlay android.permission.${' >/dev/null 2>&1 || true
+                    done
+                    APK_PATH=$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
+                    if [ -z "${'$'}APK_PATH" ]; then
+                      echo APK_NOT_FOUND
+                      exit 21
+                    fi
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo ALREADY_RUNNING
+                      exit 0
+                    fi
+                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    sleep 1
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo STARTED
+                      exit 0
+                    fi
+                    cat /data/local/tmp/$DAEMON_NAME.log 2>/dev/null
+                    echo START_FAILED
+                    exit 22
+                """.trimIndent()
+
+                val response = adb.shell(command)
+                val output = response.output
+                Log.i(TAG, "ADB daemon launch exit=${response.exitCode}; output=${output.take(1200)}")
+                response.exitCode == 0 &&
+                    (output.contains("STARTED") || output.contains("ALREADY_RUNNING"))
+            }
+        } catch (t: Throwable) {
+            Log.e(
+                TAG,
+                "Local ADB connection to 127.0.0.1:5555 failed. Confirm the head unit's ADB service is enabled and authorize this app's key if prompted.",
+                t
+            )
+            false
+        }
+    }
+
+    fun logBydPermissionState(context: Context) {
+        listOf(
+            "BYDAUTO_STATISTIC_GET",
+            "BYDAUTO_INSTRUMENT_GET",
+            "BYDAUTO_POWER_GET",
+            "BYDAUTO_ENERGY_GET"
+        ).forEach { name ->
+            val permission = "android.permission.$name"
+            val granted = try {
+                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+            } catch (_: Exception) {
+                false
+            }
+            // These checks describe the ordinary app UID only. The daemon runs
+            // as shell UID and uses the BYD SDK with a permission-bypass Context.
+            Log.i(TAG, "$permission appUid=${if (granted) "GRANTED" else "DENIED"}")
+        }
+    }
+
+    fun isAllPermissionsReady(context: Context): Boolean {
+        val overlayOk = Settings.canDrawOverlays(context)
+        val enabledListeners = Settings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        ) ?: ""
+        return overlayOk && enabledListeners.contains(context.packageName)
+    }
+
+    fun openOverlayPermissionScreen(context: Context): Boolean {
+        val intents = listOf(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
+            Intent().setComponent(ComponentName("com.byd.carsettings", "com.byd.carsettings.permission.PermissionManageActivity")),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}AppDrawOverlaySettingsActivity")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+
+    fun openNotificationPermissionScreen(context: Context): Boolean {
+        val intents = listOf(
+            Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}NotificationAccessSettingsActivity")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+}
+}APK_PATH" ]; then
+                      echo APK_NOT_FOUND
+                      exit 21
+                    fi
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo ALREADY_RUNNING
+                      exit 0
+                    fi
+                    CLASSPATH="${'" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    sleep 1
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo STARTED
+                      exit 0
+                    fi
+                    cat /data/local/tmp/$DAEMON_NAME.log 2>/dev/null
+                    echo START_FAILED
+                    exit 22
+                """.trimIndent()
+
+                val response = adb.shell(command)
+                val output = response.output
+                Log.i(TAG, "ADB daemon launch exit=${response.exitCode}; output=${output.take(1200)}")
+                response.exitCode == 0 &&
+                    (output.contains("STARTED") || output.contains("ALREADY_RUNNING"))
+            }
+        } catch (t: Throwable) {
+            Log.e(
+                TAG,
+                "Local ADB connection to 127.0.0.1:5555 failed. Confirm the head unit's ADB service is enabled and authorize this app's key if prompted.",
+                t
+            )
+            false
+        }
+    }
+
+    fun logBydPermissionState(context: Context) {
+        listOf(
+            "BYDAUTO_STATISTIC_GET",
+            "BYDAUTO_INSTRUMENT_GET",
+            "BYDAUTO_POWER_GET",
+            "BYDAUTO_ENERGY_GET"
+        ).forEach { name ->
+            val permission = "android.permission.$name"
+            val granted = try {
+                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+            } catch (_: Exception) {
+                false
+            }
+            // These checks describe the ordinary app UID only. The daemon runs
+            // as shell UID and uses the BYD SDK with a permission-bypass Context.
+            Log.i(TAG, "$permission appUid=${if (granted) "GRANTED" else "DENIED"}")
+        }
+    }
+
+    fun isAllPermissionsReady(context: Context): Boolean {
+        val overlayOk = Settings.canDrawOverlays(context)
+        val enabledListeners = Settings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        ) ?: ""
+        return overlayOk && enabledListeners.contains(context.packageName)
+    }
+
+    fun openOverlayPermissionScreen(context: Context): Boolean {
+        val intents = listOf(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
+            Intent().setComponent(ComponentName("com.byd.carsettings", "com.byd.carsettings.permission.PermissionManageActivity")),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}AppDrawOverlaySettingsActivity")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+
+    fun openNotificationPermissionScreen(context: Context): Boolean {
+        val intents = listOf(
+            Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}NotificationAccessSettingsActivity")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+}
+}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    sleep 1
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo STARTED
+                      exit 0
+                    fi
+                    cat /data/local/tmp/$DAEMON_NAME.log 2>/dev/null
+                    echo START_FAILED
+                    exit 22
+                """.trimIndent()
+
+                val response = adb.shell(command)
+                val output = response.output
+                Log.i(TAG, "ADB daemon launch exit=${response.exitCode}; output=${output.take(1200)}")
+                response.exitCode == 0 &&
+                    (output.contains("STARTED") || output.contains("ALREADY_RUNNING"))
+            }
+        } catch (t: Throwable) {
+            Log.e(
+                TAG,
+                "Local ADB connection to 127.0.0.1:5555 failed. Confirm the head unit's ADB service is enabled and authorize this app's key if prompted.",
+                t
+            )
+            false
+        }
+    }
+
+    fun logBydPermissionState(context: Context) {
+        listOf(
+            "BYDAUTO_STATISTIC_GET",
+            "BYDAUTO_INSTRUMENT_GET",
+            "BYDAUTO_POWER_GET",
+            "BYDAUTO_ENERGY_GET"
+        ).forEach { name ->
+            val permission = "android.permission.$name"
+            val granted = try {
+                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+            } catch (_: Exception) {
+                false
+            }
+            // These checks describe the ordinary app UID only. The daemon runs
+            // as shell UID and uses the BYD SDK with a permission-bypass Context.
+            Log.i(TAG, "$permission appUid=${if (granted) "GRANTED" else "DENIED"}")
+        }
+    }
+
+    fun isAllPermissionsReady(context: Context): Boolean {
+        val overlayOk = Settings.canDrawOverlays(context)
+        val enabledListeners = Settings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        ) ?: ""
+        return overlayOk && enabledListeners.contains(context.packageName)
+    }
+
+    fun openOverlayPermissionScreen(context: Context): Boolean {
+        val intents = listOf(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
+            Intent().setComponent(ComponentName("com.byd.carsettings", "com.byd.carsettings.permission.PermissionManageActivity")),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}AppDrawOverlaySettingsActivity")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+
+    fun openNotificationPermissionScreen(context: Context): Boolean {
+        val intents = listOf(
+            Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}NotificationAccessSettingsActivity")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+}
+}PERMISSION >/dev/null 2>&1 || true
                     done
                     APK_PATH=$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then
