@@ -25,7 +25,7 @@ object AutoPermissionHelper {
     private const val ADB_HOST = "127.0.0.1"
     private const val ADB_PORT = 5555
     private const val DAEMON_PORT = 19878
-    private const val DAEMON_NAME = "byd_maps_telemetry_daemon"
+    private const val DAEMON_NAME = "bydtelemetry"
     private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
     private const val RETRY_INTERVAL_MS = 15_000L
 
@@ -113,7 +113,7 @@ object AutoPermissionHelper {
 
                 val command = """
                     APK_PATH=$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
-                    if [ -z "${'" ]; then
+                    if [ -z "${'$'}APK_PATH" ]; then
                       echo APK_NOT_FOUND
                       exit 21
                     fi
@@ -121,7 +121,7 @@ object AutoPermissionHelper {
                       echo ALREADY_RUNNING
                       exit 0
                     fi
-                    CLASSPATH="$APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
                     sleep 1
                     if pidof $DAEMON_NAME >/dev/null 2>&1; then
                       echo STARTED
