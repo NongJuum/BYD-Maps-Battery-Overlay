@@ -77,6 +77,17 @@
 
 ---
 
+## 📦 Prerequisites & App Dependencies
+
+- **🚗 Supported Vehicles:** All BYD electric and DM-i vehicles running Android-based DiLink (DiLink 3.0, 4.0, 5.0), including Dolphin, Atto 3, Seal, M6, Sealion 6 DM-i, Sealion 7, etc.
+- **🔌 Hardware Dongles:** **None required!** (No OBD2 scanner or Bluetooth/Wi-Fi adapters needed; reads directly from vehicle CAN bus / BMS).
+- **📱 Third-Party App Dependencies:** **None! 100% Standalone.**
+  - Does NOT require OverDrive, DUDU Launcher, Tasker, or Shizuku to function.
+  - Fully compatible with stock BYD DiLink UI as well as custom launchers (such as DUDU Launcher).
+- **🗺️ Navigation App:** **Google Maps** installed on the head unit (compatible with Play Store, Aurora Store, MicroG, Vanced, GBox, Gspace, etc.) so that the overlay can read turn-by-turn distance and calculate destination battery percentage.
+
+---
+
 ## 📥 Installation & Activation Guide
 
 ### Step 1: Install APK
