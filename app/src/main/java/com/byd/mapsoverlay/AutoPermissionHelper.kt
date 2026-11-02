@@ -75,12 +75,12 @@ object AutoPermissionHelper {
 
             Dadb.create("127.0.0.1", 5555, keyPair, 2_000, 5_000).use { adb ->
                 val command = """
-                    APK_PATH=\$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
-                    if [ -z "\$APK_PATH" ]; then echo APK_NOT_FOUND; exit 21; fi
+                    APK_PATH=${'$'}(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
+                    if [ -z "${'$'}APK_PATH" ]; then echo APK_NOT_FOUND; exit 21; fi
                     if pidof byd_maps_telemetry_daemon >/dev/null 2>&1; then
                       echo ALREADY_RUNNING
                     else
-                      CLASSPATH="\$APK_PATH" app_process /system/bin --nice-name=byd_maps_telemetry_daemon com.byd.mapsoverlay.BydTelemetryDaemon >/data/local/tmp/byd_maps_telemetry_daemon.log 2>&1 &
+                      CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=byd_maps_telemetry_daemon com.byd.mapsoverlay.BydTelemetryDaemon >/data/local/tmp/byd_maps_telemetry_daemon.log 2>&1 &
                       sleep 1
                       if pidof byd_maps_telemetry_daemon >/dev/null 2>&1; then echo STARTED; else cat /data/local/tmp/byd_maps_telemetry_daemon.log 2>/dev/null; exit 22; fi
                     fi
@@ -135,7 +135,7 @@ object AutoPermissionHelper {
         val intents = listOf(
             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
             Intent().setComponent(ComponentName("com.byd.carsettings", "com.byd.carsettings.permission.PermissionManageActivity")),
-            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings\$AppDrawOverlaySettingsActivity")),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}AppDrawOverlaySettingsActivity")),
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
         )
         for (intent in intents) {
@@ -154,7 +154,7 @@ object AutoPermissionHelper {
     fun openNotificationPermissionScreen(context: Context): Boolean {
         val intents = listOf(
             Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
-            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings\$NotificationAccessSettingsActivity")),
+            Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings${'$'}NotificationAccessSettingsActivity")),
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
         )
         for (intent in intents) {
