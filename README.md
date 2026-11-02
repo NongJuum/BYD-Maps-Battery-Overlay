@@ -77,19 +77,31 @@
 
 ---
 
-## 📥 Installation Guide for BYD Vehicles
+## 📥 Installation & Activation Guide
 
+### Step 1: Install APK
 1. Download the prebuilt **[BYD-Maps-Battery-Overlay-Universal.apk (Direct Download)](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/download/v1.0.0/BYD-Maps-Battery-Overlay-Universal.apk)** from [GitHub Releases](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest).
-2. Copy the `.apk` file to a USB flash drive (FAT32 or NTFS formatted).
-3. Plug the USB flash drive into the BYD infotainment USB port in your car.
-4. Open the built-in **File Manager** on the BYD screen and tap the APK to install.
-5. Enable **Wireless ADB / ADB over TCP (port 5555)** on the DiLink head unit before launching the app.
-6. Launch **BYD Maps Battery**:
-   - On first connection, accept the Android ADB authorization prompt and select Always allow if offered.
-   - The app starts a read-only BYD SDK telemetry daemon as shell UID 2000, then exposes SoC, range and remaining battery energy to the overlay over localhost.
-   - Grant Overlay and Google Maps Notification Listener access.
-   - Choose your vehicle model, or leave the default **"📡 Auto"** profile.
-7. Open Google Maps and start navigation. Live vehicle data appears once the telemetry daemon connects successfully.
+2. Copy the `.apk` file to a USB flash drive, plug it into the car's USB port, and install via the native **File Manager**.
+3. Open **BYD Maps Battery** and grant the required Overlay and Notification Listener permissions.
+
+---
+
+### Step 2: One-Time Vehicle Telemetry Activation via ADB
+> ⚠️ **Why is this required?**  
+> On BYD DiLink firmware (DiLink 3.0 / 4.0 / 5.0), the vehicle CAN bus / battery statistics permission (`BYDAUTO_STATISTIC_GET`) is protected by OEM signature. Just like other prominent BYD apps (**OverDrive** and **DUDU Launcher**), a background reader running as ADB Shell (UID 2000) is required:
+
+1. Connect your computer to the same Wi-Fi network as the vehicle head unit (or use mobile hotspot).
+2. Note your head unit's IP address in Wi-Fi settings (e.g., `10.51.77.234` or `192.168.1.xxx`).
+3. Run the following command in Terminal / PowerShell on your computer:
+   ```bash
+   adb connect <CAR_IP_ADDRESS>:5555
+   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
+   ```
+4. Check the head unit screen: live Battery SoC %, real range, and 50km power consumption will immediately start updating!
+
+> **💡 Notes:**
+> - Fully compatible alongside **OverDrive** (operates on dedicated port 19890 with zero port collisions).
+> - Whenever Google Maps navigation starts, the pill overlay displays automatically.
 
 > **Tip:** You can test or position the overlay anytime by tapping **"👁️ Test / Show Overlay"** in the app settings screen.
 

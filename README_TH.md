@@ -77,19 +77,31 @@
 
 ---
 
-## 📥 วิธีติดตั้งลงบนหน้าจอรถ BYD (Installation Guide)
+## 📥 วิธีติดตั้งและเปิดใช้งาน (Installation & Activation Guide)
 
+### ขั้นตอนที่ 1: ติดตั้งแอป
 1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Universal.apk (ลิงก์ตรง)](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/download/v1.0.0/BYD-Maps-Battery-Overlay-Universal.apk)** หรือเข้าผ่านหน้า [Releases ล่าสุด](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest)
-2. ก๊อปปี้ไฟล์ `.apk` ใส่แฟลชไดรฟ์ USB (ฟอร์แมต FAT32 หรือ NTFS)
-3. นำแฟลชไดรฟ์ไปเสียบที่พอร์ต USB ของตัวรถ BYD
-4. เปิดแอป **จัดการไฟล์ (File Manager)** บนหน้าจอรถ แล้วกดติดตั้ง APK
-5. ก่อนเปิดแอป ให้เปิด **Wireless ADB / ADB over TCP (พอร์ต 5555)** บนหน้าจอรถ DiLink
-6. เปิดแอป **BYD Maps Battery**:
-   - ครั้งแรก Android จะแสดงหน้าต่าง **Allow USB debugging? / อนุญาตการแก้ไขข้อบกพร่อง USB?** ให้กดยอมรับ และเลือก Always allow หากมีตัวเลือก
-   - แอปจะใช้ ADB Shell เพื่อเริ่มตัวอ่านข้อมูล BYD SDK ใน UID 2000 แล้วส่งค่า SoC, ระยะทาง และพลังงานคงเหลือให้แถบ Overlay ผ่าน localhost
-   - อนุญาตสิทธิ์ Overlay และ Notification Listener ของ Google Maps
-   - เลือกรุ่นรถของคุณ หรือปล่อยเป็นค่าเริ่มต้น **"📡 อัตโนมัติ"**
-7. เปิด Google Maps แล้วเริ่มนำทาง แถบลอยจะใช้ข้อมูลรถจริงเมื่อ Daemon เชื่อมต่อสำเร็จ
+2. ก๊อปปี้ไฟล์ `.apk` ใส่แฟลชไดรฟ์ USB นำไปเสียบที่พอร์ตคอนโซลรถ แล้วเปิดติดตั้งผ่านแอป **จัดการไฟล์ (File Manager)**
+3. เปิดแอป **BYD Maps Battery** แล้วกดเปิดสิทธิ์ Overlay และ Notification Listener
+
+---
+
+### ขั้นตอนที่ 2: ปลดล็อกการอ่านข้อมูลรถ (One-Time Activation via ADB)
+> ⚠️ **ทำไมต้องทำขั้นตอนนี้?**  
+> บนระบบของ BYD (DiLink 3.0 / 4.0 / 5.0) สิทธิ์การอ่านข้อมูลแบตเตอรี่และ CAN-Bus (`BYDAUTO_STATISTIC_GET`) ถูกล็อกไว้เป็น **Signature Permission** ของโรงงาน BYD (เช่นเดียวกับแอปชื่อดังอย่าง **OverDrive** และ **DUDU Launcher**) จึงต้องรัน Service ผ่าน ADB Shell (UID 2000) ครั้งแรก:
+
+1. ให้คอมพิวเตอร์และหน้าจอรถเชื่อมต่อ Wi-Fi วงเดียวกัน (หรือแชร์ Wi-Fi Hotspot)
+2. ดู IP Address ของจอรถในการตั้งค่า Wi-Fi ของรถ (เช่น `10.51.77.234` หรือ `192.168.1.xxx`)
+3. เปิด Terminal หรือ PowerShell ในคอมพิวเตอร์ แล้วรันคำสั่ง:
+   ```bash
+   adb connect <IP_ของจอรถ>:5555
+   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
+   ```
+4. ที่หน้าจอรถ ข้อมูล % แบตเตอรี่ (SoC), ระยะทางวิ่งจริง และอัตรากินไฟเฉลี่ยจะเริ่มซิงค์สดทันที!
+
+> **💡 หมายเหตุ:**
+> - สามารถเปิดใช้งานร่วมกับ **OverDrive** ได้โดยไม่มีปัญหาพอร์ตชนกัน (แยกพอร์ต 19890 อิสระ)
+> - เมื่อเปิด Google Maps ระบบจะคำนวณและแสดงแถบลอยบนหน้าจออัตโนมัติ
 
 > **หมายเหตุ:** หากต้องการลากแถบลอยไปวางตำแหน่งที่ต้องการหรือทดสอบขนาด สามารถกดปุ่ม **"👁️ แสดง/ทดสอบแถบลอย"** ในหน้าแอปได้ทันที
 

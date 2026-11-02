@@ -24,7 +24,7 @@ object AutoPermissionHelper {
     private const val TAG = "AutoPermissionHelper"
     private const val ADB_HOST = "127.0.0.1"
     private const val ADB_PORT = 5555
-    private const val DAEMON_PORT = 19878
+    private const val DAEMON_PORT = 19890
     private const val DAEMON_NAME = "bydtelemetry"
     private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
     private const val RETRY_INTERVAL_MS = 15_000L

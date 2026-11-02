@@ -269,8 +269,8 @@ class BydVehicleBridge(
 
     private fun fetchOptionalOverDriveStatus() {
         try {
-            // Read our shell-UID telemetry daemon, not an assumed OverDrive HTTP endpoint.
-            val url = URL("http://127.0.0.1:19878/status")
+            // Read our shell-UID telemetry daemon on port 19890 (avoiding collision with OverDrive AacIngest 19878)
+            val url = URL("http://127.0.0.1:19890/status")
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = 800
             conn.readTimeout = 800

@@ -22,7 +22,7 @@ import java.lang.reflect.Method;
  */
 public final class BydTelemetryDaemon {
     private static final String TAG = "BydTelemetryDaemon";
-    private static final int PORT = 19878;
+    private static final int PORT = 19890;
     private static volatile JSONObject snapshot = unavailable("Starting");
     private static volatile double callbackSoc = -1.0;
     private static volatile int callbackRangeKm = -1;
