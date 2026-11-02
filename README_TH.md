@@ -118,3 +118,6 @@
 
 Copyright (c) 2026 Nontarat Hasitapong.  
 Distributed under the MIT License.
+
+
+<!-- CI rebuild trigger: validate v1/v2 signing for Android 10 IVI. -->
