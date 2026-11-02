@@ -58,3 +58,23 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'dev.mobile:dadb:1.2.6'
 }
+
+afterEvaluate {
+    tasks.register('copyApkToRoot') {
+        doLast {
+            def apkFile = file("${layout.buildDirectory.get()}/outputs/apk/debug/app-debug.apk")
+            if (apkFile.exists()) {
+                copy {
+                    from apkFile
+                    into rootProject.projectDir
+                    rename { 'BYD-Maps-Battery-Overlay-Universal.apk' }
+                }
+                println "✅ Copied Universal APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Universal.apk"
+            }
+        }
+    }
+
+    tasks.named('assembleDebug').configure {
+        finalizedBy 'copyApkToRoot'
+    }
+}

@@ -2,3 +2,11 @@ plugins {
     id 'com.android.application' version '8.13.2' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.23' apply false
 }
+
+// Redirect build intermediates to local APFS drive if project is on external drive (exFAT/FAT32)
+// This eliminates macOS '._*' AppleDouble conflicts and file locking issues on external drives.
+if (rootDir.canonicalPath.startsWith("/Volumes/")) {
+    allprojects {
+        layout.buildDirectory.set(new File("${System.getProperty('user.home')}/.gradle_builds/byd-maps-battery-overlay/${project.name}"))
+    }
+}
