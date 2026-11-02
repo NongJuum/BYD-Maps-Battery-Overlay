@@ -165,6 +165,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 tvNedcRange.text = String.format("📋 Dashboard NEDC Range: %d km", vehicleBridge.elecRangeKm)
+                tvStatus.text = vehicleBridge.diagnosticStatus
             }
         }
         vehicleBridge.startListening()
@@ -236,7 +237,7 @@ class MainActivity : AppCompatActivity() {
             showDonateDialog()
         }
 
-        tvStatus.text = "✅ พร้อมใช้งาน: ข้อมูลรุ่นรถใช้ตามที่คุณตั้งค่า + ข้อมูลแบตเตอรี่และอัตรากินไฟดึงสดจาก OBD"
+        tvStatus.text = "กำลังเชื่อมต่อ BYD telemetry ผ่าน local ADB shell..."
     }
 
     private fun showDonateDialog() {

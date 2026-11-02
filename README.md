@@ -83,10 +83,13 @@
 2. Copy the `.apk` file to a USB flash drive (FAT32 or NTFS formatted).
 3. Plug the USB flash drive into the BYD infotainment USB port in your car.
 4. Open the built-in **File Manager** on the BYD screen and tap the APK to install.
-5. Launch **BYD Maps Battery**:
-   - The app automatically grants and requests system overlay permission and Google Maps notification listener access.
-   - Choose your vehicle model, or leave default as **"📡 Auto: Direct OBD / BMS Sync (Recommended)"**.
-6. Open Google Maps and start navigation — the battery overlay pill will appear automatically!
+5. Enable **Wireless ADB / ADB over TCP (port 5555)** on the DiLink head unit before launching the app.
+6. Launch **BYD Maps Battery**:
+   - On first connection, accept the Android ADB authorization prompt and select Always allow if offered.
+   - The app starts a read-only BYD SDK telemetry daemon as shell UID 2000, then exposes SoC, range and remaining battery energy to the overlay over localhost.
+   - Grant Overlay and Google Maps Notification Listener access.
+   - Choose your vehicle model, or leave the default **"📡 Auto"** profile.
+7. Open Google Maps and start navigation. Live vehicle data appears once the telemetry daemon connects successfully.
 
 > **Tip:** You can test or position the overlay anytime by tapping **"👁️ Test / Show Overlay"** in the app settings screen.
 

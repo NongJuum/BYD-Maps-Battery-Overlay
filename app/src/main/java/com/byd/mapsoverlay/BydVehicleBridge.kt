@@ -1,10 +1,12 @@
 package com.byd.mapsoverlay
 
-import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -19,7 +21,7 @@ import kotlin.math.roundToInt
  * BydVehicleBridge:
  * - รุ่นรถและขนาดความจุแบตเตอรี่ตั้งต้น: อ่านจาก VehicleProfileManager ที่ผู้ใช้เลือกรุ่นรถหรือกรอกเองเป็นหลัก
  *   (ป้องกันปัญหาบางรุ่นดึงขนาดแบตผิดพลาด) และหาก BMS ส่งค่า kWh จริงมา ก็ใช้ประกอบได้
- * - ข้อมูลการขับขี่สด (Live Telemetry): ดึงจาก OBD / CAN Bus ของรถโดยตรง 100%:
+ * - ทดลองอ่าน telemetry ผ่าน BYD native API; จะถือว่าอ่านสำเร็จต่อเมื่อ API คืนค่าจริงเท่านั้น:
  *   1. % แบตเตอรี่ปัจจุบัน (SoC) -> BYDAutoStatisticDevice.getElecPercentageValue
  *   2. อัตราการกินไฟเฉลี่ย 50 กม. ล่าสุด (Past 50 km) -> BYDAutoInstrumentDevice.getLast50KmPowerConsume / getLastElecConPHMValue
  *   3. พลังงานคงเหลือจริง (kWh) และระยะทางหน้าปัด -> BYDAutoPowerDevice.getBatteryRemainPowerEV / getElecDrivingRangeValue
@@ -47,35 +49,34 @@ class BydVehicleBridge(
         private set
     var realRangeKm: Double = 0.0
         private set
-    var detectedVehicleModel: String = "กำลังดึงข้อมูลรุ่นรถและแบตเตอรี่จาก OBD / BMS..."
+    var detectedVehicleModel: String = "กำลังตรวจสอบ BYD native API..."
+        private set
+    @Volatile var diagnosticStatus: String = "ยังไม่ได้ตรวจสอบ BYD API"
         private set
 
     private var executor: ScheduledExecutorService? = null
-    private var isStreamingCan = false
-    private var canLogcatProcess: Process? = null
 
     fun startListening() {
         applyUserVehicleProfile()
-        startContinuousCanStream()
+        AutoPermissionHelper.ensureTelemetryDaemon(context)
 
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
-            pollDirectBydHardwareApi()
+            // Self-heal if the shell daemon died or ADB was temporarily
+            // unavailable. The helper rate-limits reconnect attempts.
+            AutoPermissionHelper.ensureTelemetryDaemon(context)
             fetchOptionalOverDriveStatus()
         }, 0, 2, TimeUnit.SECONDS)
     }
 
     fun stopListening() {
-        isStreamingCan = false
-        canLogcatProcess?.destroy()
-        canLogcatProcess = null
         executor?.shutdownNow()
         executor = null
     }
 
     /**
-     * รีสตาร์ทการเชื่อมต่อท่อข้อมูล OBD / CAN Bus ใหม่ทันที (ใช้เมื่อกดปุ่มขอสิทธิ์/ซ่อมสิทธิ์ในแอป)
+     * เริ่มรอบตรวจสอบ BYD native API ใหม่ทันที
      */
     fun restartConnection() {
         stopListening()
@@ -97,85 +98,126 @@ class BydVehicleBridge(
         }
     }
 
-    @SuppressLint("PrivateApi")
+    /**
+     * ตรวจสอบ API ที่มีอยู่จริงบน firmware ก่อนเรียกใช้งาน
+     * ไม่ถือว่า logcat เป็น CAN reader และไม่กลืนข้อผิดพลาดของ reflection
+     */
     private fun pollDirectBydHardwareApi() {
         var updated = false
+        val diagnostics = mutableListOf<String>()
 
-        // 1. BYDAutoStatisticDevice (SoC %, Last 50km Consumption, Driving Range)
-        try {
-            val statClass = Class.forName("android.hardware.bydauto.statistic.BYDAutoStatisticDevice")
-            val getInstance = statClass.getMethod("getInstance", Context::class.java)
-            val statDevice = getInstance.invoke(null, context)
+        val candidates = listOf(
+            ApiCandidate(
+                "android.hardware.bydauto.statistic.BYDAutoStatisticDevice",
+                listOf("getElecPercentageValue", "getLastElecConPHMValue", "getElecDrivingRangeValue")
+            ),
+            ApiCandidate(
+                "android.hardware.bydauto.instrument.BYDAutoInstrumentDevice",
+                listOf("getLast50KmPowerConsume")
+            ),
+            ApiCandidate(
+                "android.hardware.bydauto.power.BYDAutoPowerDevice",
+                listOf("getBatteryRemainPowerEV")
+            )
+        )
 
-            if (statDevice != null) {
-                runCatching {
-                    val socVal = (statClass.getMethod("getElecPercentageValue").invoke(statDevice) as? Number)?.toDouble()
-                    if (socVal != null && socVal in 1.0..1000.0) {
-                        val normSoc = if (socVal > 100.0) socVal / 10.0 else socVal
-                        if (normSoc != currentSoc) {
-                            currentSoc = normSoc
-                            updated = true
-                        }
-                    }
+        for (candidate in candidates) {
+            val clazz = try {
+                Class.forName(candidate.className)
+            } catch (e: Throwable) {
+                diagnostics += "${candidate.className}: CLASS_NOT_FOUND (${e.javaClass.simpleName})"
+                Log.w(tag, "BYD API class unavailable: ${candidate.className}", e)
+                continue
+            }
+
+            val methods = (clazz.methods + clazz.declaredMethods)
+                .distinctBy { methodSignature(it) }
+                .sortedBy { it.name }
+            val matchingMethods = methods.filter { it.name in candidate.getters }
+            diagnostics += "${candidate.className}: CLASS_FOUND, getters=${matchingMethods.joinToString { methodSignature(it) }.ifBlank { "NONE" }}"
+
+            val device = obtainDeviceInstance(clazz, diagnostics) ?: continue
+            for (methodName in candidate.getters) {
+                val method = matchingMethods.firstOrNull { it.name == methodName && it.parameterCount == 0 }
+                if (method == null) {
+                    diagnostics += "$methodName: METHOD_NOT_FOUND_OR_UNSUPPORTED_SIGNATURE"
+                    continue
                 }
 
-                runCatching {
-                    val conVal = (statClass.getMethod("getLastElecConPHMValue").invoke(statDevice) as? Number)?.toDouble()
-                    if (conVal != null && conVal in 5.0..40.0) {
-                        val rounded = (conVal * 10.0).roundToInt() / 10.0
-                        if (rounded != currentConsumption) {
-                            currentConsumption = rounded
-                            updated = true
-                        }
+                try {
+                    method.isAccessible = true
+                    val value = method.invoke(if (Modifier.isStatic(method.modifiers)) null else device)
+                    val number = value as? Number
+                    if (number == null) {
+                        diagnostics += "$methodName: NON_NUMERIC_RESULT (${value?.javaClass?.name ?: "null"})"
+                        continue
                     }
-                }
 
-                runCatching {
-                    val rangeVal = (statClass.getMethod("getElecDrivingRangeValue").invoke(statDevice) as? Number)?.toInt()
-                    if (rangeVal != null && rangeVal in 1..1200 && rangeVal != elecRangeKm) {
-                        elecRangeKm = rangeVal
-                        updated = true
+                    val raw = number.toDouble()
+                    when (methodName) {
+                        "getElecPercentageValue" -> if (raw in 1.0..1000.0) {
+                            val soc = if (raw > 100.0) raw / 10.0 else raw
+                            if (soc in 1.0..100.0 && soc != currentSoc) {
+                                currentSoc = soc
+                                updated = true
+                            }
+                            diagnostics += "$methodName: OK=$soc"
+                        } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
+
+                        "getLastElecConPHMValue", "getLast50KmPowerConsume" -> if (raw in 5.0..40.0) {
+                            val consumption = (raw * 10.0).roundToInt() / 10.0
+                            if (consumption != currentConsumption) {
+                                currentConsumption = consumption
+                                updated = true
+                            }
+                            diagnostics += "$methodName: OK=$consumption"
+                        } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
+
+                        "getElecDrivingRangeValue" -> if (raw in 1.0..1200.0) {
+                            val range = raw.toInt()
+                            if (range != elecRangeKm) {
+                                elecRangeKm = range
+                                updated = true
+                            }
+                            diagnostics += "$methodName: OK=$range"
+                        } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
+
+                        "getBatteryRemainPowerEV" -> if (raw in 0.5..150.0) {
+                            if (raw != remainEnergyKwh) {
+                                remainEnergyKwh = raw
+                                updated = true
+                            }
+                            diagnostics += "$methodName: OK=$raw kWh"
+                        } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
                     }
+                } catch (e: Throwable) {
+                    val cause = e.cause ?: e
+                    diagnostics += "$methodName: INVOCATION_FAILED (${cause.javaClass.simpleName}: ${cause.message})"
+                    Log.e(tag, "BYD API invocation failed: $methodName", cause)
                 }
             }
-        } catch (_: Throwable) {}
+        }
 
-        // 2. BYDAutoInstrumentDevice (getLast50KmPowerConsume)
-        try {
-            val instClass = Class.forName("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice")
-            val getInstance = instClass.getMethod("getInstance", Context::class.java)
-            val instDevice = getInstance.invoke(null, context)
-
-            if (instDevice != null) {
-                runCatching {
-                    val con50 = (instClass.getMethod("getLast50KmPowerConsume").invoke(instDevice) as? Number)?.toDouble()
-                    if (con50 != null && con50 in 5.0..40.0) {
-                        val rounded = (con50 * 10.0).roundToInt() / 10.0
-                        if (rounded != currentConsumption) {
-                            currentConsumption = rounded
-                            updated = true
-                        }
-                    }
-                }
+        val permissionResults = listOf(
+            "BYDAUTO_STATISTIC_GET",
+            "BYDAUTO_INSTRUMENT_GET",
+            "BYDAUTO_POWER_GET",
+            "BYDAUTO_ENERGY_GET"
+        ).map { shortName ->
+            val permission = "android.permission.$shortName"
+            val granted = try {
+                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+            } catch (e: Throwable) {
+                false
             }
-        } catch (_: Throwable) {}
-
-        // 3. BYDAutoPowerDevice (getBatteryRemainPowerEV)
-        try {
-            val powerClass = Class.forName("android.hardware.bydauto.power.BYDAutoPowerDevice")
-            val getInstance = powerClass.getMethod("getInstance", Context::class.java)
-            val powerDevice = getInstance.invoke(null, context)
-
-            if (powerDevice != null) {
-                runCatching {
-                    val remainKwh = (powerClass.getMethod("getBatteryRemainPowerEV").invoke(powerDevice) as? Number)?.toDouble()
-                    if (remainKwh != null && remainKwh in 0.5..150.0 && remainKwh != remainEnergyKwh) {
-                        remainEnergyKwh = remainKwh
-                        updated = true
-                    }
-                }
-            }
-        } catch (_: Throwable) {}
+            "$shortName=${if (granted) "GRANTED" else "DENIED"}"
+        }
+        diagnostics += "permissions: ${permissionResults.joinToString()}"
+        val newDiagnosticStatus = diagnostics.joinToString(" | ")
+        if (newDiagnosticStatus != diagnosticStatus) {
+            diagnosticStatus = newDiagnosticStatus
+            Log.i(tag, "BYD native API diagnostic: $diagnosticStatus")
+        }
 
         if (updated) {
             recalculateRealTelemetry()
@@ -183,115 +225,104 @@ class BydVehicleBridge(
         }
     }
 
-    private fun startContinuousCanStream() {
-        if (isStreamingCan) return
-        isStreamingCan = true
+    private data class ApiCandidate(
+        val className: String,
+        val getters: List<String>
+    )
 
-        Thread {
-            try {
-                val process = Runtime.getRuntime().exec(arrayOf(
-                    "logcat", "-v", "raw", "-s",
-                    "BYDAutoInstrumentDevice:D",
-                    "BYDAutoStatisticDevice:D",
-                    "BYDAutoPowerDevice:D",
-                    "BYDAutoEnergyDevice:D"
-                ))
-                canLogcatProcess = process
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
-
-                while (isStreamingCan) {
-                    val line = reader.readLine() ?: break
-                    var updated = false
-
-                    // 1. อัตรากินไฟเฉลี่ย 50 กม. ล่าสุด (Past 50 km) จาก OBD/CAN
-                    if (line.contains("getLast50KmPowerConsume:") || line.contains("getLastElecConPHMValue")) {
-                        val parsedVal = when {
-                            line.contains("getLast50KmPowerConsume:") ->
-                                line.substringAfter("getLast50KmPowerConsume:").trim().split(" ").firstOrNull()?.toDoubleOrNull()
-                            line.contains("getLastElecConPHMValue") && line.contains("value is:") ->
-                                line.substringAfter("value is:").trim().split(" ").firstOrNull()?.toDoubleOrNull()
-                            else -> null
-                        }
-
-                        if (parsedVal != null && parsedVal in 5.0..40.0) {
-                            val rounded = (parsedVal * 10.0).roundToInt() / 10.0
-                            if (rounded != currentConsumption) {
-                                currentConsumption = rounded
-                                Log.d(tag, "OBD/CAN 50km Consumption: $currentConsumption kWh/100km")
-                                updated = true
-                            }
-                        }
-                    }
-
-                    // 2. เปอร์เซ็นต์แบตเตอรี่ปัจจุบัน (SoC %) จาก OBD/CAN
-                    if (line.contains("getElecPercentageValue") && line.contains("value is:")) {
-                        val socVal = line.substringAfter("value is:").trim().split(" ").firstOrNull()?.toDoubleOrNull()
-                        if (socVal != null && socVal in 1.0..1000.0) {
-                            val normalizedSoc = if (socVal > 100.0) socVal / 10.0 else socVal
-                            if (normalizedSoc != currentSoc) {
-                                currentSoc = normalizedSoc
-                                Log.d(tag, "OBD/CAN SoC: $currentSoc%")
-                                updated = true
-                            }
-                        }
-                    }
-
-                    // 3. พลังงานคงเหลือจริงในแบตเตอรี่เป็น kWh จาก BMS
-                    if (line.contains("getBatteryRemainPowerEV") && line.contains("value is")) {
-                        val kwhVal = line.substringAfter("value is").replace(":", "").trim().split(" ").firstOrNull()?.toDoubleOrNull()
-                        if (kwhVal != null && kwhVal in 0.5..150.0 && kwhVal != remainEnergyKwh) {
-                            remainEnergyKwh = kwhVal
-                            Log.d(tag, "OBD/CAN Remaining Battery Energy: $remainEnergyKwh kWh")
-                            updated = true
-                        }
-                    }
-
-                    // 4. ระยะทางวิ่งคงเหลือบนหน้าปัด (Dashboard Range)
-                    if (line.contains("getElecDrivingRangeValue") && line.contains("value is:")) {
-                        val rangeVal = line.substringAfter("value is:").trim().split(" ").firstOrNull()?.toIntOrNull()
-                        if (rangeVal != null && rangeVal in 1..1200 && rangeVal != elecRangeKm) {
-                            elecRangeKm = rangeVal
-                            updated = true
-                        }
-                    }
-
-                    if (updated) {
-                        recalculateRealTelemetry()
-                        notifyUpdate()
-                    }
-                }
-                reader.close()
-            } catch (e: Exception) {
-                Log.e(tag, "CAN stream error: ${e.message}")
+    private fun obtainDeviceInstance(clazz: Class<*>, diagnostics: MutableList<String>): Any? {
+        val factory = (clazz.methods + clazz.declaredMethods)
+            .firstOrNull {
+                it.name == "getInstance" &&
+                    Modifier.isStatic(it.modifiers) &&
+                    (it.parameterTypes.contentEquals(arrayOf(Context::class.java)) || it.parameterCount == 0)
             }
-        }.start()
+
+        if (factory == null) {
+            diagnostics += "${clazz.simpleName}: INSTANCE_FACTORY_NOT_FOUND"
+            return null
+        }
+
+        return try {
+            factory.isAccessible = true
+            val instance = if (factory.parameterCount == 1) {
+                factory.invoke(null, context.applicationContext)
+            } else {
+                factory.invoke(null)
+            }
+            if (instance == null) {
+                diagnostics += "${clazz.simpleName}: GET_INSTANCE_RETURNED_NULL"
+            } else {
+                diagnostics += "${clazz.simpleName}: INSTANCE_OK"
+            }
+            instance
+        } catch (e: Throwable) {
+            val cause = e.cause ?: e
+            diagnostics += "${clazz.simpleName}: GET_INSTANCE_FAILED (${cause.javaClass.simpleName}: ${cause.message})"
+            Log.e(tag, "BYD API getInstance failed: ${clazz.name}", cause)
+            null
+        }
     }
+
+    private fun methodSignature(method: Method): String =
+        "${method.name}(${method.parameterTypes.joinToString { it.simpleName }}):${method.returnType.simpleName}"
 
     private fun fetchOptionalOverDriveStatus() {
         try {
-            val url = URL("http://127.0.0.1:8080/status")
+            // Read our shell-UID telemetry daemon, not an assumed OverDrive HTTP endpoint.
+            val url = URL("http://127.0.0.1:19878/status")
             val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 600
-            conn.readTimeout = 600
+            conn.connectTimeout = 800
+            conn.readTimeout = 800
             conn.requestMethod = "GET"
-
-            if (conn.responseCode == 200) {
-                val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                val json = JSONObject(reader.readText())
-                reader.close()
-
-                if (currentSoc <= 0.0 && json.has("soc")) {
-                    currentSoc = json.getJSONObject("soc").optDouble("percent", currentSoc)
+            conn.setRequestProperty("Cache-Control", "no-cache")
+            try {
+                if (conn.responseCode != 200) {
+                    diagnosticStatus = "Telemetry daemon HTTP ${conn.responseCode}"
+                    return
                 }
-
-                if (elecRangeKm <= 0 && json.has("range")) {
-                    elecRangeKm = json.getJSONObject("range").optInt("elecRangeKm", elecRangeKm)
+                val previousStatus = diagnosticStatus
+                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val daemonStatus = json.optString("status", "UNKNOWN")
+                val daemonError = json.optString("error", "")
+                diagnosticStatus = if (daemonError.isNotBlank()) {
+                    "Shell telemetry daemon: $daemonStatus ($daemonError)"
+                } else {
+                    "Shell telemetry daemon: $daemonStatus (uid=${json.optInt("uid", -1)})"
                 }
+                val socObject = json.optJSONObject("soc")
+                val soc = socObject?.optDouble("percent", -1.0) ?: -1.0
+                if (soc in 0.0..100.0) currentSoc = soc
 
-                recalculateRealTelemetry()
-                notifyUpdate()
+                val rangeObject = json.optJSONObject("range")
+                val range = rangeObject?.optInt("elecRangeKm", 0) ?: 0
+                if (range > 0) elecRangeKm = range
+
+                val remain = json.optDouble("remainEnergyKwh", -1.0)
+                if (remain in 0.1..150.0) remainEnergyKwh = remain
+
+                val consumptionObject = json.optJSONObject("consumption")
+                val consumption = consumptionObject?.optDouble("kwhPer100km", -1.0) ?: -1.0
+                if (consumption in 1.0..60.0) currentConsumption = consumption
+
+                val hasVehicleData = soc >= 0.0 || range > 0 || remain > 0.0 || consumption > 0.0
+                if (hasVehicleData) {
+                    recalculateRealTelemetry()
+                    notifyUpdate()
+                } else if (diagnosticStatus != previousStatus) {
+                    notifyUpdate()
+                }
+            } finally {
+                conn.disconnect()
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            // Daemon may still be starting or local ADB authorization may be pending.
+            val newStatus = "Telemetry daemon unavailable: ${e.javaClass.simpleName}: ${e.message}"
+            val changed = diagnosticStatus != newStatus
+            diagnosticStatus = newStatus
+            Log.w(tag, newStatus)
+            if (changed) notifyUpdate()
+        }
     }
 
     private fun recalculateRealTelemetry() {
