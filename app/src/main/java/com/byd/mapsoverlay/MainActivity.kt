@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
             showDonateDialog()
         }
 
-        tvStatus.text = "กำลังเชื่อมต่อ BYD telemetry ผ่าน local ADB shell..."
+        tvStatus.text = "กำลังอ่านข้อมูลรถผ่าน BYD SDK (DUDU Vehicle Information path)..."
     }
 
     private fun isDuduLauncherInstalled(): Boolean {
