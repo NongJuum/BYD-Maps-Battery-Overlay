@@ -309,7 +309,9 @@ class OverlayService : Service() {
         }
 
         val currentSoc = bydBridge.currentSoc
-        val consumption = if (bydBridge.smoothedConsumption > 0.0) bydBridge.smoothedConsumption else bydBridge.currentConsumption
+        // Overlay must show the live CAN/OBD consumption value. Keep the conservative
+        // rounded-up EMA exclusively for destination SoC estimation below.
+        val consumption = bydBridge.currentConsumption
         val liveRemainKwh = bydBridge.remainEnergyKwh
         val realRange = bydBridge.realRangeKm
 
