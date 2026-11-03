@@ -252,7 +252,7 @@ object AutoPermissionHelperAlpha {
                     // preserve the actual return code, and persist progress/error details.
                     val installScript = """
                         #!/system/bin/sh
-                        APK_PATH="$1"
+                        APK_PATH="${'1"
                         TARGET_PKG="$2"
                         EXPECTED_BYTES="$3"
                         PROGRESS="$progressFile"
@@ -294,6 +294,941 @@ object AutoPermissionHelperAlpha {
                         printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
                         sleep 2
                         am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}1"
+                        TARGET_PKG="${'2"
+                        EXPECTED_BYTES="$3"
+                        PROGRESS="$progressFile"
+                        LOG="$installLog"
+                        echo "[install] starting at $(date)" > "$LOG"
+                        printf '{"phase":"installing","percent":-1,"message":"Installing Alpha update"}' > "$PROGRESS"
+
+                        if [ ! -f "$APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}2"
+                        EXPECTED_BYTES="${'3"
+                        PROGRESS="$progressFile"
+                        LOG="$installLog"
+                        echo "[install] starting at $(date)" > "$LOG"
+                        printf '{"phase":"installing","percent":-1,"message":"Installing Alpha update"}' > "$PROGRESS"
+
+                        if [ ! -f "$APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}3"
+                        PROGRESS="$progressFile"
+                        LOG="$installLog"
+                        echo "[install] starting at ${'(date)" > "$LOG"
+                        printf '{"phase":"installing","percent":-1,"message":"Installing Alpha update"}' > "$PROGRESS"
+
+                        if [ ! -f "$APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}(date)" > "${'LOG"
+                        printf '{"phase":"installing","percent":-1,"message":"Installing Alpha update"}' > "$PROGRESS"
+
+                        if [ ! -f "$APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}LOG"
+                        printf '{"phase":"installing","percent":-1,"message":"Installing Alpha update"}' > "${'PROGRESS"
+
+                        if [ ! -f "$APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PROGRESS"
+
+                        if [ ! -f "${'APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}APK_PATH" ]; then
+                          echo "APK file missing: ${'APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}APK_PATH" | tee -a "${'LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "${'PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PROGRESS"
+                          exit 20
+                        fi
+
+                        ACTUAL_BYTES=${'(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}(wc -c < "${'APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "${'ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}ACTUAL_BYTES" != "${'EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=${'EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}EXPECTED_BYTES actual=${'ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}ACTUAL_BYTES" | tee -a "${'LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "${'PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "${'LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}LOG"
+                        PM_OUT=${'(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}(pm install -r -d "${'APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}APK_PATH" 2>&1)
+                        INSTALL_RC=${'?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}?
+                        echo "${'PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PM_OUT" | tee -a "${'LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}LOG"
+                        echo "[install] done rc=${'INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}INSTALL_RC at ${'(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}(date)" | tee -a "${'LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}LOG"
+
+                        if [ "${'INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}INSTALL_RC" != "0" ] || ! echo "${'PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PM_OUT" | grep -qi '^Success'; then
+                          case "${'PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=${'(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}(printf %s "${'PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "${'PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PM_ESC" "${'INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}INSTALL_RC" > "${'PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PROGRESS"
+                          echo "INSTALL_FAILED rc=${'INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}INSTALL_RC: ${'PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PM_OUT"
+                          exit "${'INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "${'PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}PROGRESS"
+                        sleep 2
+                        am start -n "${'TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
+}TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
                         echo "INSTALL_SUCCESS"
                         exit 0
                     """.trimIndent()
