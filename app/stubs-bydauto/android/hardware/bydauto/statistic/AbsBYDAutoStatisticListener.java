@@ -10,4 +10,7 @@ public abstract class AbsBYDAutoStatisticListener {
     public void onElecPercentageChanged(double percentage) {}
     public void onElecDrivingRangeChanged(int rangeKm) {}
     public void onEVRemainingBatteryPowerChanged(float remainingKwh) {}
+    // Alternate callback names observed in the OverDrive reference APK.
+    public void onRemainingBatteryPowerChanged(float remainingKwh) {}
+    public void onRemainingBatteryPowerChanged(double remainingKwh) {}
 }
