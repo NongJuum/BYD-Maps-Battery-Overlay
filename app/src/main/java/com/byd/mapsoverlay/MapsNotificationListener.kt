@@ -11,7 +11,7 @@ class MapsNotificationListener : NotificationListenerService() {
     private val tag = "MapsNotification"
     private val eventHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
-    // One-shot checks only: no recurring polling loop.
+    // One-shot checks only; there is no recurring polling loop.
     private val removalCheckRunnable = Runnable {
         syncActiveNavigationNotifications("notification removed")
     }
@@ -38,15 +38,13 @@ class MapsNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn == null || sbn.packageName == packageName) return
-
         if (!isNavigationNotification(sbn)) return
 
         eventHandler.removeCallbacks(removalCheckRunnable)
         eventHandler.removeCallbacks(invalidRouteCheckRunnable)
 
         if (!processMapsNotification(sbn)) {
-            // Maps can briefly publish a navigation notification without its distance.
-            // Verify once after a grace period instead of running a permanent poll.
+            // Allow Maps a short grace period if it posts navigation before distance is ready.
             eventHandler.postDelayed(invalidRouteCheckRunnable, invalidRouteGraceMs)
         }
     }
@@ -85,7 +83,7 @@ class MapsNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         if (sbn != null && sbn.packageName != packageName && isNavigationNotification(sbn)) {
-            Log.d(tag, "Navigation notification removed -> schedule one-shot active route check")
+            Log.d(tag, "Navigation notification removed -> one-shot route verification")
             eventHandler.removeCallbacks(invalidRouteCheckRunnable)
             eventHandler.removeCallbacks(removalCheckRunnable)
             eventHandler.postDelayed(removalCheckRunnable, removalDebounceMs)
@@ -94,8 +92,8 @@ class MapsNotificationListener : NotificationListenerService() {
 
     private fun syncActiveNavigationNotifications(reason: String) {
         try {
-            val activeNotifications = activeNotifications.orEmpty()
-            val foundValidRoute = activeNotifications.any { notification ->
+            val notifications = activeNotifications.orEmpty()
+            val foundValidRoute = notifications.any { notification ->
                 notification.packageName != packageName && processMapsNotification(notification)
             }
 
@@ -133,99 +131,6 @@ class MapsNotificationListener : NotificationListenerService() {
         "com.gbox.android",
         "com.gspace.android"
     )
-
-    override fun onListenerConnected() {
-        super.onListenerConnected()
-        Log.d(tag, "NotificationListener connected -> one-time active route sync")
-        eventHandler.removeCallbacks(removalCheckRunnable)
-        syncActiveNavigationNotifications()
-    }
-
-    override fun onListenerDisconnected() {
-        super.onListenerDisconnected()
-        eventHandler.removeCallbacks(removalCheckRunnable)
-    }
-
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        super.onNotificationPosted(sbn)
-        if (sbn != null) {
-            if (isNavigationNotification(sbn)) {
-                // A refreshed/reposted route notification cancels a pending hide.
-                eventHandler.removeCallbacks(removalCheckRunnable)
-            }
-            processMapsNotification(sbn)
-        }
-    }
-
-    private fun processMapsNotification(sbn: StatusBarNotification) {
-        val pkg = sbn.packageName ?: return
-        if (pkg == packageName) return
-
-        if (isNavigationNotification(sbn)) {
-            val extras = sbn.notification.extras
-            val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-            val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-            val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
-            val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
-
-            val distanceKm = extractTotalRemainingDistance(subText, text, bigText)
-            if (distanceKm != null && distanceKm > 0.0) {
-                val broadcastIntent = Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
-                    putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
-                }
-                sendBroadcast(broadcastIntent)
-
-                val serviceIntent = Intent(this, OverlayService::class.java).apply {
-                    action = OverlayService.ACTION_UPDATE_DISTANCE
-                    putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
-                }
-                try {
-                    startService(serviceIntent)
-                } catch (e: Exception) {
-                    Log.w(tag, "startService fallback to broadcast", e)
-                }
-            }
-        }
-    }
-
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        super.onNotificationRemoved(sbn)
-        if (sbn != null && isNavigationNotification(sbn)) {
-            Log.d(tag, "Maps navigation notification removed -> checking active routes")
-            // Maps may replace its notification while navigation is still active.
-            eventHandler.removeCallbacks(removalCheckRunnable)
-            eventHandler.postDelayed(removalCheckRunnable, removalDebounceMs)
-        }
-    }
-
-    private fun syncActiveNavigationNotifications() {
-        try {
-            val activeRoutes = activeNotifications
-                ?.filter { isNavigationNotification(it) }
-                .orEmpty()
-
-            if (activeRoutes.isEmpty()) {
-                Log.d(tag, "No active Maps navigation notification -> hide overlay")
-                hideOverlay()
-            } else {
-                activeRoutes.forEach { processMapsNotification(it) }
-            }
-        } catch (e: Exception) {
-            Log.w(tag, "Active navigation sync error", e)
-        }
-    }
-
-    private fun hideOverlay() {
-        sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
-        val intent = Intent(this, OverlayService::class.java).apply {
-            action = OverlayService.ACTION_HIDE_OVERLAY
-        }
-        try {
-            startService(intent)
-        } catch (e: Exception) {
-            Log.w(tag, "startService hide fallback", e)
-        }
-    }
 
     private fun isNavigationNotification(sbn: StatusBarNotification): Boolean {
         val pkg = sbn.packageName.lowercase()
