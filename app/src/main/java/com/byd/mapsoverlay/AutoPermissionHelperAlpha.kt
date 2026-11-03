@@ -136,6 +136,8 @@ object AutoPermissionHelperAlpha {
                       BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
                       pm grant com.byd.mapsoverlay android.permission.${'$'}P >/dev/null 2>&1 || true
                     done
+                    pm grant com.byd.mapsoverlay com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
+                    pm grant com.byd.mapsoverlay com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
 
                     # 2. Grant Overlay AppOp
                     appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
