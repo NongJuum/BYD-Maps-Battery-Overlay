@@ -9,21 +9,11 @@ import java.util.regex.Pattern
 
 class MapsNotificationListener : NotificationListenerService() {
     private val tag = "MapsNotification"
-    private val pollHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val activePollRunnable = object : Runnable {
-        override fun run() {
-            try {
-                activeNotifications?.forEach { sbn ->
-                    if (isNavigationNotification(sbn)) {
-                        processMapsNotification(sbn)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(tag, "Poll active notifications error", e)
-            }
-            pollHandler.postDelayed(this, 3000)
-        }
+    private val eventHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val removalCheckRunnable = Runnable {
+        syncActiveNavigationNotifications()
     }
+    private val removalDebounceMs = 800L
 
     private val explicitMapsPackages = setOf(
         "com.google.android.apps.maps",
@@ -39,19 +29,23 @@ class MapsNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d(tag, "NotificationListener connected -> starting active route sync")
-        pollHandler.removeCallbacks(activePollRunnable)
-        pollHandler.post(activePollRunnable)
+        Log.d(tag, "NotificationListener connected -> one-time active route sync")
+        eventHandler.removeCallbacks(removalCheckRunnable)
+        syncActiveNavigationNotifications()
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        pollHandler.removeCallbacks(activePollRunnable)
+        eventHandler.removeCallbacks(removalCheckRunnable)
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn != null) {
+            if (isNavigationNotification(sbn)) {
+                // A refreshed/reposted route notification cancels a pending hide.
+                eventHandler.removeCallbacks(removalCheckRunnable)
+            }
             processMapsNotification(sbn)
         }
     }
@@ -90,16 +84,39 @@ class MapsNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         if (sbn != null && isNavigationNotification(sbn)) {
-            Log.d(tag, "Maps navigation ended [${sbn.packageName}] -> hide overlay")
-            sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
-            val intent = Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_HIDE_OVERLAY
+            Log.d(tag, "Maps navigation notification removed -> checking active routes")
+            // Maps may replace its notification while navigation is still active.
+            eventHandler.removeCallbacks(removalCheckRunnable)
+            eventHandler.postDelayed(removalCheckRunnable, removalDebounceMs)
+        }
+    }
+
+    private fun syncActiveNavigationNotifications() {
+        try {
+            val activeRoutes = activeNotifications
+                ?.filter { isNavigationNotification(it) }
+                .orEmpty()
+
+            if (activeRoutes.isEmpty()) {
+                Log.d(tag, "No active Maps navigation notification -> hide overlay")
+                hideOverlay()
+            } else {
+                activeRoutes.forEach { processMapsNotification(it) }
             }
-            try {
-                startService(intent)
-            } catch (e: Exception) {
-                Log.w(tag, "startService hide fallback", e)
-            }
+        } catch (e: Exception) {
+            Log.w(tag, "Active navigation sync error", e)
+        }
+    }
+
+    private fun hideOverlay() {
+        sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
+        val intent = Intent(this, OverlayService::class.java).apply {
+            action = OverlayService.ACTION_HIDE_OVERLAY
+        }
+        try {
+            startService(intent)
+        } catch (e: Exception) {
+            Log.w(tag, "startService hide fallback", e)
         }
     }
 
