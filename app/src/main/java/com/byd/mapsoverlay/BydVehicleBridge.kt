@@ -55,10 +55,10 @@ class BydVehicleBridge(
         private set
 
     private var executor: ScheduledExecutorService? = null
+    private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
 
     fun startListening() {
         applyUserVehicleProfile()
-        AutoPermissionHelper.ensureTelemetryDaemon(context)
 
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
@@ -75,6 +75,7 @@ class BydVehicleBridge(
     fun stopListening() {
         executor?.shutdownNow()
         executor = null
+        deviceCache.clear()
     }
 
     /**
@@ -233,38 +234,76 @@ class BydVehicleBridge(
     )
 
     private fun obtainDeviceInstance(clazz: Class<*>, diagnostics: MutableList<String>): Any? {
-        val factory = (clazz.methods + clazz.declaredMethods)
-            .firstOrNull {
-                it.name == "getInstance" &&
-                    Modifier.isStatic(it.modifiers) &&
-                    (it.parameterTypes.contentEquals(arrayOf(Context::class.java)) || it.parameterCount == 0)
-            }
-
-        if (factory == null) {
-            diagnostics += "${clazz.simpleName}: INSTANCE_FACTORY_NOT_FOUND"
-            return null
+        val cached = deviceCache[clazz.name]
+        if (cached != null) {
+            return cached
         }
 
-        return try {
-            factory.isAccessible = true
-            val wrappedContext = BydPermissionContext.wrap(context)
-            val instance = if (factory.parameterCount == 1) {
-                factory.invoke(null, wrappedContext)
-            } else {
-                factory.invoke(null)
-            }
-            if (instance == null) {
-                diagnostics += "${clazz.simpleName}: GET_INSTANCE_RETURNED_NULL"
-            } else {
-                diagnostics += "${clazz.simpleName}: INSTANCE_OK"
-            }
-            instance
-        } catch (e: Throwable) {
-            val cause = e.cause ?: e
-            diagnostics += "${clazz.simpleName}: GET_INSTANCE_FAILED (${cause.javaClass.simpleName}: ${cause.message})"
-            Log.e(tag, "BYD API getInstance failed: ${clazz.name}", cause)
-            null
+        val methods = clazz.methods + clazz.declaredMethods
+        val wrappedContext = BydPermissionContext.wrap(context)
+
+        // 1. Try getInstance(Context)
+        val getInstanceWithContext = methods.firstOrNull {
+            it.name == "getInstance" &&
+                Modifier.isStatic(it.modifiers) &&
+                it.parameterTypes.contentEquals(arrayOf(Context::class.java))
         }
+        if (getInstanceWithContext != null) {
+            try {
+                getInstanceWithContext.isAccessible = true
+                val instance = getInstanceWithContext.invoke(null, wrappedContext)
+                if (instance != null) {
+                    deviceCache[clazz.name] = instance
+                    diagnostics += "${clazz.simpleName}: INSTANCE_OK (getInstance(Context))"
+                    return instance
+                }
+            } catch (t: Throwable) {
+                Log.d(tag, "${clazz.simpleName}.getInstance(Context) failed: ${t.message}")
+            }
+        }
+
+        // 2. Try self() (DiLink 3 OEM singleton pattern used by DUDU launcher)
+        val selfMethod = methods.firstOrNull {
+            it.name == "self" &&
+                Modifier.isStatic(it.modifiers) &&
+                it.parameterCount == 0
+        }
+        if (selfMethod != null) {
+            try {
+                selfMethod.isAccessible = true
+                val instance = selfMethod.invoke(null)
+                if (instance != null) {
+                    deviceCache[clazz.name] = instance
+                    diagnostics += "${clazz.simpleName}: INSTANCE_OK (self())"
+                    return instance
+                }
+            } catch (t: Throwable) {
+                Log.d(tag, "${clazz.simpleName}.self() failed: ${t.message}")
+            }
+        }
+
+        // 3. Try no-arg getInstance()
+        val getInstanceNoArg = methods.firstOrNull {
+            it.name == "getInstance" &&
+                Modifier.isStatic(it.modifiers) &&
+                it.parameterCount == 0
+        }
+        if (getInstanceNoArg != null) {
+            try {
+                getInstanceNoArg.isAccessible = true
+                val instance = getInstanceNoArg.invoke(null)
+                if (instance != null) {
+                    deviceCache[clazz.name] = instance
+                    diagnostics += "${clazz.simpleName}: INSTANCE_OK (getInstance())"
+                    return instance
+                }
+            } catch (t: Throwable) {
+                Log.d(tag, "${clazz.simpleName}.getInstance() failed: ${t.message}")
+            }
+        }
+
+        diagnostics += "${clazz.simpleName}: INSTANCE_FACTORY_NOT_FOUND"
+        return null
     }
 
     private fun methodSignature(method: Method): String =

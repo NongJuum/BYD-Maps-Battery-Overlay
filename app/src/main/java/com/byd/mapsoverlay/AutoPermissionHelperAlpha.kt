@@ -58,11 +58,24 @@ object AutoPermissionHelperAlpha {
         Thread({
             var activeDadb: Dadb? = null
             try {
-                // 1. Check if ADB port 5555 is open
+                // 1. Check if ADB port 5555 is open (with 15-second startup grace window)
                 onStatus("กำลังตรวจสอบพอร์ต ADB (127.0.0.1:5555)...", false, false)
-                if (!isAdbPortOpen()) {
+                var portOpen = false
+                for (p in 0 until 10) {
+                    if (isAdbPortOpen()) {
+                        portOpen = true
+                        break
+                    }
+                    try {
+                        Thread.sleep(1500)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
+                }
+
+                if (!portOpen) {
                     onStatus(
-                        "พอร์ต ADB 5555 ยังไม่เปิด! กรุณาเปิด 'Developer options -> USB debugging' ในการตั้งค่ารถก่อน",
+                        "พอร์ต ADB 5555 ยังไม่เปิด! กรุณาเปิด 'Developer options -> USB debugging' ในการตั้งค่ารถ แล้วกดปุ่มลองใหม่",
                         true,
                         false
                     )
