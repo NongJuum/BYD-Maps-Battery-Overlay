@@ -176,13 +176,15 @@ object AppUpdaterAlpha {
                 mainHandler.post { onStatus("ดาวน์โหลดเสร็จสิ้น กำลังตรวจสอบช่องทางติดตั้ง...") }
                 // Always attempt a real authenticated ADB install; a listening TCP port is not authorization.
                 // On any ADB/auth/install failure, fall back to Android Package Installer for user confirmation.
-                AutoPermissionHelperAlpha.installApkSilently(appContext, targetFile) { success, msg ->
-                    if (success) {
+                AutoPermissionHelperAlpha.installApkSilently(appContext, targetFile) { started, msg ->
+                    if (started) {
+                        // The remote shell owns the install process. PackageManager
+                        // terminates this app during replacement, so do not wait here
+                        // or launch a second Android installer over the same APK.
                         mainHandler.post { onFinished(true, msg) }
                     } else {
-                        Log.w(TAG, "Silent ADB install failed; falling back to Android installer: $msg")
-                        mainHandler.post { onStatus("ติดตั้งผ่าน ADB ไม่สำเร็จ กำลังเปิดตัวติดตั้ง Android...") }
-                        mainHandler.post { launchSystemInstaller(appContext, targetFile, msg, onFinished) }
+                        Log.e(TAG, "Unable to start detached ADB OTA install: $msg")
+                        mainHandler.post { onFinished(false, "เริ่มติดตั้ง OTA ไม่สำเร็จ: $msg") }
                     }
                 }
             } catch (t: Throwable) {
