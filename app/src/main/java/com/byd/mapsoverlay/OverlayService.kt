@@ -311,7 +311,13 @@ class OverlayService : Service() {
         val currentSoc = bydBridge.currentSoc
         // Overlay must show the live CAN/OBD consumption value. Keep the conservative
         // rounded-up EMA exclusively for destination SoC estimation below.
-        val consumption = bydBridge.currentConsumption
+        // Keep the live CAN/OBD value for the overlay; use conservative EMA only for destination SoC.
+        val displayConsumption = bydBridge.currentConsumption
+        val calculationConsumption = if (bydBridge.smoothedConsumption > 0.0) {
+            bydBridge.smoothedConsumption
+        } else {
+            bydBridge.currentConsumption
+        }
         val liveRemainKwh = bydBridge.remainEnergyKwh
         val realRange = bydBridge.realRangeKm
 
@@ -320,7 +326,7 @@ class OverlayService : Service() {
         val (rawDestSoc, _) = EnergyCalculator.calculateDestinationSoc(
             currentSoc = currentSoc,
             remainingDistanceKm = latestDistanceKm,
-            consumptionKwhPer100km = consumption,
+            consumptionKwhPer100km = calculationConsumption,
             liveRemainEnergyKwh = liveRemainKwh,
             preferUserCapacity = isUserConfiguredModel
         )
@@ -392,7 +398,7 @@ class OverlayService : Service() {
         tvMapsDistance?.text = String.format("%.1f km", latestDistanceKm)
 
         // 4. อัตราสิ้นเปลืองปัจจุบันจาก CAN/OBD (⚡)
-        tvConsumption?.text = String.format("%.1f", consumption)
+        tvConsumption?.text = String.format("%.1f", displayConsumption)
 
         if (showBadge) {
             tvWarningBadge?.visibility = View.VISIBLE
