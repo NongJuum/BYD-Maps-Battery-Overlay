@@ -32,6 +32,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Overdrive-style BYD whitelist registration & hidden API bypass
+        HiddenApiBypass.exemptAll()
+        BydDataCacheWhitelist.ensureWhitelisted(this)
+
         // Start overlay floating service automatically
         try {
             val serviceIntent = Intent(this, OverlayService::class.java)

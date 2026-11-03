@@ -89,6 +89,8 @@ class OverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        HiddenApiBypass.exemptAll()
+        BydDataCacheWhitelist.ensureWhitelisted(this)
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         currentScale = prefs.getFloat(KEY_SCALE, 1.0f)
