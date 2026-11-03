@@ -132,6 +132,8 @@ object AutoPermissionHelperAlpha {
                 isAdbAuthorized = true
                 onStatus("เชื่อมต่อ ADB สำเร็จแล้ว! กำลังบันทึกสิทธิ์และตั้งค่าระบบ...", false, false)
 
+                val targetPkg = appContext.packageName
+
                 val setupScript = """
                     # 1. Grant BYD hardware and system permissions (exact Overdrive parity)
                     for P in \
@@ -147,16 +149,16 @@ object AutoPermissionHelperAlpha {
                       BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
                       BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
                       BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
-                      pm grant com.byd.mapsoverlay android.permission.${'$'}P >/dev/null 2>&1 || true
+                      pm grant $targetPkg android.permission.${'$'}P >/dev/null 2>&1 || true
                     done
-                    pm grant com.byd.mapsoverlay com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
-                    pm grant com.byd.mapsoverlay com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
+                    pm grant $targetPkg com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
+                    pm grant $targetPkg com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
 
                     # 2. Grant Overlay AppOp
-                    appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+                    appops set $targetPkg SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
 
                     # 3. Grant Notification Listener
-                    COMPONENT=com.byd.mapsoverlay/com.byd.mapsoverlay.MapsNotificationListener
+                    COMPONENT=$targetPkg/com.byd.mapsoverlay.MapsNotificationListener
                     cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
                     LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
                     case ":${'$'}LISTENERS:" in
@@ -171,31 +173,31 @@ object AutoPermissionHelperAlpha {
                     esac
 
                     # 4. Overdrive's ACC Mode Manager Service Calls & System Properties
-                    setprop persist.sys.acc.whitelist 'com.byd.mapsoverlay' 2>&1
-                    service call accmodemanager 1 s16 'com.byd.mapsoverlay' 2>/dev/null || true
-                    service call accmodemanager 2 s16 'com.byd.mapsoverlay' 2>/dev/null || true
-                    service call accmodemanager 3 s16 'com.byd.mapsoverlay' 2>/dev/null || true
+                    setprop persist.sys.acc.whitelist '$targetPkg' 2>&1
+                    service call accmodemanager 1 s16 '$targetPkg' 2>/dev/null || true
+                    service call accmodemanager 2 s16 '$targetPkg' 2>/dev/null || true
+                    service call accmodemanager 3 s16 '$targetPkg' 2>/dev/null || true
 
                     # 5. Overdrive's Background, WAKE_LOCK, AUTO_START and Doze whitelist
-                    appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow 2>/dev/null || true
-                    appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
-                    appops set com.byd.mapsoverlay WAKE_LOCK allow 2>/dev/null || true
-                    cmd appops set com.byd.mapsoverlay AUTO_START allow 2>/dev/null || true
-                    cmd appops set com.byd.mapsoverlay BOOT_COMPLETED allow 2>/dev/null || true
-                    dumpsys deviceidle whitelist +com.byd.mapsoverlay 2>/dev/null || true
+                    appops set $targetPkg RUN_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set $targetPkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
+                    cmd appops set $targetPkg AUTO_START allow 2>/dev/null || true
+                    cmd appops set $targetPkg BOOT_COMPLETED allow 2>/dev/null || true
+                    dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
 
                     # 6. Overdrive's Startup Provider & SSC Whitelists
-                    CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,com.byd.mapsoverlay,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}com.byd.mapsoverlay" 2>/dev/null;; esac
-                    CUR=${'$'}(settings get secure ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,com.byd.mapsoverlay,*) ;; *) settings put secure ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}com.byd.mapsoverlay" 2>/dev/null;; esac
-                    content call --uri content://com.byd.appstartup/whitelist --method add --arg 'com.byd.mapsoverlay' 2>/dev/null || true
+                    CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
+                    CUR=${'$'}(settings get secure ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put secure ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
+                    content call --uri content://com.byd.appstartup/whitelist --method add --arg '$targetPkg' 2>/dev/null || true
                     setprop persist.sys.adb.status_memory_enable true 2>/dev/null || true
 
                     # 5. Launch auxiliary telemetry daemon if not running (port 19890 = hex 4DAE in /proc/net/tcp)
-                    APK_PATH=${'$'}(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
+                    APK_PATH=${'$'}(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -n "${'$'}APK_PATH" ]; then
                       if ! grep -qi ":4DAE " /proc/net/tcp 2>/dev/null; then
                         export CLASSPATH="${'$'}APK_PATH"
-                        nohup app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                        nohup app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS $targetPkg </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
                         sleep 1
                         chmod 666 /data/local/tmp/$DAEMON_NAME.log 2>/dev/null || true
                       fi
@@ -251,7 +253,7 @@ object AutoPermissionHelperAlpha {
                         rm -f $tmpTarget
                         if [ ${'$'}STATUS -eq 0 ]; then
                           sleep 1
-                          am start -n com.byd.mapsoverlay/.MainActivity --ez post_update true
+                          am start -n ${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
                           echo INSTALL_SUCCESS
                         else
                           echo INSTALL_FAILED_${'$'}STATUS

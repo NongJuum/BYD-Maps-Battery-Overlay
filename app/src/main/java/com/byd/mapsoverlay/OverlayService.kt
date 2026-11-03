@@ -14,6 +14,7 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -189,14 +190,20 @@ class OverlayService : Service() {
     private fun showOverlay() {
         if (overlayView != null) return
 
-        val inflater = LayoutInflater.from(this)
-        overlayView = inflater.inflate(R.layout.layout_battery_pill, null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            android.util.Log.w("OverlayService", "Cannot show overlay: SYSTEM_ALERT_WINDOW not yet granted")
+            return
+        }
 
-        tvSocDisplay = overlayView?.findViewById(R.id.tv_destination_soc)
-        tvRealRange = overlayView?.findViewById(R.id.tv_real_range)
-        tvMapsDistance = overlayView?.findViewById(R.id.tv_maps_distance)
-        tvConsumption = overlayView?.findViewById(R.id.tv_consumption)
-        tvWarningBadge = overlayView?.findViewById(R.id.tv_warning_badge)
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.layout_battery_pill, null)
+        overlayView = view
+
+        tvSocDisplay = view.findViewById(R.id.tv_destination_soc)
+        tvRealRange = view.findViewById(R.id.tv_real_range)
+        tvMapsDistance = view.findViewById(R.id.tv_maps_distance)
+        tvConsumption = view.findViewById(R.id.tv_consumption)
+        tvWarningBadge = view.findViewById(R.id.tv_warning_badge)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -208,7 +215,7 @@ class OverlayService : Service() {
         val savedX = prefs.getInt(KEY_POS_X, 0).coerceIn(-920, 920)
         val savedY = prefs.getInt(KEY_POS_Y, 120).coerceIn(0, 1030)
 
-        windowParams = WindowManager.LayoutParams(
+        val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutFlag,
@@ -222,22 +229,23 @@ class OverlayService : Service() {
             x = savedX
             y = savedY
         }
+        windowParams = params
 
-        overlayView?.scaleX = currentScale
-        overlayView?.scaleY = currentScale
+        view.scaleX = currentScale
+        view.scaleY = currentScale
 
         scaleDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 currentScale *= detector.scaleFactor
                 currentScale = currentScale.coerceIn(0.6f, 1.8f)
-                overlayView?.scaleX = currentScale
-                overlayView?.scaleY = currentScale
+                view.scaleX = currentScale
+                view.scaleY = currentScale
                 prefs.edit().putFloat(KEY_SCALE, currentScale).apply()
                 return true
             }
         })
 
-        overlayView?.setOnTouchListener { _, event ->
+        view.setOnTouchListener { _, event ->
             scaleDetector.onTouchEvent(event)
 
             if (event.pointerCount == 1) {
@@ -250,18 +258,18 @@ class OverlayService : Service() {
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        windowParams?.let { params ->
-                            params.x = (initialX + (event.rawX - initialTouchX).toInt()).coerceIn(-920, 920)
-                            params.y = (initialY - (event.rawY - initialTouchY).toInt()).coerceIn(0, 1030)
-                            windowManager?.updateViewLayout(overlayView, params)
+                        windowParams?.let { p ->
+                            p.x = (initialX + (event.rawX - initialTouchX).toInt()).coerceIn(-920, 920)
+                            p.y = (initialY - (event.rawY - initialTouchY).toInt()).coerceIn(0, 1030)
+                            windowManager?.updateViewLayout(overlayView, p)
                         }
                         true
                     }
                     MotionEvent.ACTION_UP -> {
-                        windowParams?.let { params ->
+                        windowParams?.let { p ->
                             prefs.edit()
-                                .putInt(KEY_POS_X, params.x)
-                                .putInt(KEY_POS_Y, params.y)
+                                .putInt(KEY_POS_X, p.x)
+                                .putInt(KEY_POS_Y, p.y)
                                 .apply()
                         }
                         true
@@ -274,13 +282,22 @@ class OverlayService : Service() {
         }
 
         try {
-            windowManager?.addView(overlayView, windowParams)
+            windowManager?.addView(view, params)
+            android.util.Log.i("OverlayService", "Overlay successfully added to WindowManager")
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("OverlayService", "Failed to add overlay to WindowManager: ${e.message}", e)
+            overlayView = null
         }
     }
 
     private fun renderOverlay() {
+        if (overlayView == null) {
+            if (Settings.canDrawOverlays(this) && latestDistanceKm > 0) {
+                showOverlay()
+            }
+            if (overlayView == null) return
+        }
+
         val currentSoc = bydBridge.currentSoc
         val consumption = bydBridge.currentConsumption
         val liveRemainKwh = bydBridge.remainEnergyKwh

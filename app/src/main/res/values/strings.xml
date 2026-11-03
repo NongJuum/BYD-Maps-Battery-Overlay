@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BYD Maps Battery</string>
+    <string name="app_name">BYD Maps (Alpha)</string>
     <string name="app_title">⚡ BYD Smart EV Route &amp; Battery Overlay</string>
     <string name="app_author">Developed by Nontarat Hasitapong</string>
     <string name="btn_switch_language">🌐 Switch to ภาษาไทย</string>

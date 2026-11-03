@@ -189,14 +189,37 @@ class MainActivity : AppCompatActivity() {
 
         btnTestOverlay.setOnClickListener {
             val testDist = 25.0
+            val serviceIntent = Intent(this, OverlayService::class.java).apply {
+                action = OverlayService.ACTION_UPDATE_DISTANCE
+                putExtra(OverlayService.EXTRA_DISTANCE_KM, testDist)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
             sendBroadcast(Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
+                setPackage(packageName)
                 putExtra(OverlayService.EXTRA_DISTANCE_KM, testDist)
             })
-            Toast.makeText(this, getString(R.string.toast_overlay_shown), Toast.LENGTH_SHORT).show()
+
+            val hasOverlay = Settings.canDrawOverlays(this)
+            val msg = if (hasOverlay) {
+                getString(R.string.toast_overlay_shown)
+            } else {
+                if (isTh) "กำลังรอสิทธิ์ Overlay จาก ADB... หากมีหน้าต่างขึ้นบนจอให้กดยืนยัน" else "Waiting for Overlay permission from ADB..."
+            }
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
 
         btnResetPosition.setOnClickListener {
-            sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION))
+            val serviceIntent = Intent(this, OverlayService::class.java).apply {
+                action = OverlayService.ACTION_RESET_POSITION
+            }
+            startService(serviceIntent)
+            sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION).apply {
+                setPackage(packageName)
+            })
             Toast.makeText(this, getString(R.string.toast_overlay_reset), Toast.LENGTH_SHORT).show()
         }
 
@@ -215,7 +238,13 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, toastMsg, Toast.LENGTH_LONG).show()
                         if (isSuccess) {
                             vehicleBridge.restartConnection()
-                            sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
+                            val updateIntent = Intent(this, OverlayService::class.java).apply {
+                                action = OverlayService.ACTION_PROFILE_UPDATED
+                            }
+                            startService(updateIntent)
+                            sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED).apply {
+                                setPackage(packageName)
+                            })
                             vehicleBridge.notifyUpdate()
                         }
                     }
@@ -247,7 +276,13 @@ class MainActivity : AppCompatActivity() {
                 tvStatus.text = message
                 if (isFinished && isSuccess) {
                     vehicleBridge.restartConnection()
-                    sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
+                    val updateIntent = Intent(this, OverlayService::class.java).apply {
+                        action = OverlayService.ACTION_PROFILE_UPDATED
+                    }
+                    startService(updateIntent)
+                    sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED).apply {
+                        setPackage(packageName)
+                    })
                     vehicleBridge.notifyUpdate()
                 }
             }
