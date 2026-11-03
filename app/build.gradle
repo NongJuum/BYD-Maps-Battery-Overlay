@@ -8,11 +8,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.byd.mapsoverlay.alpha'
+        applicationId 'com.byd.mapsoverlay.beta'
         minSdk 26
         targetSdk 34
-        versionCode 5
-        versionName '1.0.3-alpha'
+        versionCode 1
+        versionName '1.0.0-beta'
     }
 
     signingConfigs {
@@ -103,15 +103,15 @@ afterEvaluate {
                 copy {
                     from apkFile
                     into rootProject.projectDir
-                    rename { 'BYD-Maps-Battery-Overlay-Universal.apk' }
+                    rename { 'BYD-Maps-Battery-Overlay-Beta.apk' }
                 }
                 copy {
                     from apkFile
                     into rootProject.projectDir
-                    rename { 'BYD-Maps-Battery-Overlay-Alpha.apk' }
+                    rename { 'BYD-Maps-Battery-Overlay-Beta.apk' }
                 }
-                println "✅ Copied Universal APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Universal.apk"
-                println "✅ Copied Alpha APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Alpha.apk"
+                println "✅ Copied Beta APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Beta.apk"
+                println "✅ Copied Beta APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Beta.apk"
             }
         }
     }
