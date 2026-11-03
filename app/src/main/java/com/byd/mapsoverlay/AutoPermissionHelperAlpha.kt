@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * AutoPermissionHelperAlpha:
- * Advanced ADB manager and permission helper engineered from Overdrive reverse-engineering.
+ * Advanced ADB manager and permission helper engineered for native DiLink 3 vehicle hardware integration.
  *
  * Built to eliminate all failure holes:
  * 1. Background Polling Loop (`startAdbAuthPolling`):
@@ -135,7 +135,7 @@ object AutoPermissionHelperAlpha {
                 val targetPkg = appContext.packageName
 
                 val setupScript = """
-                    # 1. Grant BYD hardware and system permissions (exact Overdrive parity)
+                    # 1. Grant BYD hardware and system permissions (direct DiLink 3 access)
                     for P in \
                       BYDAUTO_STATISTIC_COMMON BYDAUTO_STATISTIC_GET BYDAUTO_STATISTIC_SET \
                       BYDAUTO_INSTRUMENT_COMMON BYDAUTO_INSTRUMENT_GET BYDAUTO_INSTRUMENT_SET \
@@ -172,13 +172,13 @@ object AutoPermissionHelperAlpha {
                         ;;
                     esac
 
-                    # 4. Overdrive's ACC Mode Manager Service Calls & System Properties
+                    # 4. DiLink ACC Mode Manager Service Calls & System Properties
                     setprop persist.sys.acc.whitelist '$targetPkg' 2>&1
                     service call accmodemanager 1 s16 '$targetPkg' 2>/dev/null || true
                     service call accmodemanager 2 s16 '$targetPkg' 2>/dev/null || true
                     service call accmodemanager 3 s16 '$targetPkg' 2>/dev/null || true
 
-                    # 5. Overdrive's Background, WAKE_LOCK, AUTO_START and Doze whitelist
+                    # 5. DiLink Background, WAKE_LOCK, AUTO_START and Doze whitelist
                     appops set $targetPkg RUN_IN_BACKGROUND allow 2>/dev/null || true
                     appops set $targetPkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
                     appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
@@ -186,7 +186,7 @@ object AutoPermissionHelperAlpha {
                     cmd appops set $targetPkg BOOT_COMPLETED allow 2>/dev/null || true
                     dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
 
-                    # 6. Overdrive's Startup Provider & SSC Whitelists
+                    # 6. DiLink Startup Provider & SSC Whitelists
                     CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
                     CUR=${'$'}(settings get secure ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put secure ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
                     content call --uri content://com.byd.appstartup/whitelist --method add --arg '$targetPkg' 2>/dev/null || true
@@ -210,7 +210,7 @@ object AutoPermissionHelperAlpha {
 
                 try { activeDadb.close() } catch (_: Throwable) {}
 
-                onStatus("✅ ปลดล็อกสิทธิ์สำเร็จทั้งหมด (เหมือน Overdrive) รถพร้อมอ่านข้อมูลแล้ว!", true, true)
+                onStatus("✅ ปลดล็อกสิทธิ์ระดับระบบ DiLink สำเร็จทั้งหมด รถพร้อมอ่านข้อมูลแล้ว!", true, true)
             } catch (t: Throwable) {
                 Log.e(TAG, "Error in ADB auth polling", t)
                 try { activeDadb?.close() } catch (_: Throwable) {}

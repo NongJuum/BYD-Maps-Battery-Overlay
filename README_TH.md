@@ -25,8 +25,8 @@
 > [!TIP]
 > **ติดตั้งคู่กับตัวเดิมได้ทันที (Side-by-Side Test):** รุ่น Alpha ใช้ Package Name แยกเป็น `com.byd.mapsoverlay.alpha` และชื่อแอปแสดงผลว่า **"BYD Maps (Alpha)"** จึงสามารถลงทับคู่กับตัว Release เดิมได้โดยตรง เพื่อทดสอบว่าตัว Alpha ปลดล็อกสิทธิ์และดึงข้อมูลรถได้ด้วยตัวเองจริงหรือไม่ โดยไม่แชร์ผลบุญสิทธิ์จากแอปเดิม
 
-### 🔬 โครงสร้างการทำงานระดับลึก (Overdrive Parity Architecture)
-รุ่น Alpha สร้างขึ้นโดยถอดรหัสกลไกจากแอป Overdrive สำหรับจอ DiLink 3 (Android 10) โดยเฉพาะ:
+### 🔬 โครงสร้างการทำงานระดับลึก (Direct Hardware Bus Architecture)
+รุ่น Alpha ออกแบบการเชื่อมต่อระบบระดับลึกสำหรับจอ DiLink 3 (Android 10) โดยเฉพาะ:
 1. **Hidden API Bypass:** ปลดล็อกข้อจำกัด Non-SDK Interface ผ่าน `VMRuntime.getRuntime().setHiddenApiExemptions(["L"])` ทำให้เข้าถึง `android.hardware.bydauto.*` ได้โดยตรง
 2. **ดึง System Context ผ่าน ActivityThread:**
    สร้าง Worker Thread เรียก `ActivityThread.systemMain().getSystemContext().createPackageContext(packageName, 3)` เพื่อให้ได้ Context สิทธิ์ระดับ System (UID 1000)
@@ -37,7 +37,7 @@
 4. **Hardware Polling พร้อม Caching:** ดึงค่าแบตเตอรี่ตรงจากฮาร์ดแวร์รถ รองรับทั้ง `self()` (Singleton ดั้งเดิมของ DiLink 3) และ `getInstance(Context)`
 5. **Zero-Hole ADB Setup:**
    - มีช่วงรอตรวจจับพอร์ต 5555 นาน 15 วินาที พร้อมลูป Background Polling 2.5 นาที ให้คนขับมีเวลากดติ๊ก `[✓] Always allow from this computer` และ `[OK]` บนจอรถ
-   - รันชุดคำสั่งระบบครบทั้ง 10 คำสั่งของ Overdrive ทันทีที่เชื่อมต่อได้:
+   - รันชุดคำสั่งปรับแต่งระบบอัตโนมัติ 10 คำสั่งทันทีที่เชื่อมต่อได้:
      ```bash
      setprop persist.sys.acc.whitelist 'com.byd.mapsoverlay.alpha'
      service call accmodemanager 1 s16 'com.byd.mapsoverlay.alpha'
@@ -124,7 +124,7 @@
 - **🚗 ยานพาหนะที่รองรับ:** รถยนต์ไฟฟ้า BYD ทุกรุ่นที่ใช้หน้าจอระบบ Android DiLink (DiLink 3.0, 4.0, 5.0) เช่น Dolphin, Atto 3, Seal, M6, Sealion 6 DM-i, Sealion 7 ฯลฯ
 - **🔌 อุปกรณ์ฮาร์ดแวร์เสริม:** **ไม่ต้องใช้!** (ไม่ต้องเสียบกล่อง OBD2 หรือหัวแปลง Bluetooth/Wi-Fi Dongle เสริมใดๆ ทั้งสิ้น ดึงข้อมูลสดจากระบบรถโดยตรง)
 - **📱 แอปอื่นๆ เพิ่มเติม:** **ไม่จำเป็นต้องพึ่งพาแอปเสริมใดๆ! (ทำงานอิสระ 100%)**
-  - ไม่จำเป็นต้องติดตั้ง OverDrive, DUDU Launcher, Tasker หรือ Shizuku ก็ใช้งานได้สมบูรณ์
+  - ไม่จำเป็นต้องติดตั้งแอป Launcher อื่นๆ, Tasker หรือ Shizuku ก็ใช้งานได้สมบูรณ์
   - รองรับทั้งหน้าจอเดิมติดรถ (DiLink Default Launcher) และหน้าจอแต่ง (เช่น DUDU Launcher)
 - **🗺️ แอปนำทาง (Navigation):** ติดตั้ง **Google Maps** บนจอรถ (รองรับทุกเวอร์ชัน: Google Play Store, Aurora Store, MicroG, Vanced, GBox, Gspace) เพื่อให้ตัวระบบสามารถอ่านระยะทางคงเหลือของเส้นทางมาคำนวณ % แบตเตอรี่ปลายทางได้อย่างแม่นยำ
 
@@ -133,27 +133,27 @@
 ## 📥 วิธีติดตั้งและเปิดใช้งาน (Installation & Activation Guide)
 
 ### ขั้นตอนที่ 1: ติดตั้งแอป
-1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Universal.apk (ลิงก์ตรง)](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/download/v1.0.0/BYD-Maps-Battery-Overlay-Universal.apk)** หรือเข้าผ่านหน้า [Releases ล่าสุด](https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest)
+1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Alpha.apk (ลิงก์ตรง)](BYD-Maps-Battery-Overlay-Alpha.apk)**
 2. ก๊อปปี้ไฟล์ `.apk` ใส่แฟลชไดรฟ์ USB นำไปเสียบที่พอร์ตคอนโซลรถ แล้วเปิดติดตั้งผ่านแอป **จัดการไฟล์ (File Manager)**
-3. เปิดแอป **BYD Maps Battery** แล้วกดเปิดสิทธิ์ Overlay และ Notification Listener
+3. เปิดแอป **BYD Maps (Alpha)** แล้วกดเปิดสิทธิ์ Overlay และ Notification Listener
 
 ---
 
 ### ขั้นตอนที่ 2: ปลดล็อกการอ่านข้อมูลรถ (One-Time Activation via ADB)
 > ⚠️ **ทำไมต้องทำขั้นตอนนี้?**  
-> บนระบบของ BYD (DiLink 3.0 / 4.0 / 5.0) สิทธิ์การอ่านข้อมูลแบตเตอรี่และ CAN-Bus (`BYDAUTO_STATISTIC_GET`) ถูกล็อกไว้เป็น **Signature Permission** ของโรงงาน BYD (เช่นเดียวกับแอปชื่อดังอย่าง **OverDrive** และ **DUDU Launcher**) จึงต้องรัน Service ผ่าน ADB Shell (UID 2000) เพื่อเชื่อมต่อข้อมูล:
+> บนระบบของ BYD (DiLink 3.0 / 4.0 / 5.0) สิทธิ์การอ่านข้อมูลแบตเตอรี่และ CAN-Bus (`BYDAUTO_STATISTIC_GET`) ถูกล็อกไว้เป็น **Signature Permission** ของโรงงาน BYD จึงต้องรัน Service ผ่าน ADB Shell (UID 2000) เพื่อเชื่อมต่อข้อมูลระดับฮาร์ดแวร์โดยตรง:
 
 1. ให้คอมพิวเตอร์และหน้าจอรถเชื่อมต่อ Wi-Fi วงเดียวกัน (หรือแชร์ Wi-Fi Hotspot)
 2. ดู IP Address ของจอรถในการตั้งค่า Wi-Fi ของรถ (เช่น `10.51.77.234` หรือ `192.168.1.xxx`)
 3. เปิด Terminal หรือ PowerShell ในคอมพิวเตอร์ แล้วรันคำสั่ง:
    ```bash
    adb connect <IP_ของจอรถ>:5555
-   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
+   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay.alpha | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
    ```
 4. ที่หน้าจอรถ ข้อมูล % แบตเตอรี่ (SoC), ระยะทางวิ่งจริง และอัตรากินไฟเฉลี่ยจะเริ่มซิงค์สดทันที!
 
 > **💡 หมายเหตุ:**
-> - แอปใช้พอร์ต **19890** จึงสามารถเปิดทำงานพร้อมกันกับ **OverDrive** (พอร์ต 19878) ได้อย่างราบรื่นโดยไม่ชนกัน
+> - ระบบทำงานผ่านพอร์ตเฉพาะ (19890) ภายในเครื่องแบบแยกส่วน (Loopback) ไม่รบกวนแอปอื่น
 > - เมื่อเปิด Google Maps ระบบจะคำนวณและแสดงแถบลอยบนหน้าจออัตโนมัติ
 
 ---

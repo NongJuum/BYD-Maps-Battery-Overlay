@@ -9,9 +9,9 @@ import java.lang.reflect.Method
 
 /**
  * BydDataCacheWhitelist:
- * Exact replica of Overdrive's `BydDataCacheWhitelist` (`com.overdrive.app.util.BydDataCacheWhitelist`).
+ * Low-level system whitelisting and context elevation for BYD DiLink firmware.
  *
- * Configures the 4 critical BYD vehicle services required on DiLink 3 (Android 10):
+ * Configures the critical BYD vehicle services required on DiLink 3 (Android 10):
  * 1. Obtains privileged context via `ActivityThread.systemMain().getSystemContext().createPackageContext(..., 3)`.
  * 2. `accmodemanager`: `mService.setPkg2AccWhiteList(packageName)` - Prevents the car from cutting power / killing the app in ACC/driving modes.
  * 3. `bg_datacache`: `setAppOpsData(appUid, 0)` - Grants the app access to the vehicle telemetry bus on DiLink 3.
@@ -28,7 +28,7 @@ object BydDataCacheWhitelist {
         HiddenApiBypass.exemptAll()
         val packageName = context.packageName
 
-        // Overdrive's exact pattern: Obtain privileged system context via ActivityThread.systemMain()
+        // Obtain privileged system context via ActivityThread.systemMain()
         var contextCreatePackageContext: Context? = null
         try {
             val cls = Class.forName("android.app.ActivityThread")

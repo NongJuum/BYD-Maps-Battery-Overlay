@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- สิทธิ์เข้าถึงกล่องข้อมูลรถยนต์ BYD (OBD / CAN Bus / BMS Hardware Permissions) -->
-    <!-- ทำให้แอปสามารถเชื่อมต่อกับฮาร์ดแวร์รถยนต์ DiLink 3/4/5 ได้เต็มรูปแบบเหมือน Overdrive -->
+    <!-- ทำให้แอปสามารถเชื่อมต่อกับฮาร์ดแวร์รถยนต์ DiLink 3/4/5 ได้เต็มรูปแบบ -->
     <uses-permission android:name="android.permission.BYDAUTO_STATISTIC_COMMON" />
     <uses-permission android:name="android.permission.BYDAUTO_STATISTIC_GET" />
     <uses-permission android:name="android.permission.BYDAUTO_STATISTIC_SET" />

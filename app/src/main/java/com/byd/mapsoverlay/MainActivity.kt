@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Overdrive-style BYD whitelist registration & hidden API bypass
+        // In-process BYD system whitelist registration & hidden API bypass
         HiddenApiBypass.exemptAll()
         BydDataCacheWhitelist.ensureWhitelisted(this)
 

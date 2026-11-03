@@ -6,10 +6,7 @@ import android.content.pm.PackageManager
 
 /**
  * BydPermissionContext:
- * Exact replica of Overdrive's `PermissionBypassContext`
- * (found in `com.overdrive.app.daemon.CameraDaemon`, `TelemetryDataCollector`, and `BydDataCacheWhitelist`).
- *
- * Unconditionally grants all permission checks to prevent BYD SDK internal checks
+ * Unconditionally grants permission checks to prevent BYD SDK internal checks
  * or vehicle system services from throwing SecurityException on DiLink 3 (Android 10).
  */
 class BydPermissionContext(base: Context) : ContextWrapper(base) {

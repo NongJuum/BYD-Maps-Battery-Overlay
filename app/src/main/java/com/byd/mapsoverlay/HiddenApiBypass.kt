@@ -4,7 +4,6 @@ import java.lang.reflect.Method
 
 /**
  * HiddenApiBypass:
- * Exact replica of Overdrive's HiddenApiBypass (`com.overdrive.app.shell.HiddenApiBypass`).
  * Exempts the app from Android hidden API restrictions via dalvik.system.VMRuntime,
  * allowing reflection into android.hardware.bydauto.* and android.app.ActivityThread on Android 9/10 (DiLink 3).
  */

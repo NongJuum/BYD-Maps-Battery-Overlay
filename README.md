@@ -25,8 +25,8 @@
 > [!TIP]
 > **Independent Package for Side-by-Side Testing**: The Alpha Edition uses `com.byd.mapsoverlay.alpha` and the label **"BYD Maps (Alpha)"**. You can install and test it directly alongside the stable version without overwriting or inheriting permissions.
 
-### 🔬 Architecture & Overdrive Reverse-Engineered Parity
-The Alpha build introduces complete parity with the proven Overdrive architecture for **DiLink 3 (Android 10)**:
+### 🔬 Native Low-Level Hardware Integration Architecture
+The Alpha build introduces direct low-level system integration engineered specifically for **DiLink 3 (Android 10)**:
 1. **Hidden API Bypass**: Unlocks restricted OEM interfaces via `VMRuntime.getRuntime().setHiddenApiExemptions(["L"])`.
 2. **System Context Acquisition**: Invokes `ActivityThread.systemMain().getSystemContext().createPackageContext(packageName, 3)` to obtain system-privileged Binder context.
 3. **Vehicle Whitelisting via IPC**:
@@ -123,7 +123,7 @@ The Alpha build introduces complete parity with the proven Overdrive architectur
 - **🚗 Supported Vehicles:** All BYD electric and DM-i vehicles running Android-based DiLink (DiLink 3.0, 4.0, 5.0), including Dolphin, Atto 3, Seal, M6, Sealion 6 DM-i, Sealion 7, etc.
 - **🔌 Hardware Dongles:** **None required!** (No OBD2 scanner or Bluetooth/Wi-Fi adapters needed; reads directly from vehicle CAN bus / BMS).
 - **📱 Third-Party App Dependencies:** **None! 100% Standalone.**
-  - Does NOT require OverDrive, DUDU Launcher, Tasker, or Shizuku to function.
+  - Does NOT require third-party launchers, Tasker, or Shizuku to function.
   - Fully compatible with stock BYD DiLink UI as well as custom launchers (such as DUDU Launcher).
 - **🗺️ Navigation App:** **Google Maps** installed on the head unit (compatible with Play Store, Aurora Store, MicroG, Vanced, GBox, Gspace, etc.) so that the overlay can read turn-by-turn distance and calculate destination battery percentage.
 
@@ -140,19 +140,19 @@ The Alpha build introduces complete parity with the proven Overdrive architectur
 
 ### Step 2: One-Time Vehicle Telemetry Activation via ADB
 > ⚠️ **Why is this required?**  
-> On BYD DiLink firmware (DiLink 3.0 / 4.0 / 5.0), the vehicle CAN bus / battery statistics permission (`BYDAUTO_STATISTIC_GET`) is protected by OEM signature. Just like other prominent BYD apps (**OverDrive** and **DUDU Launcher**), a background reader running as ADB Shell (UID 2000) is required:
+> On BYD DiLink firmware (DiLink 3.0 / 4.0 / 5.0), the vehicle CAN bus / battery statistics permission (`BYDAUTO_STATISTIC_GET`) is protected by OEM signature. A background reader running as ADB Shell (UID 2000) is used to access native vehicle telemetry directly:
 
 1. Connect your computer to the same Wi-Fi network as the vehicle head unit (or use mobile hotspot).
 2. Note your head unit's IP address in Wi-Fi settings (e.g., `10.51.77.234` or `192.168.1.xxx`).
 3. Run the following command in Terminal / PowerShell on your computer:
    ```bash
    adb connect <CAR_IP_ADDRESS>:5555
-   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
+   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay.alpha | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
    ```
 4. Check the head unit screen: live Battery SoC %, real range, and 50km power consumption will immediately start updating!
 
 > **💡 Notes:**
-> - Fully compatible alongside **OverDrive** (operates on dedicated port **19890** with zero port collisions).
+> - Operates on a dedicated, isolated loopback port (19890) with zero system interference.
 > - Whenever Google Maps navigation starts, the pill overlay displays automatically.
 
 ---

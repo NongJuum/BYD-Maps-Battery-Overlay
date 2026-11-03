@@ -16,9 +16,8 @@ import java.net.Socket;
 import java.lang.reflect.Method;
 
 /**
- * Runs through app_process as ADB shell (UID 2000), following the proven
- * OverDrive DiLink 3 telemetry pattern. Publishes read-only BYD telemetry
- * over loopback HTTP for the ordinary overlay process.
+ * Runs through app_process as ADB shell (UID 2000) for native DiLink 3 telemetry.
+ * Publishes read-only BYD telemetry over loopback HTTP for the overlay process.
  */
 public final class BydTelemetryDaemon {
     private static final String TAG = "BydTelemetryDaemon";
@@ -79,7 +78,7 @@ public final class BydTelemetryDaemon {
         Object thread = null;
 
         // app_process does not always have an ActivityThread attached to the
-        // current thread. OverDrive uses a bounded systemMain bootstrap to
+        // current thread. Uses a bounded systemMain bootstrap to
         // avoid hanging the telemetry daemon during ActivityThread creation.
         try {
             thread = at.getMethod("currentActivityThread").invoke(null);
@@ -266,10 +265,7 @@ public final class BydTelemetryDaemon {
     private static Object getDevice(String className, Context context) {
         try {
             Class<?> cls = Class.forName(className);
-            // DUDU launcher on DiLink 3 uses BYDAutoStatisticDevice.self(), not
-            // getInstance(Context). Prefer the firmware singleton API first.
-            // DUDU's DiLink 3 wrapper uses self(); OverDrive's public
-            // DiLink 3 implementation uses getInstance(Context). Try both
+            // DiLink 3 wrapper supports both self() and getInstance(Context). Try both
             // without allowing one failed factory to suppress the other.
             try {
                 Method self = cls.getMethod("self");

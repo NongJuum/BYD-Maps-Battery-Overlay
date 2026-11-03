@@ -63,11 +63,11 @@ class BydVehicleBridge(
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
-            // 1. Direct native BYD hardware API reading (Overdrive style with BydPermissionContext)
+            // 1. Direct native BYD hardware API reading with BydPermissionContext
             pollDirectBydHardwareApi()
             // 2. Fallback / supplementary check via telemetry daemon
             if (currentSoc <= 0.0) {
-                fetchOptionalOverDriveStatus()
+                fetchTelemetryDaemonStatus()
             }
         }, 0, 2, TimeUnit.SECONDS)
     }
@@ -309,9 +309,9 @@ class BydVehicleBridge(
     private fun methodSignature(method: Method): String =
         "${method.name}(${method.parameterTypes.joinToString { it.simpleName }}):${method.returnType.simpleName}"
 
-    private fun fetchOptionalOverDriveStatus() {
+    private fun fetchTelemetryDaemonStatus() {
         try {
-            // Read our shell-UID telemetry daemon on port 19890 (avoiding collision with OverDrive AacIngest 19878)
+            // Read our shell-UID telemetry daemon on loopback port 19890
             val url = URL("http://127.0.0.1:19890/status")
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = 800
