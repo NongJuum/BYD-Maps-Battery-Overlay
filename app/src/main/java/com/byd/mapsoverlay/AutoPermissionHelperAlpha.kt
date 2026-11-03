@@ -265,23 +265,25 @@ object AutoPermissionHelperAlpha {
                     val localSize = apkFile.length()
                     val localSha = java.security.MessageDigest.getInstance("SHA-256")
                         .digest(apkFile.readBytes()).joinToString("") { "%02x".format(it) }
-                    val copyScript = """
-                        rm -f '$tmpTarget'
-                        cat '\${apkFile.absolutePath}' > '$tmpTarget' 2>/dev/null
-                        COPY_RC=$?
-                        if [ $COPY_RC -ne 0 ] || [ ! -f '$tmpTarget' ]; then
-                          rm -f '$tmpTarget'; echo COPY_FAILED; exit 21
-                        fi
+                    // Transfer through the ADB sync protocol. The app's private cache
+                    // path is NOT readable by the remote shell UID, so shell-side
+                    // "cat <app cache path>" can never stage this APK correctly.
+                    // Dadb.push streams the local file over the authenticated ADB
+                    // connection directly into the shell-owned /data/local/tmp.
+                    dadb.push(apkFile, tmpTarget)
+
+                    val verifyScript = """
+                        if [ ! -f '$tmpTarget' ]; then echo PUSH_MISSING; exit 21; fi
                         SIZE=$(wc -c < '$tmpTarget' 2>/dev/null | tr -d ' ')
                         HASH=$(sha256sum '$tmpTarget' 2>/dev/null | awk '{print $1}')
-                        echo "COPY_SIZE=$SIZE"
-                        echo "COPY_SHA256=$HASH"
-                        [ "$SIZE" = "$localSize" ] && [ "$HASH" = "$localSha" ] || { rm -f '$tmpTarget'; echo COPY_VERIFY_FAILED; exit 22; }
-                        echo COPY_VERIFIED
+                        echo "PUSH_SIZE=$SIZE"
+                        echo "PUSH_SHA256=$HASH"
+                        [ "$SIZE" = "$localSize" ] && [ "$HASH" = "$localSha" ] || { rm -f '$tmpTarget'; echo PUSH_VERIFY_FAILED; exit 22; }
+                        echo PUSH_VERIFIED
                     """.trimIndent()
-                    val copyResp = dadb.shell(copyScript)
-                    if (copyResp.exitCode != 0 || !copyResp.output.contains("COPY_VERIFIED")) {
-                        onResult(false, "ส่งไฟล์ APK เข้า DiLink ไม่สำเร็จ หรือข้อมูลไม่ตรงกัน: \${copyResp.output}")
+                    val copyResp = dadb.shell(verifyScript)
+                    if (copyResp.exitCode != 0 || !copyResp.output.contains("PUSH_VERIFIED")) {
+                        onResult(false, "ส่งไฟล์ APK เข้า DiLink ไม่สำเร็จ หรือข้อมูลไม่ตรงกัน: ${copyResp.output}")
                         return@use
                     }
                     val installScript = """
@@ -292,7 +294,7 @@ object AutoPermissionHelperAlpha {
                         echo "INSTALL_OUTPUT=$PM_OUT"
                         if [ "$INSTALL_RC" -eq 0 ] && echo "$PM_OUT" | grep -qx 'Success'; then
                           sleep 2
-                          am start -n \${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
+                          am start -n ${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
                           START_RC=$?
                           echo "START_RC=$START_RC"
                           [ "$START_RC" -eq 0 ] && echo INSTALL_AND_START_OK || echo INSTALL_OK_START_FAILED
