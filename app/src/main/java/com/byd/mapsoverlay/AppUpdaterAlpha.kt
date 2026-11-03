@@ -145,32 +145,34 @@ object AppUpdaterAlpha {
                     return@Thread
                 }
 
-                mainHandler.post { onStatus("ดาวน์โหลดเสร็จสิ้น กำลังสั่งติดตั้ง...") }
-
-                // 1. ถ้ามีพอร์ต ADB 5555 เปิดอยู่: ให้ติดตั้งแบบ Silent อัตโนมัติ
-                if (AutoPermissionHelperAlpha.isAdbPortOpen()) {
-                    AutoPermissionHelperAlpha.installApkSilently(appContext, targetFile) { success, msg ->
-                        mainHandler.post { onFinished(success, msg) }
-                    }
+                val archiveInfo = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    appContext.packageManager.getPackageArchiveInfo(
+                        targetFile.absolutePath,
+                        android.content.pm.PackageManager.PackageInfoFlags.of(0)
+                    )
                 } else {
-                    // 2. ถ้า ADB ปิดอยู่: ส่ง Intent ให้ตัวติดตั้งของระบบเปิดไฟล์ขึ้นมา
-                    mainHandler.post {
-                        try {
-                            val uri: Uri = FileProvider.getUriForFile(
-                                appContext,
-                                "${appContext.packageName}.provider",
-                                targetFile
-                            )
-                            val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, "application/vnd.android.package-archive")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            appContext.startActivity(installIntent)
-                            onFinished(true, "เปิดตัวติดตั้งของระบบเรียบร้อย")
-                        } catch (e: Exception) {
-                            onFinished(false, "เปิดตัวติดตั้งไม่สำเร็จ: ${e.message}")
-                        }
+                    @Suppress("DEPRECATION")
+                    appContext.packageManager.getPackageArchiveInfo(targetFile.absolutePath, 0)
+                }
+                if (archiveInfo == null) {
+                    mainHandler.post { onFinished(false, "ไฟล์ที่ดาวน์โหลดไม่ใช่ APK ที่สมบูรณ์") }
+                    return@Thread
+                }
+                if (archiveInfo.packageName != appContext.packageName) {
+                    mainHandler.post { onFinished(false, "Package ไม่ตรงกัน: พบ ${archiveInfo.packageName} แต่แอปนี้คือ ${appContext.packageName}") }
+                    return@Thread
+                }
+
+                mainHandler.post { onStatus("ดาวน์โหลดเสร็จสิ้น กำลังตรวจสอบช่องทางติดตั้ง...") }
+                // Always attempt a real authenticated ADB install; a listening TCP port is not authorization.
+                // On any ADB/auth/install failure, fall back to Android Package Installer for user confirmation.
+                AutoPermissionHelperAlpha.installApkSilently(appContext, targetFile) { success, msg ->
+                    if (success) {
+                        mainHandler.post { onFinished(true, msg) }
+                    } else {
+                        Log.w(TAG, "Silent ADB install failed; falling back to Android installer: $msg")
+                        mainHandler.post { onStatus("ติดตั้งผ่าน ADB ไม่สำเร็จ กำลังเปิดตัวติดตั้ง Android...") }
+                        mainHandler.post { launchSystemInstaller(appContext, targetFile, msg, onFinished) }
                     }
                 }
             } catch (t: Throwable) {
@@ -178,5 +180,28 @@ object AppUpdaterAlpha {
                 mainHandler.post { onFinished(false, "เกิดข้อผิดพลาด: ${t.message}") }
             }
         }.start()
+    }
+}
+
+private fun launchSystemInstaller(
+    context: Context,
+    apkFile: File,
+    adbFailure: String,
+    onFinished: (Boolean, String) -> Unit
+) {
+    try {
+        val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", apkFile)
+        val installIntent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+            data = uri
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+            putExtra(Intent.EXTRA_RETURN_RESULT, false)
+        }
+        context.startActivity(installIntent)
+        onFinished(true, "เปิดหน้าติดตั้ง Android แล้ว กรุณากดยืนยันบนหน้าจอรถ (ADB: $adbFailure)")
+    } catch (e: Exception) {
+        Log.e("AppUpdaterAlpha", "Unable to launch system package installer", e)
+        onFinished(false, "ติดตั้งผ่าน ADB ไม่สำเร็จ ($adbFailure) และเปิดตัวติดตั้ง Android ไม่ได้: ${e.message}")
     }
 }
