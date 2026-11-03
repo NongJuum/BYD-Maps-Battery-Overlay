@@ -335,9 +335,10 @@ object AutoPermissionHelperAlpha {
                           am start -n "${'$'}APP/com.byd.mapsoverlay.MainActivity" --activity-clear-task --activity-new-task --ez ota_failed true --es ota_status_file "${'$'}STATUS"
                         fi
                     """.trimIndent()
-                    localScript = File.createTempFile("beta_update_", ".sh", appContext.cacheDir)
-                    localScript.writeText(installScript)
-                    dadb.push(localScript, scriptPath)
+                    val scriptFile = File.createTempFile("beta_update_", ".sh", appContext.cacheDir)
+                    localScript = scriptFile
+                    scriptFile.writeText(installScript)
+                    dadb.push(scriptFile, scriptPath)
                     val chmod = dadb.shell("chmod 700 '$scriptPath'")
                     if (chmod.exitCode != 0) {
                         onResult(false, "เตรียมสคริปต์ติดตั้งบน DiLink ไม่สำเร็จ: " + chmod.output)
