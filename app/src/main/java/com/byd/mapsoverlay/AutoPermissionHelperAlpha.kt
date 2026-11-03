@@ -5,6 +5,7 @@ import android.provider.Settings
 import android.util.Log
 import dadb.AdbKeyPair
 import dadb.Dadb
+import dadb.SyncResult
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -338,11 +339,11 @@ object AutoPermissionHelperAlpha {
                     try {
                         scriptFile.writeText(installScript)
                         when (val pushResult = dadb.push(scriptFile, scriptPath)) {
-                            is dadb.SyncResult.Failure -> {
+                            is SyncResult.Failure -> {
                                 onResult(false, "ส่งสคริปต์ติดตั้งเข้า DiLink ไม่สำเร็จ: " + pushResult.reason)
                                 return@use
                             }
-                            dadb.SyncResult.Success -> Unit
+                            SyncResult.Success -> Unit
                         }
                     } finally {
                         scriptFile.delete()
