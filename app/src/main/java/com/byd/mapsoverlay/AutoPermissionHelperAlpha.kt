@@ -236,41 +236,96 @@ object AutoPermissionHelperAlpha {
         val appContext = context.applicationContext ?: context
         Thread({
             try {
-                if (!apkFile.exists() || apkFile.length() < 1000) {
+                if (!apkFile.exists() || apkFile.length() < 10000) {
                     onResult(false, "ไฟล์ APK ไม่ถูกต้องหรือไม่พบ")
                     return@Thread
                 }
 
+                val expectedBytes = apkFile.length()
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 60000).use { dadb ->
                     val tmpTarget = "/data/local/tmp/alpha_update.apk"
-                    val copyScript = "cat '${apkFile.absolutePath}' > $tmpTarget 2>/dev/null || cp '${apkFile.absolutePath}' $tmpTarget 2>/dev/null"
-                    dadb.shell(copyScript)
+                    val progressFile = "/data/local/tmp/alpha_update_progress.json"
+                    val installLog = "/data/local/tmp/alpha_install.log"
 
+                    // Reference-style installer: verify staged APK, capture PM output,
+                    // preserve the actual return code, and persist progress/error details.
                     val installScript = """
-                        pm install -r -d $tmpTarget
-                        STATUS=${'$'}?
-                        rm -f $tmpTarget
-                        if [ ${'$'}STATUS -eq 0 ]; then
-                          sleep 1
-                          am start -n ${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
-                          echo INSTALL_SUCCESS
-                        else
-                          echo INSTALL_FAILED_${'$'}STATUS
+                        #!/system/bin/sh
+                        APK_PATH="$1"
+                        TARGET_PKG="$2"
+                        EXPECTED_BYTES="$3"
+                        PROGRESS="$progressFile"
+                        LOG="$installLog"
+                        echo "[install] starting at $(date)" > "$LOG"
+                        printf '{"phase":"installing","percent":-1,"message":"Installing Alpha update"}' > "$PROGRESS"
+
+                        if [ ! -f "$APK_PATH" ]; then
+                          echo "APK file missing: $APK_PATH" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK file missing"}' > "$PROGRESS"
+                          exit 20
                         fi
+
+                        ACTUAL_BYTES=$(wc -c < "$APK_PATH" 2>/dev/null | tr -d ' ')
+                        if [ "$ACTUAL_BYTES" != "$EXPECTED_BYTES" ]; then
+                          echo "APK size mismatch expected=$EXPECTED_BYTES actual=$ACTUAL_BYTES" | tee -a "$LOG"
+                          printf '{"phase":"error","percent":-1,"message":"APK copy incomplete"}' > "$PROGRESS"
+                          exit 21
+                        fi
+
+                        echo "[install] running pm install" | tee -a "$LOG"
+                        PM_OUT=$(pm install -r -d "$APK_PATH" 2>&1)
+                        INSTALL_RC=$?
+                        echo "$PM_OUT" | tee -a "$LOG"
+                        echo "[install] done rc=$INSTALL_RC at $(date)" | tee -a "$LOG"
+
+                        if [ "$INSTALL_RC" != "0" ] || ! echo "$PM_OUT" | grep -qi '^Success'; then
+                          case "$PM_OUT" in
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*"No space left on device"*|*"not enough space"*|*"insufficient storage"*)
+                              PM_OUT="พื้นที่จัดเก็บในรถไม่เพียงพอสำหรับอัปเดต กรุณาเพิ่มพื้นที่แล้วลองใหม่"
+                              ;;
+                          esac
+                          PM_ESC=$(printf %s "$PM_OUT" | tr -d '\000-\037' | sed 's/\\/\\\\/g;s/"/\\"/g')
+                          printf '{"phase":"error","percent":-1,"message":"Install failed","error":"%s","exitCode":%s}' "$PM_ESC" "$INSTALL_RC" > "$PROGRESS"
+                          echo "INSTALL_FAILED rc=$INSTALL_RC: $PM_OUT"
+                          exit "$INSTALL_RC"
+                        fi
+
+                        printf '{"phase":"complete","percent":100,"message":"Install successful"}' > "$PROGRESS"
+                        sleep 2
+                        am start -n "$TARGET_PKG/com.byd.mapsoverlay.MainActivity" --ez post_update true >/dev/null 2>&1
+                        echo "INSTALL_SUCCESS"
+                        exit 0
                     """.trimIndent()
 
-                    val resp = dadb.shell(installScript)
-                    val out = resp.output
-                    if (out.contains("INSTALL_SUCCESS") || out.contains("Success", ignoreCase = true)) {
+                    val escapedScript = installScript.replace("'", "'\\\\''")
+                    val writeResp = dadb.shell("printf '%s' '$escapedScript' > /data/local/tmp/alpha_install.sh && chmod 755 /data/local/tmp/alpha_install.sh")
+                    if (writeResp.exitCode != 0) {
+                        onResult(false, "เขียนสคริปต์ติดตั้งไม่สำเร็จ: ${writeResp.output}")
+                        return@use
+                    }
+
+                    val copyScript = "cat '${apkFile.absolutePath}' > '$tmpTarget' && test \\"$(wc -c < '$tmpTarget' | tr -d ' ') \\" = '$expectedBytes'"
+                    val copyResp = dadb.shell(copyScript)
+                    if (copyResp.exitCode != 0) {
+                        onResult(false, "คัดลอก APK ไปยังรถไม่ครบ (ต้องการ $expectedBytes bytes): ${copyResp.output}")
+                        return@use
+                    }
+
+                    val runResp = dadb.shell("sh /data/local/tmp/alpha_install.sh '$tmpTarget' '${appContext.packageName}' '$expectedBytes'")
+                    val output = runResp.output.trim()
+                    Log.i(TAG, "Reference-style installer exit=${runResp.exitCode}, output=$output")
+
+                    if (output.contains("INSTALL_SUCCESS") || (runResp.exitCode == 0 && output.contains("Success", ignoreCase = true))) {
                         onResult(true, "ติดตั้งเวอร์ชัน Alpha สำเร็จ กำลังเริ่มระบบใหม่...")
                     } else {
-                        onResult(false, "ติดตั้งไม่สำเร็จ: $out")
+                        val detail = output.ifBlank { "ไม่มีข้อความตอบกลับจากตัวติดตั้ง (exit=${runResp.exitCode})" }
+                        onResult(false, "ติดตั้งไม่สำเร็จ: $detail")
                     }
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Silent install failed", t)
-                onResult(false, "เกิดข้อผิดพลาดในการติดตั้ง: ${t.message}")
+                onResult(false, "เกิดข้อผิดพลาดในการติดตั้ง: ${t.javaClass.simpleName}: ${t.message}")
             }
         }, "AdbSilentInstaller").apply {
             isDaemon = true
