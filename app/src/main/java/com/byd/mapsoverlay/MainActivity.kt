@@ -74,6 +74,18 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
 
+        // Surface the real PackageManager failure returned by the detached OTA script.
+        if (intent.getBooleanExtra("ota_failed", false)) {
+            val statusPath = intent.getStringExtra("ota_status_file")
+            val details = try {
+                statusPath?.let { java.io.File(it).readLines().drop(1).joinToString(" ").trim() }
+                    ?.takeIf { it.isNotBlank() } ?: "ไม่พบรายละเอียดจากระบบติดตั้ง"
+            } catch (_: Exception) {
+                "ไม่สามารถอ่านรายละเอียดข้อผิดพลาดได้"
+            }
+            Toast.makeText(this, "อัปเดตไม่สำเร็จ: $details", Toast.LENGTH_LONG).show()
+        }
+
         // Language switcher button
         val btnSwitchLanguage = findViewById<Button>(R.id.btn_switch_language)
         val isTh = LanguageHelper.isThai(this)
