@@ -1,9 +1,9 @@
 {
-  "versionCode": 3,
-  "versionName": "1.0.2-beta",
+  "versionCode": 4,
+  "versionName": "1.0.3-beta",
   "channel": "beta",
   "edition": "Beta",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-  "changelogTh": "• ปรับปรุงระบบ OTA ให้ตรวจสอบไฟล์ APK และสลับไปใช้ตัวติดตั้ง Android เมื่อ ADB ติดตั้งไม่สำเร็จ",
-  "changelogEn": "• Improved OTA validation and added Android Package Installer fallback when ADB installation fails."
+  "changelogTh": "• แก้ไขการส่งไฟล์ APK ผ่าน ADB sync และตรวจสอบ SHA-256 ก่อนติดตั้ง",
+  "changelogEn": "• Fixed APK transfer using ADB sync and verified SHA-256 before installation."
 }
