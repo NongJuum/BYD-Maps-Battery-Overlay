@@ -325,14 +325,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Overlay and Maps permissions are Android special-access settings.
+        // Do not route these buttons through the ADB/OBD authorization flow.
         btnOverlay.setOnClickListener {
-            triggerAdbAuth()
+            openOverlayPermissionSettings()
         }
 
         btnNotification.setOnClickListener {
-            triggerAdbAuth()
+            openNotificationListenerSettings()
         }
 
+        // OBD/BYD vehicle data permissions remain on the ADB authorization flow.
         btnObdPermission.setOnClickListener {
             triggerAdbAuth()
         }
@@ -358,6 +361,70 @@ class MainActivity : AppCompatActivity() {
                     })
                     vehicleBridge.notifyUpdate()
                 }
+            }
+        }
+    }
+
+    private fun openOverlayPermissionSettings() {
+        if (Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Overlay permission is already granted", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName")
+        )
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Some head-unit Settings builds do not expose the app-specific overlay page.
+            try {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:$packageName")
+                    )
+                )
+            } catch (fallbackError: Exception) {
+                Log.e("MainActivity", "Unable to open Overlay permission settings", fallbackError)
+                Toast.makeText(this, "เปิดหน้า Overlay permission ไม่ได้", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun openNotificationListenerSettings() {
+        val expectedComponent = android.content.ComponentName(
+            this,
+            MapsNotificationListener::class.java
+        )
+        val enabledListeners = Settings.Secure.getString(
+            contentResolver,
+            "enabled_notification_listeners"
+        ).orEmpty()
+        val isEnabled = enabledListeners.split(':')
+            .mapNotNull { android.content.ComponentName.unflattenFromString(it) }
+            .contains(expectedComponent)
+
+        if (isEnabled) {
+            Toast.makeText(this, "Maps notification access is already enabled", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Unable to open Notification Listener settings", e)
+            try {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:$packageName")
+                    )
+                )
+            } catch (fallbackError: Exception) {
+                Log.e("MainActivity", "Unable to open app settings fallback", fallbackError)
+                Toast.makeText(this, "เปิดหน้า Maps notification access ไม่ได้", Toast.LENGTH_LONG).show()
             }
         }
     }
