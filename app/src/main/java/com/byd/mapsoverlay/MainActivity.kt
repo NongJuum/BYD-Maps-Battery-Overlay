@@ -18,6 +18,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.util.Log
 import android.widget.Toast
+import android.widget.Switch
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
@@ -151,6 +152,7 @@ class MainActivity : AppCompatActivity() {
         val btnOverlay = findViewById<Button>(R.id.btn_permission_overlay)
         val btnNotification = findViewById<Button>(R.id.btn_permission_notification)
         val btnObdPermission = findViewById<Button>(R.id.btn_permission_obd)
+        val switchDisableAutoStart = findViewById<Switch>(R.id.switch_disable_auto_start)
         val btnDonate = findViewById<Button>(R.id.btn_donate)
 
         // ตั้งค่ารายการรุ่นรถใน Spinner (ตามภาษาที่เลือก)
@@ -338,6 +340,21 @@ class MainActivity : AppCompatActivity() {
         // OBD/BYD vehicle data permissions remain on the ADB authorization flow.
         btnObdPermission.setOnClickListener {
             triggerAdbAuth()
+        }
+
+        switchDisableAutoStart.isChecked = AutoPermissionHelperAlpha.isAutoStartDisabled(this)
+        switchDisableAutoStart.setOnCheckedChangeListener { _, isDisabled ->
+            getSharedPreferences(AutoPermissionHelperAlpha.PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putBoolean(AutoPermissionHelperAlpha.KEY_DISABLE_AUTO_START, isDisabled)
+                .apply()
+
+            AutoPermissionHelperAlpha.setAutoStartEnabled(this, enabled = !isDisabled) { _, message ->
+                runOnUiThread {
+                    tvStatus.text = message
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         btnDonate.setOnClickListener {
