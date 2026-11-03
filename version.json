@@ -1,9 +1,9 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.0-alpha",
+  "versionCode": 3,
+  "versionName": "1.0.1-alpha",
   "channel": "alpha",
   "edition": "Alpha",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/BYD-Maps-Battery-Overlay-Alpha.apk",
-  "changelogTh": "• ระบบกรองอัตราสิ้นเปลืองนุ่มนวล พร้อมปัดเศษขึ้นทีละ 0.5 (.0/.5) สบายตาและปลอดภัยสูง\n• ระบบล็อกช่วงแบตเตอรี่ปลายทางก้าวละ 2% (Hysteresis Deadband) ป้องกันตัวเลขสั่นไหว\n• ระบบอัปเดตออนไลน์ (OTA) สำหรับรุ่น Alpha พร้อมป๊อปอัปให้ผู้ใช้กดยืนยันสิทธิ์ Auto Start หลังติดตั้งเสร็จ",
-  "changelogEn": "• Smoothed consumption filter rounded up in 0.5 steps (.0/.5) for rock-solid EV safety\n• 2% Hysteresis Deadband destination SoC stepping to eliminate jitter\n• Built-in OTA Online Updater for Alpha edition with interactive post-update Auto Start prompt"
+  "changelogTh": "• แก้ไขปุ่ม Overlay ให้เปิดหน้าตั้งค่าสิทธิ์แสดงทับแอป\n• แก้ไขปุ่ม Notification ให้เปิดหน้าตั้งค่า Notification Access\n• แยกการตั้งค่าสิทธิ์ Android ออกจากขั้นตอน ADB เพื่อลดปัญหา EOFException",
+  "changelogEn": "• Fixed Overlay button to open Android overlay permission settings\n• Fixed Notification button to open Notification Access settings\n• Separated Android permission settings from ADB authorization flow to reduce EOFException issues"
 }
