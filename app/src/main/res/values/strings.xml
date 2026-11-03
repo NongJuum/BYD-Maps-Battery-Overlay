@@ -49,6 +49,9 @@
     <string name="post_update_dialog_desc">An update was successfully installed. System updates may reset background execution permissions.\n\nPlease tap the button below to grant Auto Start and re-verify DiLink vehicle permissions.</string>
     <string name="post_update_btn_confirm">⚡ Grant Auto Start &amp; Apply</string>
 
+    <string name="label_disable_auto_start">Disable Auto Start</string>
+    <string name="desc_disable_auto_start">Prevent the car system from launching this app automatically at startup. Manual launch remains available.</string>
+
     <!-- Donate Dialog -->
     <string name="donate_dialog_title">☕ Support &amp; Donate</string>
     <string name="donate_dialog_author">Developed by Nontarat Hasitapong</string>
