@@ -356,6 +356,32 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
+        <!-- Auto Start preference -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp"
+            android:background="#1A1F29"
+            android:padding="12dp">
+
+            <Switch
+                android:id="@+id/switch_disable_auto_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_disable_auto_start"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/desc_disable_auto_start"
+                android:textColor="#90A4AE"
+                android:textSize="11sp" />
+        </LinearLayout>
+
         <!-- Donate Button -->
         <Button
             android:id="@+id/btn_donate"
