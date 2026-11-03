@@ -120,8 +120,20 @@ object AutoPermissionHelperAlpha {
                 onStatus("เชื่อมต่อ ADB สำเร็จแล้ว! กำลังบันทึกสิทธิ์และตั้งค่าระบบ...", false, false)
 
                 val setupScript = """
-                    # 1. Grant BYD common permissions
-                    for P in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON BYDAUTO_SPEED_COMMON BYDAUTO_BODYWORK_COMMON; do
+                    # 1. Grant BYD hardware and system permissions (exact Overdrive parity)
+                    for P in \
+                      BYDAUTO_STATISTIC_COMMON BYDAUTO_STATISTIC_GET BYDAUTO_STATISTIC_SET \
+                      BYDAUTO_INSTRUMENT_COMMON BYDAUTO_INSTRUMENT_GET BYDAUTO_INSTRUMENT_SET \
+                      BYDAUTO_POWER_COMMON BYDAUTO_POWER_GET BYDAUTO_POWER_SET \
+                      BYDAUTO_ENERGY_COMMON BYDAUTO_ENERGY_GET BYDAUTO_ENERGY_SET \
+                      BYDAUTO_CHARGING_COMMON BYDAUTO_CHARGING_GET BYDAUTO_CHARGING_SET \
+                      BYDAUTO_SPEED_COMMON BYDAUTO_SPEED_GET BYDAUTO_SPEED_SET \
+                      BYDAUTO_BODYWORK_COMMON BYDAUTO_BODYWORK_GET BYDAUTO_BODYWORK_SET \
+                      BYDAUTO_GEARBOX_COMMON BYDAUTO_GEARBOX_GET \
+                      BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
+                      BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
+                      BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
+                      BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
                       pm grant com.byd.mapsoverlay android.permission.${'$'}P >/dev/null 2>&1 || true
                     done
 

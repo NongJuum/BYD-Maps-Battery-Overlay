@@ -18,7 +18,12 @@ class BydPermissionContext(base: Context) : ContextWrapper(base) {
     private fun isBydPermission(permission: String?): Boolean {
         return permission != null && (
             permission.startsWith("android.permission.BYD") ||
-            permission.startsWith("com.byd.permission.BYD")
+            permission.startsWith("com.byd.permission.BYD") ||
+            permission.contains("BYD", ignoreCase = true) ||
+            permission == "android.permission.ACCESS_APPOPSDATA" ||
+            permission == "android.permission.DEVICE_ACC" ||
+            permission == "android.permission.DEVICE_POWER" ||
+            permission == "com.byd.car.server.PROVIDER"
         )
     }
 
