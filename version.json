@@ -1,9 +1,9 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0.0-beta",
+  "versionCode": 2,
+  "versionName": "1.0.1-beta",
   "channel": "beta",
   "edition": "Beta",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-  "changelogTh": "• รุ่น Beta สำหรับติดตั้งคู่กับ OverDrive และทดสอบเปรียบเทียบ โดยไม่ทับ Alpha",
-  "changelogEn": "• Separate Beta package for side-by-side comparison with OverDrive without replacing Alpha"
+  "changelogTh": "• ปรับปรุงการตรวจจับเส้นทาง Google Maps ให้แม่นยำขึ้น ลดการทำงานเบื้องหลัง และแก้ปัญหาการซ่อน Overlay เมื่อจบการนำทาง",
+  "changelogEn": "• Improved Google Maps route detection, reduced background work, and fixed overlay dismissal when navigation ends."
 }
