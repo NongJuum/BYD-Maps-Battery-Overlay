@@ -1,9 +1,9 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.2-alpha",
+  "versionCode": 5,
+  "versionName": "1.0.3-alpha",
   "channel": "alpha",
   "edition": "Alpha",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/BYD-Maps-Battery-Overlay-Alpha.apk",
-  "changelogTh": "• เริ่มใช้ Signing Key ถาวรสำหรับ Alpha เพื่อรองรับการอัปเดตทับเวอร์ชันเดิม\n• เพิ่มระบบตรวจสอบและติดตั้งอัปเดตผ่านแอป",
-  "changelogEn": "• Introduced a persistent Alpha signing key for seamless in-place updates\n• Added in-app update checking and installation"
+  "changelogTh": "• แยกค่าการใช้ไฟจริงบน Overlay ออกจากค่าประมาณแบบปัดขึ้นที่ใช้คำนวณ SoC ปลายทาง",
+  "changelogEn": "• Show live measured consumption on the overlay while retaining conservative rounded-up consumption for destination SoC calculations"
 }
