@@ -1,9 +1,9 @@
 {
-  "versionCode": 3,
-  "versionName": "1.0.1-alpha",
+  "versionCode": 4,
+  "versionName": "1.0.2-alpha",
   "channel": "alpha",
   "edition": "Alpha",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/BYD-Maps-Battery-Overlay-Alpha.apk",
-  "changelogTh": "• แก้ไขปุ่ม Overlay ให้เปิดหน้าตั้งค่าสิทธิ์แสดงทับแอป\n• แก้ไขปุ่ม Notification ให้เปิดหน้าตั้งค่า Notification Access\n• แยกการตั้งค่าสิทธิ์ Android ออกจากขั้นตอน ADB เพื่อลดปัญหา EOFException",
-  "changelogEn": "• Fixed Overlay button to open Android overlay permission settings\n• Fixed Notification button to open Notification Access settings\n• Separated Android permission settings from ADB authorization flow to reduce EOFException issues"
+  "changelogTh": "• เริ่มใช้ Signing Key ถาวรสำหรับ Alpha เพื่อรองรับการอัปเดตทับเวอร์ชันเดิม\n• เพิ่มระบบตรวจสอบและติดตั้งอัปเดตผ่านแอป",
+  "changelogEn": "• Introduced a persistent Alpha signing key for seamless in-place updates\n• Added in-app update checking and installation"
 }
