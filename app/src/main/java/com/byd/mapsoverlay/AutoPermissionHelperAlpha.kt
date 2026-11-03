@@ -298,14 +298,17 @@ object AutoPermissionHelperAlpha {
                         exit 0
                     """.trimIndent()
 
-                    val escapedScript = installScript.replace("'", "'\\\\''")
-                    val writeResp = dadb.shell("printf '%s' '$escapedScript' > /data/local/tmp/alpha_install.sh && chmod 755 /data/local/tmp/alpha_install.sh")
+                    val encodedScript = android.util.Base64.encodeToString(
+                        installScript.toByteArray(Charsets.UTF_8),
+                        android.util.Base64.NO_WRAP
+                    )
+                    val writeResp = dadb.shell("printf '%s' '$encodedScript' | base64 -d > /data/local/tmp/alpha_install.sh && chmod 755 /data/local/tmp/alpha_install.sh")
                     if (writeResp.exitCode != 0) {
                         onResult(false, "เขียนสคริปต์ติดตั้งไม่สำเร็จ: ${writeResp.output}")
                         return@use
                     }
 
-                    val copyScript = "cat '${apkFile.absolutePath}' > '$tmpTarget' && test \\"$(wc -c < '$tmpTarget' | tr -d ' ') \\" = '$expectedBytes'"
+                    val copyScript = "cat '${apkFile.absolutePath}' > '$tmpTarget' && test \\"$(wc -c < '$tmpTarget' | tr -d ' ')\\" = '$expectedBytes'"
                     val copyResp = dadb.shell(copyScript)
                     if (copyResp.exitCode != 0) {
                         onResult(false, "คัดลอก APK ไปยังรถไม่ครบ (ต้องการ $expectedBytes bytes): ${copyResp.output}")
