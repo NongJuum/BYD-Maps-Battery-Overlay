@@ -74,6 +74,16 @@ jobs:
             BYD-Maps-Battery-Overlay-Beta.apk
           if-no-files-found: error
 
+      - name: Create GitHub Beta prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta-v1.0.0
+          name: BYD Maps Battery Overlay Beta v1.0.0
+          target_commitish: beta
+          prerelease: true
+          generate_release_notes: true
+          files: BYD-Maps-Battery-Overlay-Beta.apk
+
       - name: Publish Beta APK to beta branch
         if: github.ref == 'refs/heads/beta' && github.event_name == 'push'
         shell: bash
