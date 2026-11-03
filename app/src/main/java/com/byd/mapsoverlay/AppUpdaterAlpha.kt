@@ -118,12 +118,20 @@ object AppUpdaterAlpha {
                 conn.readTimeout = 15000
                 conn.useCaches = false
 
-                if (conn.responseCode != 200) {
+                if (conn.url.protocol != "https") {
+                    mainHandler.post { onFinished(false, "ปฏิเสธ URL ดาวน์โหลดที่ไม่ใช่ HTTPS") }
+                    return@Thread
+                }
+                if (conn.responseCode != HttpURLConnection.HTTP_OK) {
                     mainHandler.post { onFinished(false, "ดาวน์โหลดล้มเหลว HTTP ${conn.responseCode}") }
                     return@Thread
                 }
 
-                val totalLength = conn.contentLength
+                val totalLength = conn.contentLengthLong
+                if (totalLength <= 0L || totalLength > 250L * 1024L * 1024L) {
+                    mainHandler.post { onFinished(false, "ขนาดไฟล์จากเซิร์ฟเวอร์ไม่ถูกต้อง") }
+                    return@Thread
+                }
                 var downloaded = 0
                 conn.inputStream.use { input ->
                     FileOutputStream(targetFile).use { output ->
@@ -140,8 +148,10 @@ object AppUpdaterAlpha {
                     }
                 }
 
-                if (!targetFile.exists() || targetFile.length() < 10000) {
-                    mainHandler.post { onFinished(false, "ไฟล์ดาวน์โหลดไม่สมบูรณ์") }
+                if (!targetFile.exists() || targetFile.length() != totalLength) {
+                    val received = targetFile.length()
+                    targetFile.delete()
+                    mainHandler.post { onFinished(false, "ไฟล์ดาวน์โหลดไม่ครบ: ได้รับ ${received} จาก ${totalLength} bytes") }
                     return@Thread
                 }
 
@@ -199,7 +209,7 @@ private fun launchSystemInstaller(
             putExtra(Intent.EXTRA_RETURN_RESULT, false)
         }
         context.startActivity(installIntent)
-        onFinished(true, "เปิดหน้าติดตั้ง Android แล้ว กรุณากดยืนยันบนหน้าจอรถ (ADB: $adbFailure)")
+        onFinished(false, "รอการยืนยันติดตั้งจาก Android บนหน้าจอรถ (ADB: $adbFailure)")
     } catch (e: Exception) {
         Log.e("AppUpdaterAlpha", "Unable to launch system package installer", e)
         onFinished(false, "ติดตั้งผ่าน ADB ไม่สำเร็จ ($adbFailure) และเปิดตัวติดตั้ง Android ไม่ได้: ${e.message}")
