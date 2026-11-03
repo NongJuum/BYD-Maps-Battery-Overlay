@@ -260,7 +260,7 @@ object AutoPermissionHelperAlpha {
                 }
 
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
-                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5000, 60000).use { dadb ->
+                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5000, 300000).use { dadb ->
                     val tmpTarget = "/data/local/tmp/beta_update.apk"
                     val localSize = apkFile.length()
                     val localSha = java.security.MessageDigest.getInstance("SHA-256")
@@ -270,7 +270,13 @@ object AutoPermissionHelperAlpha {
                     // "cat <app cache path>" can never stage this APK correctly.
                     // Dadb.push streams the local file over the authenticated ADB
                     // connection directly into the shell-owned /data/local/tmp.
-                    dadb.push(apkFile, tmpTarget)
+                    dadb.shell("rm -f '$tmpTarget'")
+                    try {
+                        dadb.push(apkFile, tmpTarget)
+                    } catch (pushError: Throwable) {
+                        try { dadb.shell("rm -f '$tmpTarget'") } catch (_: Throwable) {}
+                        throw pushError
+                    }
 
                     val verifyScript = """
                         if [ ! -f '$tmpTarget' ]; then echo PUSH_MISSING; exit 21; fi
