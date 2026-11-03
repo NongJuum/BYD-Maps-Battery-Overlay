@@ -428,10 +428,33 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        try {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Unable to open Notification Listener settings", e)
+        val listenerComponent = expectedComponent.flattenToString()
+        var opened = false
+
+        // Android 11+ supports opening the exact notification-listener grant page.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val detailIntent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, listenerComponent)
+                }
+                startActivity(detailIntent)
+                opened = true
+            } catch (detailError: Exception) {
+                Log.w("MainActivity", "Direct Maps notification access page unavailable; using list", detailError)
+            }
+        }
+
+        // Fallback for Android versions / BYD DiLink builds without the detail page.
+        if (!opened) {
+            try {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                opened = true
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Unable to open Notification Listener settings", e)
+            }
+        }
+
+        if (!opened) {
             try {
                 startActivity(
                     Intent(
