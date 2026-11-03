@@ -1,9 +1,9 @@
 {
-  "versionCode": 3,
-  "versionName": "1.0.2-beta",
+  "versionCode": 5,
+  "versionName": "1.0.4-beta",
   "channel": "beta",
   "edition": "Beta",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-  "changelogTh": "รอการเผยแพร่รุ่นแก้ไข OTA หลังตรวจสอบ Build",
-  "changelogEn": "Waiting for the OTA-fix build to finish and publish."
+  "changelogTh": "แก้ OTA ให้ติดตั้งแยกจาก process ของแอป พร้อมตรวจพื้นที่และรายงานข้อผิดพลาดจริง",
+  "changelogEn": "Detached OTA installation, head-unit storage check and real Package Manager error reporting."
 }
