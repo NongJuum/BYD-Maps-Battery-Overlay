@@ -10,12 +10,30 @@ import java.util.regex.Pattern
 class MapsNotificationListener : NotificationListenerService() {
     private val tag = "MapsNotification"
     private val pollHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    // Require two consecutive polls without a valid route before hiding. This avoids
+    // flicker while Maps refreshes its notification during normal navigation.
+    private var consecutiveNoRoutePolls = 0
     private val activePollRunnable = object : Runnable {
         override fun run() {
             try {
-                activeNotifications?.forEach { sbn ->
-                    if (isNavigationNotification(sbn)) {
-                        processMapsNotification(sbn)
+                val navigationNotifications = activeNotifications
+                    ?.filter { isNavigationNotification(it) }
+                    .orEmpty()
+
+                var foundActiveRoute = false
+                navigationNotifications.forEach { sbn ->
+                    if (processMapsNotification(sbn)) {
+                        foundActiveRoute = true
+                    }
+                }
+
+                if (foundActiveRoute) {
+                    consecutiveNoRoutePolls = 0
+                } else {
+                    consecutiveNoRoutePolls++
+                    if (consecutiveNoRoutePolls >= 2) {
+                        hideNavigationOverlay("no active route in Maps notifications")
+                        consecutiveNoRoutePolls = 2
                     }
                 }
             } catch (e: Exception) {
@@ -56,50 +74,58 @@ class MapsNotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun processMapsNotification(sbn: StatusBarNotification) {
-        val pkg = sbn.packageName ?: return
-        if (pkg == packageName) return
+    private fun processMapsNotification(sbn: StatusBarNotification): Boolean {
+        val pkg = sbn.packageName ?: return false
+        if (pkg == packageName) return false
+        if (!isNavigationNotification(sbn)) return false
 
-        if (isNavigationNotification(sbn)) {
-            val extras = sbn.notification.extras
-            val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-            val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-            val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
-            val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
+        val extras = sbn.notification.extras
+        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+        val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
+        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
 
-            val distanceKm = extractTotalRemainingDistance(subText, text, bigText)
-            if (distanceKm != null && distanceKm > 0.0) {
-                val broadcastIntent = Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
-                    putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
-                }
-                sendBroadcast(broadcastIntent)
+        val distanceKm = extractTotalRemainingDistance(subText, text, bigText)
+        if (distanceKm == null || distanceKm <= 0.0) return false
 
-                val serviceIntent = Intent(this, OverlayService::class.java).apply {
-                    action = OverlayService.ACTION_UPDATE_DISTANCE
-                    putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
-                }
-                try {
-                    startService(serviceIntent)
-                } catch (e: Exception) {
-                    Log.w(tag, "startService fallback to broadcast", e)
-                }
-            }
+        consecutiveNoRoutePolls = 0
+        val broadcastIntent = Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
+            putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
+        }
+        sendBroadcast(broadcastIntent)
+
+        val serviceIntent = Intent(this, OverlayService::class.java).apply {
+            action = OverlayService.ACTION_UPDATE_DISTANCE
+            putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
+        }
+        try {
+            startService(serviceIntent)
+        } catch (e: Exception) {
+            Log.w(tag, "startService fallback to broadcast", e)
+        }
+        return true
+    }
+
+    private fun hideNavigationOverlay(reason: String) {
+        Log.d(tag, "Navigation ended -> hide overlay ($reason)")
+        sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
+        val intent = Intent(this, OverlayService::class.java).apply {
+            action = OverlayService.ACTION_HIDE_OVERLAY
+        }
+        try {
+            startService(intent)
+        } catch (e: Exception) {
+            Log.w(tag, "startService hide fallback", e)
         }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         if (sbn != null && isNavigationNotification(sbn)) {
-            Log.d(tag, "Maps navigation ended [${sbn.packageName}] -> hide overlay")
-            sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
-            val intent = Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_HIDE_OVERLAY
-            }
-            try {
-                startService(intent)
-            } catch (e: Exception) {
-                Log.w(tag, "startService hide fallback", e)
-            }
+            // A Maps notification may be replaced by another navigation notification.
+            // Let the active-notification poll confirm that no route remains.
+            consecutiveNoRoutePolls = 0
+            pollHandler.removeCallbacks(activePollRunnable)
+            pollHandler.post(activePollRunnable)
         }
     }
 
