@@ -319,12 +319,14 @@ class BydVehicleBridge(
                 conn.disconnect()
             }
         } catch (e: Exception) {
-            // Daemon may still be starting or local ADB authorization may be pending.
-            val newStatus = "Telemetry daemon unavailable: ${e.javaClass.simpleName}: ${e.message}"
-            val changed = diagnosticStatus != newStatus
-            diagnosticStatus = newStatus
-            Log.w(tag, newStatus)
-            if (changed) notifyUpdate()
+            // Only update status to daemon error if we do not already have live vehicle data
+            if (currentSoc <= 0.0) {
+                val newStatus = "Telemetry daemon: ${e.javaClass.simpleName} (${e.message})"
+                val changed = diagnosticStatus != newStatus
+                diagnosticStatus = newStatus
+                Log.w(tag, newStatus)
+                if (changed) notifyUpdate()
+            }
         }
     }
 

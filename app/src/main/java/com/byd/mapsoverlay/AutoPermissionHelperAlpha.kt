@@ -1,11 +1,6 @@
 package com.byd.mapsoverlay
 
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import dadb.AdbKeyPair
@@ -19,17 +14,19 @@ import java.util.concurrent.atomic.AtomicBoolean
  * AutoPermissionHelperAlpha:
  * Advanced ADB manager and permission helper engineered from Overdrive reverse-engineering.
  *
- * Key features:
+ * Built to eliminate all failure holes:
  * 1. Background Polling Loop (`startAdbAuthPolling`):
  *    Polls every 2.5 seconds for up to 2.5 minutes while waiting for the user to tap
  *    "[✓] Always allow from this computer" and "[OK]" on the car screen.
+ *    Properly closes unauthenticated sockets to avoid file descriptor exhaustion.
  * 2. Full Privileged Setup:
- *    Once connected, executes `pm grant` for all BYDAUTO common permissions,
- *    `appops set SYSTEM_ALERT_WINDOW allow`, notification listener enablement,
- *    and background doze whitelist (`dumpsys deviceidle whitelist`).
- * 3. Silent Remote Update (`installApkSilently`):
- *    Installs APKs silently via ADB `pm install -r -d` and restarts the app,
- *    identical to Overdrive's updater mechanism.
+ *    Executes `pm grant` for all BYDAUTO common permissions, `appops SYSTEM_ALERT_WINDOW allow`,
+ *    notification listener enablement, and background execution whitelist (`dumpsys deviceidle whitelist`).
+ * 3. Robust Daemon Startup:
+ *    Uses `/proc/net/tcp` (hex 4DAE = port 19890) to check daemon status without depending on `nc` or `pidof`.
+ *    Uses `nohup` + `export CLASSPATH` so the daemon process is detached and survives ADB disconnect.
+ * 4. Silent Remote Update (`installApkSilently`):
+ *    Installs APKs silently via ADB `pm install -r -d` and restarts the app.
  */
 object AutoPermissionHelperAlpha {
     private const val TAG = "AutoPermHelperAlpha"
@@ -59,6 +56,7 @@ object AutoPermissionHelperAlpha {
 
         val appContext = context.applicationContext ?: context
         Thread({
+            var activeDadb: Dadb? = null
             try {
                 // 1. Check if ADB port 5555 is open
                 onStatus("กำลังตรวจสอบพอร์ต ADB (127.0.0.1:5555)...", false, false)
@@ -75,28 +73,27 @@ object AutoPermissionHelperAlpha {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 onStatus("กำลังเชื่อมต่อ ADB... หากมีหน้าต่างขึ้นบนจอรถ ให้ติ๊ก [✓] Always allow แล้วกด [OK]", false, false)
 
-                var dadbInstance: Dadb? = null
                 val maxAttempts = 60 // 60 attempts * 2.5s = 150 seconds (2.5 mins)
                 var attempt = 0
 
                 while (attempt < maxAttempts) {
                     attempt++
+                    var candidate: Dadb? = null
                     try {
-                        // Attempt connection with short timeout so it doesn't freeze
-                        dadbInstance = Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 3000)
-                        if (dadbInstance != null) {
-                            // Test running a simple echo
-                            val testResp = dadbInstance.shell("echo connected")
-                            if (testResp.output.contains("connected")) {
-                                Log.i(TAG, "ADB authorization succeeded on attempt $attempt!")
-                                break
-                            }
+                        candidate = Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 3000)
+                        val testResp = candidate.shell("echo connected")
+                        if (testResp.output.contains("connected")) {
+                            Log.i(TAG, "ADB authorization succeeded on attempt $attempt!")
+                            activeDadb = candidate
+                            break
+                        } else {
+                            try { candidate.close() } catch (_: Throwable) {}
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
+                        try { candidate?.close() } catch (_: Throwable) {}
                         Log.d(TAG, "Attempt $attempt waiting for ADB auth: ${e.message}")
                     }
 
-                    // Inform user every few attempts
                     if (attempt % 2 == 0) {
                         val secondsLeft = ((maxAttempts - attempt) * 2.5).toInt()
                         onStatus(
@@ -113,12 +110,12 @@ object AutoPermissionHelperAlpha {
                     }
                 }
 
-                if (dadbInstance == null) {
+                if (activeDadb == null) {
                     onStatus("หมดเวลาการรอเชื่อมต่อ ADB กรุณาลองกดปุ่มใหม่อีกครั้ง", true, false)
                     return@Thread
                 }
 
-                // 3. We are authorized! Execute the complete privilege setup
+                // 3. Authorized! Apply full permissions and launch auxiliary daemon
                 isAdbAuthorized = true
                 onStatus("เชื่อมต่อ ADB สำเร็จแล้ว! กำลังบันทึกสิทธิ์และตั้งค่าระบบ...", false, false)
 
@@ -151,24 +148,28 @@ object AutoPermissionHelperAlpha {
                     appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1
                     dumpsys deviceidle whitelist +com.byd.mapsoverlay >/dev/null 2>&1
 
-                    # 5. Launch auxiliary telemetry daemon if available
+                    # 5. Launch auxiliary telemetry daemon if not running (port 19890 = hex 4DAE in /proc/net/tcp)
                     APK_PATH=${'$'}(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
                     if [ -n "${'$'}APK_PATH" ]; then
-                      if ! nc -z 127.0.0.1 $DAEMON_PORT >/dev/null 2>&1; then
-                        CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                      if ! grep -qi ":4DAE " /proc/net/tcp 2>/dev/null; then
+                        export CLASSPATH="${'$'}APK_PATH"
+                        nohup app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                        sleep 1
+                        chmod 666 /data/local/tmp/$DAEMON_NAME.log 2>/dev/null || true
                       fi
                     fi
                     echo SETUP_COMPLETE
                 """.trimIndent()
 
-                val setupResp = dadbInstance.shell(setupScript)
+                val setupResp = activeDadb.shell(setupScript)
                 Log.i(TAG, "Setup script exit=${setupResp.exitCode}, output=${setupResp.output}")
 
-                dadbInstance.close()
+                try { activeDadb.close() } catch (_: Throwable) {}
 
                 onStatus("✅ ปลดล็อกสิทธิ์สำเร็จทั้งหมด (เหมือน Overdrive) รถพร้อมอ่านข้อมูลแล้ว!", true, true)
             } catch (t: Throwable) {
                 Log.e(TAG, "Error in ADB auth polling", t)
+                try { activeDadb?.close() } catch (_: Throwable) {}
                 onStatus("เกิดข้อผิดพลาด: ${t.javaClass.simpleName} - ${t.message}", true, false)
             } finally {
                 isPollingActive.set(false)
@@ -181,7 +182,7 @@ object AutoPermissionHelperAlpha {
 
     /**
      * Silent remote update:
-     * Installs an APK file from device storage (/data/local/tmp/...) via ADB and restarts the app.
+     * Installs an APK file from device storage via ADB shell and restarts the app.
      */
     fun installApkSilently(
         context: Context,
@@ -198,12 +199,10 @@ object AutoPermissionHelperAlpha {
 
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 60000).use { dadb ->
-                    // Copy APK to /data/local/tmp/update.apk
                     val tmpTarget = "/data/local/tmp/alpha_update.apk"
                     val copyScript = "cat '${apkFile.absolutePath}' > $tmpTarget 2>/dev/null || cp '${apkFile.absolutePath}' $tmpTarget 2>/dev/null"
                     dadb.shell(copyScript)
 
-                    // Execute silent install and relaunch
                     val installScript = """
                         pm install -r -d $tmpTarget
                         STATUS=${'$'}?
