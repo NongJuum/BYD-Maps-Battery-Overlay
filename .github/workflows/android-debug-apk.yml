@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - fix/byd-native-api-diagnostics
+      - fix/alpha-permission-settings
       - main
   pull_request:
     branches:
+      - alpha
       - main
   workflow_dispatch:
 
