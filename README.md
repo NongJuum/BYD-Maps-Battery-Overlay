@@ -151,8 +151,6 @@ adb shell "appops set com.byd.mapsoverlay START_FOREGROUND allow"
 
 ---
 
----
-
 > **Tip:** You can test or position the overlay anytime by tapping **"👁️ Test / Show Overlay"** in the app settings screen.
 
 ---

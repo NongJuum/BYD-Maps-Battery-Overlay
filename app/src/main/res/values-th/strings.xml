@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BYD Maps Battery</string>
+    <string name="app_title">⚡ BYD Smart EV Route &amp; Battery Overlay</string>
+    <string name="app_author">พัฒนาโดย Nontarat Hasitapong</string>
+    <string name="btn_switch_language">🌐 Switch to English</string>
+
+    <!-- Section 1: Vehicle & Battery Profile -->
+    <string name="section_profile_title">⚙️ 1. โหมดข้อมูลรุ่นรถและแบตเตอรี่</string>
+    <string name="section_profile_desc">ค่าเริ่มต้นจะดึงข้อมูลจาก OBD ของรถโดยตรง แต่สามารถเลือกรุ่นรถหรือกรอกขนาดแบตเตอรี่เองได้ด้านล่าง</string>
+    <string name="hint_model_name">ชื่อรุ่นรถ (เช่น BYD Seal)</string>
+    <string name="hint_battery_kwh">ความจุแบต (kWh)</string>
+    <string name="label_soh">สุขภาพแบตเตอรี่ (SOH %):</string>
+    <string name="label_soh_unit" formatted="false">% (ค่าเริ่มต้น 95-100%)</string>
+    <string name="btn_save_profile">💾 บันทึกข้อมูลรถ</string>
+
+    <!-- Section 2: Live Telemetry -->
+    <string name="section_telemetry_title">📊 2. ข้อมูลสดจากตัวรถ (OBD / CAN Bus)</string>
+    <string name="tv_live_soc_waiting">🔋 แบตเตอรี่ปัจจุบัน (OBD SoC): รอซิงค์สัญญาณจากรถ...</string>
+    <string name="tv_live_soc_format">🔋 แบตเตอรี่ปัจจุบัน (OBD SoC): %1$.0f%%%2$s</string>
+    <string name="tv_usable_capacity_format">🩺 ความจุแบตที่ใช้คำนวณ (หัก SOH %1$d%%): %2$.1f kWh (จากสเปก %3$.2f kWh)</string>
+    <string name="tv_consumption_waiting">⚡ อัตรากินไฟ 50 กม. ล่าสุด: รอซิงค์สัญญาณจากรถ...</string>
+    <string name="tv_consumption_format">⚡ อัตรากินไฟ 50 กม. ล่าสุด: %.1f kWh/100km</string>
+    <string name="tv_real_range_waiting">🎯 ระยะทางวิ่งได้จริงคงเหลือ: รอข้อมูล SoC และอัตรากินไฟ...</string>
+    <string name="tv_real_range_format">🎯 ระยะทางวิ่งได้จริงคงเหลือ: ~%.0f กม.</string>
+    <string name="tv_nedc_range_format">📋 ระยะทางบนหน้าปัดรถ: %d กม.</string>
+
+    <!-- Section 3: Icon Guide -->
+    <string name="legend_title">💡 ความหมายสัญลักษณ์บนแถบลอย</string>
+    <string name="legend_content" formatted="false">• 🏁🔋 88-90% = แบตที่จะเหลือเมื่อถึงปลายทาง (เผื่อ Safety Buffer 2%) | 🚗 = ระยะวิ่งจริง\n• 📍 = ระยะทางถึงจุดหมาย (Google Maps) | ⚡ = อัตรากินไฟ 50km (kWh/100km)\n• ⚠️🪫 (สีเหลือง) = แบตต่ำกว่า 20% | ⚠️🔌 (สีแดง) = แบตไม่พอถึงปลายทาง แนะนำแวะชาร์จ!</string>
+
+    <!-- Buttons -->
+    <string name="btn_test_overlay">👁️ แสดง/ทดสอบแถบลอย</string>
+    <string name="btn_reset_pos">🔄 รีเซ็ตตำแหน่ง</string>
+    <string name="btn_perm_overlay">1. สิทธิ์วางทับหน้าจอ</string>
+    <string name="btn_perm_maps">2. สิทธิ์ Google Maps</string>
+    <string name="btn_perm_obd">🔌 3. ขอสิทธิ์ OBD / ซ่อมสิทธิ์อัตโนมัติ</string>
+    <string name="btn_donate">☕ สนับสนุนผู้พัฒนา</string>
+
+    <!-- Donate Dialog -->
+    <string name="donate_dialog_title">☕ ร่วมสนับสนุนผู้พัฒนา (Support &amp; Donate)</string>
+    <string name="donate_dialog_author">Developed by Nontarat Hasitapong</string>
+    <string name="donate_dialog_note">ใครจะนำไปใช้แก้ไขหรือปรับปรุงต่อ นำไปใช้ได้อิสระเลยครับ! แต่หากมีความเมตตา เลี้ยงค่าลูกอม/ขนมสักนิดก็ขอบคุณมากครับ ❤️</string>
+    <string name="donate_bmc_title">☕ Buy Me a Coffee (เลี้ยงกาแฟ / ค่าขนม)</string>
+    <string name="donate_bmc_subtitle">(รองรับทั้งบัตรเครดิต/เดบิต, Apple Pay และ Google Pay)</string>
+    <string name="donate_bmc_btn_open">เปิดเว็บ</string>
+    <string name="donate_bmc_btn_copy">คัดลอกลิงก์</string>
+    <string name="donate_skrill_title">🌐 Skrill (สำหรับต่างประเทศ)</string>
+    <string name="donate_skrill_btn_copy">คัดลอกอีเมล</string>
+    <string name="donate_btn_close">ปิดหน้าต่าง</string>
+
+    <!-- Toast / Alerts -->
+    <string name="toast_overlay_shown">แสดงแถบลอยบนหน้าจอแล้ว (ลากเปลี่ยนตำแหน่งได้เลย)</string>
+    <string name="toast_overlay_reset">รีเซ็ตตำแหน่งและขนาดแถบลอยกลับตรงกลางเรียบร้อย</string>
+    <string name="toast_overlay_perm_granted">✅ เปิดสิทธิ์วางทับหน้าจอเรียบร้อยแล้ว!</string>
+    <string name="toast_maps_perm_granted">✅ เชื่อมต่อสิทธิ์ Google Maps และ OBD ครบถ้วนแล้ว!</string>
+    <string name="toast_adb_hint">💡 กรุณาเปิด Wireless Debugging / ADB ในหน้าตั้งค่ารถ แล้วกดปุ่มนี้อีกครั้ง</string>
+    <string name="toast_obd_requesting">🔄 กำลังขอสิทธิ์ OBD และตรวจสอบการเชื่อมต่อข้อมูลรถ...</string>
+    <string name="toast_obd_success">✅ ซ่อมสิทธิ์ทั้งหมดและเชื่อมต่อท่อข้อมูล OBD สำเร็จ!</string>
+    <string name="toast_obd_daemon_started">✅ ส่งคำขอสิทธิ์ OBD และรีสตาร์ทตัวอ่านข้อมูลสำเร็จ!</string>
+    <string name="toast_bmc_copied">คัดลอกลิงก์ buymeacoffee.com/nongjuum เรียบร้อยแล้ว</string>
+    <string name="toast_skrill_copied">คัดลอกอีเมล Skrill (canon.non.7@gmail.com) แล้ว</string>
+    <string name="toast_profile_saved">บันทึกข้อมูลรถ: %s เรียบร้อยแล้ว</string>
+    <string name="tv_status_ready">✅ พร้อมใช้งาน: ใช้รุ่นรถตามที่ตั้งค่า + ข้อมูลแบตเตอรี่และอัตรากินไฟดึงสดจาก OBD</string>
+
+    <!-- Presets -->
+    <string name="preset_auto_obd">📡 อัตโนมัติ: ดึงจาก OBD / BMS รถโดยตรง (แนะนำ)</string>
+    <string name="preset_custom">✏️ กำหนดรุ่นรถและขนาดแบตเตอรี่เอง...</string>
+</resources>

@@ -20,7 +20,7 @@ object VehicleProfileManager {
 
     val presets = listOf(
         // Default: Auto OBD / BMS direct detection
-        BydCarPreset(PRESET_AUTO, "📡 Auto: Direct OBD / BMS Sync (อัตโนมัติ OBD - Recommended)", 0.0),
+        BydCarPreset(PRESET_AUTO, "📡 Auto: Direct OBD / BMS Sync (Recommended)", 0.0),
         BydCarPreset("DOLPHIN_TH_50_25", "BYD Dolphin Standard / Thai Spec (50.25 kWh)", 50.25),
         BydCarPreset("DOLPHIN_STD_44_9", "BYD Dolphin Standard Range (44.9 kWh)", 44.9),
         BydCarPreset("DOLPHIN_EXT_60_48", "BYD Dolphin Extended Range (60.48 kWh)", 60.48),
@@ -34,8 +34,20 @@ object VehicleProfileManager {
         BydCarPreset("SEALION6_18_3", "BYD Sealion 6 DM-i PHEV (18.3 kWh)", 18.3),
         BydCarPreset("SEALION7_PREM_82_5", "BYD Sealion 7 Premium (82.5 kWh)", 82.5),
         BydCarPreset("SEALION7_AWD_91_3", "BYD Sealion 7 Performance AWD (91.3 kWh)", 91.3),
-        BydCarPreset(PRESET_CUSTOM, "✏️ Custom Vehicle & Battery (กำหนดค่าเอง)...", 50.25)
+        BydCarPreset(PRESET_CUSTOM, "✏️ Custom Vehicle & Battery Specs...", 50.25)
     )
+
+    fun getLocalizedPresets(context: Context): List<BydCarPreset> {
+        val autoLabel = try { context.getString(R.string.preset_auto_obd) } catch (e: Exception) { "📡 Auto: Direct OBD / BMS Sync (Recommended)" }
+        val customLabel = try { context.getString(R.string.preset_custom) } catch (e: Exception) { "✏️ Custom Vehicle & Battery Specs..." }
+        return presets.map {
+            when (it.id) {
+                PRESET_AUTO -> it.copy(displayName = autoLabel)
+                PRESET_CUSTOM -> it.copy(displayName = customLabel)
+                else -> it
+            }
+        }
+    }
 
     fun getSelectedPresetId(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

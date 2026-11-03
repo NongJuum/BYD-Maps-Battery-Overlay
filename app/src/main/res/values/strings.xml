@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BYD Maps Battery</string>
+    <string name="app_title">⚡ BYD Smart EV Route &amp; Battery Overlay</string>
+    <string name="app_author">Developed by Nontarat Hasitapong</string>
+    <string name="btn_switch_language">🌐 Switch to ภาษาไทย</string>
+
+    <!-- Section 1: Vehicle & Battery Profile -->
+    <string name="section_profile_title">⚙️ 1. Vehicle &amp; Battery Settings</string>
+    <string name="section_profile_desc">Auto OBD/BMS sync by default. You can also select your specific model or override custom specs below.</string>
+    <string name="hint_model_name">Model (e.g. BYD Seal)</string>
+    <string name="hint_battery_kwh">Battery (kWh)</string>
+    <string name="label_soh">Battery Health (SOH %):</string>
+    <string name="label_soh_unit" formatted="false">% (Default 95-100%)</string>
+    <string name="btn_save_profile">💾 Save Profile</string>
+
+    <!-- Section 2: Live Telemetry -->
+    <string name="section_telemetry_title">📊 2. Live Telemetry from Car (OBD / CAN Bus)</string>
+    <string name="tv_live_soc_waiting">🔋 Battery (OBD SoC): Waiting for car telemetry...</string>
+    <string name="tv_live_soc_format">🔋 Battery (OBD SoC): %1$.0f%%%2$s</string>
+    <string name="tv_usable_capacity_format">🩺 Usable Capacity (SOH %1$d%%): %2$.1f kWh (Spec: %3$.2f kWh)</string>
+    <string name="tv_consumption_waiting">⚡ Past 50km Avg (OBD): Waiting for OBD sync...</string>
+    <string name="tv_consumption_format">⚡ Past 50km Avg (OBD): %.1f kWh/100km</string>
+    <string name="tv_real_range_waiting">🎯 Real Range: Waiting for SoC &amp; OBD data...</string>
+    <string name="tv_real_range_format">🎯 Real Range: ~%.0f km</string>
+    <string name="tv_nedc_range_format">📋 Dashboard NEDC Range: %d km</string>
+
+    <!-- Section 3: Icon Guide -->
+    <string name="legend_title">💡 Floating Pill Icon Guide</string>
+    <string name="legend_content" formatted="false">• 🏁🔋 88-90% = Destination SoC (2% buffer) | 🚗 = Real remaining range\n• 📍 = Distance to destination (Google Maps) | ⚡ = Past 50km avg (kWh/100km)\n• ⚠️🪫 (Yellow) = Battery &lt; 20% | ⚠️🔌 (Red) = Battery insufficient to destination</string>
+
+    <!-- Buttons -->
+    <string name="btn_test_overlay">👁️ Test Overlay</string>
+    <string name="btn_reset_pos">🔄 Reset Pos</string>
+    <string name="btn_perm_overlay">1. Overlay Perm</string>
+    <string name="btn_perm_maps">2. Maps Perm</string>
+    <string name="btn_perm_obd">🔌 3. Request OBD Permission / Auto-Fix</string>
+    <string name="btn_donate">☕ Support &amp; Donate</string>
+
+    <!-- Donate Dialog -->
+    <string name="donate_dialog_title">☕ Support &amp; Donate</string>
+    <string name="donate_dialog_author">Developed by Nontarat Hasitapong</string>
+    <string name="donate_dialog_note">Feel free to use, modify or build upon this project freely! If you find it valuable, a small treat, candy or coffee is always warmly appreciated ❤️</string>
+    <string name="donate_bmc_title">☕ Buy Me a Coffee</string>
+    <string name="donate_bmc_subtitle">(Supports Debit/Credit cards, Apple Pay, Google Pay)</string>
+    <string name="donate_bmc_btn_open">Open Web</string>
+    <string name="donate_bmc_btn_copy">Copy Link</string>
+    <string name="donate_skrill_title">🌐 Skrill (International Support)</string>
+    <string name="donate_skrill_btn_copy">Copy</string>
+    <string name="donate_btn_close">Close</string>
+
+    <!-- Toast / Alerts -->
+    <string name="toast_overlay_shown">Overlay visible! You can drag to move or pinch to resize.</string>
+    <string name="toast_overlay_reset">Overlay position and scale reset to center.</string>
+    <string name="toast_overlay_perm_granted">✅ Overlay permission granted!</string>
+    <string name="toast_maps_perm_granted">✅ Google Maps &amp; OBD permissions active!</string>
+    <string name="toast_adb_hint">💡 Please enable Wireless Debugging / ADB in car settings, then tap this button again.</string>
+    <string name="toast_obd_requesting">🔄 Requesting OBD permissions &amp; repairing connection...</string>
+    <string name="toast_obd_success">✅ All permissions and OBD connections repaired!</string>
+    <string name="toast_obd_daemon_started">✅ OBD permission requested &amp; vehicle bridge restarted!</string>
+    <string name="toast_bmc_copied">Copied link: buymeacoffee.com/nongjuum</string>
+    <string name="toast_skrill_copied">Copied Skrill email: canon.non.7@gmail.com</string>
+    <string name="toast_profile_saved">Saved vehicle profile: %s</string>
+    <string name="tv_status_ready">✅ Ready: Profile set + live telemetry syncing from vehicle OBD</string>
+
+    <!-- Presets -->
+    <string name="preset_auto_obd">📡 Auto: Direct OBD / BMS Sync (Recommended)</string>
+    <string name="preset_custom">✏️ Custom Vehicle &amp; Battery Specs...</string>
+</resources>

@@ -12,11 +12,11 @@
         android:gravity="center_horizontal"
         android:padding="18dp">
 
-        <!-- Header -->
+        <!-- Top Header & Language Toggle -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="⚡ BYD Smart EV Route &amp; Battery Overlay"
+            android:text="@string/app_title"
             android:textColor="#FFFFFF"
             android:textSize="21sp"
             android:textStyle="bold" />
@@ -25,22 +25,35 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Developed by Nontarat Hasitapong"
+            android:text="@string/app_author"
             android:textColor="#80D8FF"
             android:textSize="12sp"
             android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_switch_language"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#263238"
+            android:text="@string/btn_switch_language"
+            android:textColor="#80D8FF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
 
         <TextView
             android:id="@+id/tv_detected_model"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:text="🚗 BYD Dolphin Standard / Thai Spec (50.25 kWh)"
             android:textColor="#69F0AE"
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <!-- ส่วนที่ 1: ตั้งค่ารุ่นรถและขนาดแบตเตอรี่ด้วยตัวเอง (ป้องกันการดึงขนาดแบตผิดพลาด) -->
+        <!-- Section 1: Vehicle & Battery Settings -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -52,7 +65,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚙️ 1. Vehicle &amp; Battery Settings (ตั้งค่ารุ่นรถและแบตเตอรี่)"
+                android:text="@string/section_profile_title"
                 android:textColor="#FFD54F"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -61,7 +74,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Auto OBD/BMS sync by default. You can also select your model or override custom specs below.\n(ค่าเริ่มต้นอ่านจาก OBD รถอัตโนมัติ หรือเลือกรุ่นรถ/ระบุขนาดแบตเตอรี่เองได้)"
+                android:text="@string/section_profile_desc"
                 android:textColor="#90A4AE"
                 android:textSize="11sp" />
 
@@ -74,7 +87,7 @@
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp" />
 
-            <!-- กล่องกรอกเอง (แสดงเมื่อเลือก Custom หรือแก้ไขค่า) -->
+            <!-- Custom Inputs -->
             <LinearLayout
                 android:id="@+id/layout_custom_inputs"
                 android:layout_width="match_parent"
@@ -89,7 +102,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1.2"
                     android:layout_marginEnd="8dp"
-                    android:hint="Model (e.g. Seal)"
+                    android:hint="@string/hint_model_name"
                     android:inputType="text"
                     android:textColor="#FFFFFF"
                     android:textColorHint="#78909C"
@@ -100,7 +113,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Battery (kWh)"
+                    android:hint="@string/hint_battery_kwh"
                     android:inputType="numberDecimal"
                     android:textColor="#FFFFFF"
                     android:textColorHint="#78909C"
@@ -117,7 +130,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Health (SOH %):"
+                    android:text="@string/label_soh"
                     android:textColor="#CFD8DC"
                     android:textSize="13sp" />
 
@@ -138,7 +151,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
-                    android:text="% (Default 95-100%)"
+                    android:text="@string/label_soh_unit"
                     android:textColor="#78909C"
                     android:textSize="11sp" />
 
@@ -147,14 +160,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
                     android:backgroundTint="#FF8F00"
-                    android:text="💾 Save / บันทึก"
+                    android:text="@string/btn_save_profile"
                     android:textColor="#FFFFFF"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ส่วนที่ 2: การ์ดข้อมูล Live OBD / CAN Bus Telemetry -->
+        <!-- Section 2: Live Telemetry -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -166,7 +179,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📊 2. Live Telemetry from Car (ข้อมูลสดจากตัวรถ / OBD)"
+                android:text="@string/section_telemetry_title"
                 android:textColor="#40C4FF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -182,7 +195,7 @@
                 android:id="@+id/tv_live_soc"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔋 Current Battery (OBD SoC): Reading..."
+                android:text="@string/tv_live_soc_waiting"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -201,7 +214,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="⚡ Past 50km Consumption (OBD): Reading..."
+                android:text="@string/tv_consumption_waiting"
                 android:textColor="#69F0AE"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -211,7 +224,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="🎯 Real Range (ระยะวิ่งจริง): Calculating..."
+                android:text="@string/tv_real_range_waiting"
                 android:textColor="#40C4FF"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -226,7 +239,7 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- คำอธิบายสัญลักษณ์บนหน้าต่างลอย (Icon Legend) -->
+        <!-- Section 3: Icon Guide -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -238,7 +251,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="💡 Floating Pill Icon Guide (ความหมายสัญลักษณ์)"
+                android:text="@string/legend_title"
                 android:textColor="#FFD54F"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -247,13 +260,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="• 🏁🔋 88-90% = Destination SoC (2% buffer)  |  🚗 = Real range\n• 📍 = Distance to destination (Google Maps)  |  ⚡ = Past 50km avg (kWh/100km)\n• ⚠️🪫 (Yellow) = Battery &lt; 20%  |  ⚠️🔌 (Red) = Battery insufficient to destination"
+                android:text="@string/legend_content"
                 android:textColor="#B0BEC5"
                 android:lineSpacingExtra="2dp"
                 android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- ปุ่มควบคุมและทดสอบสำหรับผู้ใช้ทั่วไป -->
+        <!-- Control and Test Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -267,7 +280,7 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 android:backgroundTint="#00C853"
-                android:text="👁️ Test Overlay\n(ทดสอบแถบลอย)"
+                android:text="@string/btn_test_overlay"
                 android:textColor="#FFFFFF"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -279,7 +292,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 android:backgroundTint="#0288D1"
-                android:text="🔄 Reset Pos\n(รีเซ็ตตำแหน่ง)"
+                android:text="@string/btn_reset_pos"
                 android:textColor="#FFFFFF"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -298,7 +311,7 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 android:backgroundTint="#37474F"
-                android:text="1. Overlay Perm\n(สิทธิ์ทับหน้าจอ)"
+                android:text="@string/btn_perm_overlay"
                 android:textSize="11sp" />
 
             <Button
@@ -308,30 +321,30 @@
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 android:backgroundTint="#37474F"
-                android:text="2. Maps Perm\n(สิทธิ์ Google Maps)"
+                android:text="@string/btn_perm_maps"
                 android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- ปุ่มขอสิทธิ์เชื่อมต่อ OBD / ซ่อมสิทธิ์ทั้งหมดในคลิกเดียว (เผื่อกรณีสิทธิ์หลุดหลังอัปเดต OTA รถ) -->
+        <!-- OBD Permission Button -->
         <Button
             android:id="@+id/btn_permission_obd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:backgroundTint="#6A1B9A"
-            android:text="🔌 3. Request OBD Permission / Auto-Fix (ขอ/ซ่อมสิทธิ์ OBD)"
+            android:text="@string/btn_perm_obd"
             android:textColor="#FFFFFF"
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <!-- ปุ่ม Donate / ร่วมสนับสนุนผู้พัฒนา -->
+        <!-- Donate Button -->
         <Button
             android:id="@+id/btn_donate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:backgroundTint="#FF6F00"
-            android:text="☕ Support &amp; Donate (ร่วมสนับสนุนผู้พัฒนา / ค่าน้ำชา)"
+            android:text="@string/btn_donate"
             android:textColor="#FFFFFF"
             android:textSize="13sp"
             android:textStyle="bold" />

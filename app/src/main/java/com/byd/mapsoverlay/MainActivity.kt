@@ -1,5 +1,6 @@
 package com.byd.mapsoverlay
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -22,6 +23,11 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var vehicleBridge: BydVehicleBridge
 
+    override fun attachBaseContext(newBase: Context) {
+        val lang = LanguageHelper.getSavedLanguage(newBase)
+        super.attachBaseContext(LanguageHelper.wrapContext(newBase, lang))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -38,6 +44,16 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+
+        // Language switcher button
+        val btnSwitchLanguage = findViewById<Button>(R.id.btn_switch_language)
+        val isTh = LanguageHelper.isThai(this)
+        btnSwitchLanguage.text = if (isTh) "🌐 Switch to English" else "🌐 เปลี่ยนเป็นภาษาไทย"
+        btnSwitchLanguage.setOnClickListener {
+            val targetLang = if (isTh) LanguageHelper.LANG_EN else LanguageHelper.LANG_TH
+            LanguageHelper.setLanguage(this, targetLang)
+            recreate()
         }
 
         val tvDetectedModel = findViewById<TextView>(R.id.tv_detected_model)
@@ -62,8 +78,8 @@ class MainActivity : AppCompatActivity() {
         val btnObdPermission = findViewById<Button>(R.id.btn_permission_obd)
         val btnDonate = findViewById<Button>(R.id.btn_donate)
 
-        // ตั้งค่ารายการรุ่นรถใน Spinner
-        val presets = VehicleProfileManager.presets
+        // ตั้งค่ารายการรุ่นรถใน Spinner (ตามภาษาที่เลือก)
+        val presets = VehicleProfileManager.getLocalizedPresets(this)
         val adapter = object : ArrayAdapter<String>(
             this,
             android.R.layout.simple_spinner_item,
@@ -126,11 +142,8 @@ class MainActivity : AppCompatActivity() {
             vehicleBridge.notifyUpdate()
             sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
 
-            Toast.makeText(
-                this,
-                "บันทึกข้อมูลรถเรียบร้อย: ${vehicleBridge.detectedVehicleModel} (ความจุคำนวณจริง ${vehicleBridge.estimatedCapacityKwh} kWh)",
-                Toast.LENGTH_SHORT
-            ).show()
+            val savedMsg = getString(R.string.toast_profile_saved, "${vehicleBridge.detectedVehicleModel} (${vehicleBridge.estimatedCapacityKwh} kWh)")
+            Toast.makeText(this, savedMsg, Toast.LENGTH_SHORT).show()
         }
 
         vehicleBridge = BydVehicleBridge(this) { soc, consumption ->
@@ -139,32 +152,33 @@ class MainActivity : AppCompatActivity() {
                 val remainKwhText = if (vehicleBridge.remainEnergyKwh > 0.0) {
                     String.format(" (OBD BMS %.1f kWh)", vehicleBridge.remainEnergyKwh)
                 } else ""
+
                 tvLiveSoc.text = if (soc > 0.0) {
-                    String.format("🔋 Battery (OBD SoC): %.0f%%%s", soc, remainKwhText)
+                    getString(R.string.tv_live_soc_format, soc, remainKwhText)
                 } else {
-                    "🔋 Battery (OBD SoC): Waiting for car telemetry..."
+                    getString(R.string.tv_live_soc_waiting)
                 }
 
-                tvBatteryHealth.text = String.format(
-                    "🩺 Usable Capacity (SOH %d%%): %.1f kWh (Spec: %.2f kWh)",
+                tvBatteryHealth.text = getString(
+                    R.string.tv_usable_capacity_format,
                     vehicleBridge.sohPercent,
                     vehicleBridge.estimatedCapacityKwh,
                     vehicleBridge.nominalCapacityKwh
                 )
 
                 tvLiveConsumptionReal.text = if (consumption > 0.0) {
-                    String.format("⚡ Past 50km Avg (OBD): %.1f kWh/100km", consumption)
+                    getString(R.string.tv_consumption_format, consumption)
                 } else {
-                    "⚡ Past 50km Avg (OBD): Waiting for OBD sync..."
+                    getString(R.string.tv_consumption_waiting)
                 }
 
                 tvRealRange.text = if (vehicleBridge.realRangeKm > 0.0) {
-                    String.format("🎯 Real Remaining Range (ระยะวิ่งจริง): ~%.0f km", vehicleBridge.realRangeKm)
+                    getString(R.string.tv_real_range_format, vehicleBridge.realRangeKm)
                 } else {
-                    "🎯 Real Remaining Range (ระยะวิ่งจริง): Waiting for SoC & OBD data..."
+                    getString(R.string.tv_real_range_waiting)
                 }
 
-                tvNedcRange.text = String.format("📋 Dashboard NEDC Range: %d km", vehicleBridge.elecRangeKm)
+                tvNedcRange.text = getString(R.string.tv_nedc_range_format, vehicleBridge.elecRangeKm)
                 tvStatus.text = vehicleBridge.diagnosticStatus
             }
         }
@@ -176,16 +190,16 @@ class MainActivity : AppCompatActivity() {
             sendBroadcast(Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
                 putExtra(OverlayService.EXTRA_DISTANCE_KM, testDist)
             })
-            Toast.makeText(this, "Overlay visible! You can drag to move or pinch to resize.\n(แสดงแถบลอยแล้ว ลากเปลี่ยนตำแหน่งได้เลย)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_overlay_shown), Toast.LENGTH_SHORT).show()
         }
 
         btnResetPosition.setOnClickListener {
             sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION))
-            Toast.makeText(this, "Overlay position and scale reset to center.\n(รีเซ็ตตำแหน่งกลับค่าเริ่มต้นแล้ว)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_overlay_reset), Toast.LENGTH_SHORT).show()
         }
 
         btnOverlay.setOnClickListener {
-            tvStatus.text = "กำลังเปิดสิทธิ์ Overlay ผ่าน IVI ADB..."
+            tvStatus.text = if (isTh) "กำลังเปิดสิทธิ์ Overlay ผ่าน IVI ADB..." else "Enabling Overlay permission via IVI ADB..."
             AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
                 runOnUiThread {
                     tvStatus.text = result
@@ -195,28 +209,29 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnNotification.setOnClickListener {
-            tvStatus.text = "กำลังเปิดสิทธิ์อ่านการนำทาง Google Maps ผ่าน IVI ADB..."
+            tvStatus.text = if (isTh) "กำลังเปิดสิทธิ์อ่านการนำทาง Google Maps ผ่าน IVI ADB..." else "Enabling Google Maps navigation listener via IVI ADB..."
             AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
                 runOnUiThread {
                     tvStatus.text = result
                     Toast.makeText(this, result, Toast.LENGTH_LONG).show()
-                    if (result.contains("สำเร็จ")) {
+                    if (result.contains("สำเร็จ") || result.contains("success", ignoreCase = true)) {
                         vehicleBridge.restartConnection()
                         vehicleBridge.notifyUpdate()
                     }
                 }
             }
         }
+
         btnObdPermission.setOnClickListener {
-            Toast.makeText(this, "🔄 Requesting OBD permissions... (กำลังขอสิทธิ์ OBD)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_obd_requesting), Toast.LENGTH_SHORT).show()
             AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
                 runOnUiThread {
                     vehicleBridge.restartConnection()
                     sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
                     val msg = if (ready) {
-                        "✅ All permissions and OBD connections repaired! (ซ่อมสิทธิ์สำเร็จ)"
+                        getString(R.string.toast_obd_success)
                     } else {
-                        "✅ OBD permission requested & vehicle bridge restarted! (รีสตาร์ทตัวอ่านข้อมูลสำเร็จ)"
+                        getString(R.string.toast_obd_daemon_started)
                     }
                     Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                     vehicleBridge.notifyUpdate()
@@ -228,7 +243,7 @@ class MainActivity : AppCompatActivity() {
             showDonateDialog()
         }
 
-        tvStatus.text = "กำลังเชื่อมต่อ BYD telemetry ผ่าน local ADB shell..."
+        tvStatus.text = getString(R.string.tv_status_ready)
     }
 
     private fun showDonateDialog() {
@@ -252,14 +267,14 @@ class MainActivity : AppCompatActivity() {
             val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("Buy Me a Coffee", "https://www.buymeacoffee.com/nongjuum")
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, "คัดลอกลิงก์ buymeacoffee.com/nongjuum เรียบร้อยแล้ว", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_bmc_copied), Toast.LENGTH_SHORT).show()
         }
 
         dialogView.findViewById<Button>(R.id.btn_copy_skrill)?.setOnClickListener {
             val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("Skrill Email", "canon.non.7@gmail.com")
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, "คัดลอกอีเมล Skrill (canon.non.7@gmail.com) แล้ว", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_skrill_copied), Toast.LENGTH_SHORT).show()
         }
 
         dialogView.findViewById<Button>(R.id.btn_close_dialog).setOnClickListener {
@@ -286,3 +301,4 @@ class MainActivity : AppCompatActivity() {
         vehicleBridge.stopListening()
     }
 }
+

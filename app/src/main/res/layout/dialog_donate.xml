@@ -14,7 +14,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="☕ Support &amp; Donate (ร่วมสนับสนุนผู้พัฒนา)"
+            android:text="@string/donate_dialog_title"
             android:textColor="#FFD54F"
             android:textSize="17sp"
             android:textStyle="bold" />
@@ -23,7 +23,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Developed by Nontarat Hasitapong"
+            android:text="@string/donate_dialog_author"
             android:textColor="#40C4FF"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:gravity="center"
-            android:text="ใครจะนำไปใช้แก้ไขหรือปรับปรุงต่อ นำไปใช้ได้อิสระเลยครับ!\nแต่หากมีความเมตตา เลี้ยงค่าลูกอม/ขนมสักนิดก็ขอบคุณมากครับ ❤️\n(Feel free to fork/modify! Small treat/candy is warmly appreciated)"
+            android:text="@string/donate_dialog_note"
             android:textColor="#CFD8DC"
             android:textSize="11sp" />
 
@@ -44,7 +44,7 @@
             android:layout_marginBottom="12dp"
             android:background="#26FFFFFF" />
 
-        <!-- 1. ช่องทาง Buy Me a Coffee -->
+        <!-- 1. Buy Me a Coffee -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -56,7 +56,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="☕ Buy Me a Coffee (เลี้ยงกาแฟ / ค่าขนม)"
+                android:text="@string/donate_bmc_title"
                 android:textColor="#FFDD00"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -93,7 +93,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
                     android:backgroundTint="#FFD000"
-                    android:text="Open Web / เปิดเว็บ"
+                    android:text="@string/donate_bmc_btn_open"
                     android:textColor="#000000"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -104,12 +104,12 @@
                     android:layout_height="36dp"
                     android:layout_marginStart="8dp"
                     android:backgroundTint="#37474F"
-                    android:text="Copy Link / คัดลอก"
+                    android:text="@string/donate_bmc_btn_copy"
                     android:textSize="11sp" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- 2. ช่องทาง Skrill (International / ต่างประเทศ) -->
+        <!-- 2. Skrill (International) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -122,7 +122,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🌐 Skrill (International Support)"
+                android:text="@string/donate_skrill_title"
                 android:textColor="#E040FB"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -149,7 +149,7 @@
                     android:layout_height="36dp"
                     android:layout_marginStart="8dp"
                     android:backgroundTint="#7B1FA2"
-                    android:text="Copy / คัดลอก"
+                    android:text="@string/donate_skrill_btn_copy"
                     android:textSize="11sp" />
             </LinearLayout>
         </LinearLayout>
@@ -160,7 +160,7 @@
             android:layout_height="40dp"
             android:layout_marginTop="14dp"
             android:backgroundTint="#37474F"
-            android:text="Close / ปิด"
+            android:text="@string/donate_btn_close"
             android:textColor="#FFFFFF"
             android:textSize="12sp" />
 
