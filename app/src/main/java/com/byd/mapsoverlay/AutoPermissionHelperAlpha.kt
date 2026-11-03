@@ -253,7 +253,6 @@ object AutoPermissionHelperAlpha {
     ) {
         val appContext = context.applicationContext ?: context
         Thread({
-            var localScript: File? = null
             try {
                 if (!apkFile.exists() || apkFile.length() < 1000) {
                     onResult(false, "ไฟล์ APK ไม่ถูกต้องหรือไม่พบ")
@@ -336,9 +335,18 @@ object AutoPermissionHelperAlpha {
                         fi
                     """.trimIndent()
                     val scriptFile = File.createTempFile("beta_update_", ".sh", appContext.cacheDir)
-                    localScript = scriptFile
-                    scriptFile.writeText(installScript)
-                    dadb.push(scriptFile, scriptPath)
+                    try {
+                        scriptFile.writeText(installScript)
+                        when (val pushResult = dadb.push(scriptFile, scriptPath)) {
+                            is dadb.SyncResult.Failure -> {
+                                onResult(false, "ส่งสคริปต์ติดตั้งเข้า DiLink ไม่สำเร็จ: " + pushResult.reason)
+                                return@use
+                            }
+                            dadb.SyncResult.Success -> Unit
+                        }
+                    } finally {
+                        scriptFile.delete()
+                    }
                     val chmod = dadb.shell("chmod 700 '$scriptPath'")
                     if (chmod.exitCode != 0) {
                         onResult(false, "เตรียมสคริปต์ติดตั้งบน DiLink ไม่สำเร็จ: " + chmod.output)
@@ -356,8 +364,6 @@ object AutoPermissionHelperAlpha {
             } catch (t: Throwable) {
                 Log.e(TAG, "Silent install failed", t)
                 onResult(false, "เริ่มติดตั้ง OTA ไม่สำเร็จ: " + t.javaClass.simpleName + ": " + t.message)
-            } finally {
-                try { localScript?.delete() } catch (_: Throwable) {}
             }
         }, "AdbSilentInstaller").apply {
             isDaemon = true
