@@ -10,10 +10,117 @@ import java.util.regex.Pattern
 class MapsNotificationListener : NotificationListenerService() {
     private val tag = "MapsNotification"
     private val eventHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    // One-shot checks only: no recurring polling loop.
     private val removalCheckRunnable = Runnable {
-        syncActiveNavigationNotifications()
+        syncActiveNavigationNotifications("notification removed")
+    }
+    private val invalidRouteCheckRunnable = Runnable {
+        syncActiveNavigationNotifications("notification without readable distance")
     }
     private val removalDebounceMs = 800L
+    private val invalidRouteGraceMs = 6000L
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        Log.d(tag, "NotificationListener connected -> one-time active route sync")
+        eventHandler.removeCallbacks(removalCheckRunnable)
+        eventHandler.removeCallbacks(invalidRouteCheckRunnable)
+        syncActiveNavigationNotifications("listener connected")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        eventHandler.removeCallbacks(removalCheckRunnable)
+        eventHandler.removeCallbacks(invalidRouteCheckRunnable)
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        super.onNotificationPosted(sbn)
+        if (sbn == null || sbn.packageName == packageName) return
+
+        if (!isNavigationNotification(sbn)) return
+
+        eventHandler.removeCallbacks(removalCheckRunnable)
+        eventHandler.removeCallbacks(invalidRouteCheckRunnable)
+
+        if (!processMapsNotification(sbn)) {
+            // Maps can briefly publish a navigation notification without its distance.
+            // Verify once after a grace period instead of running a permanent poll.
+            eventHandler.postDelayed(invalidRouteCheckRunnable, invalidRouteGraceMs)
+        }
+    }
+
+    private fun processMapsNotification(sbn: StatusBarNotification): Boolean {
+        if (sbn.packageName == packageName || !isNavigationNotification(sbn)) return false
+
+        val extras = sbn.notification.extras
+        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+        val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
+        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
+
+        val distanceKm = extractTotalRemainingDistance(subText, text, bigText)
+        if (distanceKm == null || distanceKm <= 0.0) {
+            Log.d(tag, "Navigation notification found but no valid remaining distance")
+            return false
+        }
+
+        val broadcastIntent = Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
+            putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
+        }
+        sendBroadcast(broadcastIntent)
+
+        val serviceIntent = Intent(this, OverlayService::class.java).apply {
+            action = OverlayService.ACTION_UPDATE_DISTANCE
+            putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
+        }
+        try {
+            startService(serviceIntent)
+        } catch (e: Exception) {
+            Log.w(tag, "startService fallback to broadcast", e)
+        }
+        return true
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        if (sbn != null && sbn.packageName != packageName && isNavigationNotification(sbn)) {
+            Log.d(tag, "Navigation notification removed -> schedule one-shot active route check")
+            eventHandler.removeCallbacks(invalidRouteCheckRunnable)
+            eventHandler.removeCallbacks(removalCheckRunnable)
+            eventHandler.postDelayed(removalCheckRunnable, removalDebounceMs)
+        }
+    }
+
+    private fun syncActiveNavigationNotifications(reason: String) {
+        try {
+            val activeNotifications = activeNotifications.orEmpty()
+            val foundValidRoute = activeNotifications.any { notification ->
+                notification.packageName != packageName && processMapsNotification(notification)
+            }
+
+            if (foundValidRoute) {
+                Log.d(tag, "Active route confirmed ($reason)")
+            } else {
+                Log.d(tag, "No readable active route ($reason) -> hide overlay")
+                hideOverlay()
+            }
+        } catch (e: Exception) {
+            Log.w(tag, "Active route verification failed ($reason)", e)
+        }
+    }
+
+    private fun hideOverlay() {
+        sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
+        val intent = Intent(this, OverlayService::class.java).apply {
+            action = OverlayService.ACTION_HIDE_OVERLAY
+        }
+        try {
+            startService(intent)
+        } catch (e: Exception) {
+            Log.w(tag, "startService hide fallback", e)
+        }
+    }
 
     private val explicitMapsPackages = setOf(
         "com.google.android.apps.maps",
