@@ -4,6 +4,6 @@
   "channel": "alpha",
   "edition": "Alpha",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/BYD-Maps-Battery-Overlay-Alpha.apk",
-  "changelogTh": "• ระบบกรองอัตราสิ้นเปลืองนุ่มนวล พร้อมปัดเศษขึ้นเสมอ (Conservative Ceil)\n• ระบบล็อกช่วงแบตเตอรี่ปลายทางก้าวละ 2% (Hysteresis Deadband) ป้องกันตัวเลขสั่นไหว\n• ระบบอัปเดตออนไลน์ (OTA) สำหรับรุ่น Alpha พร้อมป๊อปอัปให้ผู้ใช้กดยืนยันสิทธิ์ Auto Start หลังติดตั้งเสร็จ",
-  "changelogEn": "• Smoothed consumption filter with conservative ceiling (Ceil)\n• 2% Hysteresis Deadband destination SoC stepping to eliminate jitter\n• Built-in OTA Online Updater for Alpha edition with interactive post-update Auto Start prompt"
+  "changelogTh": "• ระบบกรองอัตราสิ้นเปลืองนุ่มนวล พร้อมปัดเศษขึ้นทีละ 0.5 (.0/.5) สบายตาและปลอดภัยสูง\n• ระบบล็อกช่วงแบตเตอรี่ปลายทางก้าวละ 2% (Hysteresis Deadband) ป้องกันตัวเลขสั่นไหว\n• ระบบอัปเดตออนไลน์ (OTA) สำหรับรุ่น Alpha พร้อมป๊อปอัปให้ผู้ใช้กดยืนยันสิทธิ์ Auto Start หลังติดตั้งเสร็จ",
+  "changelogEn": "• Smoothed consumption filter rounded up in 0.5 steps (.0/.5) for rock-solid EV safety\n• 2% Hysteresis Deadband destination SoC stepping to eliminate jitter\n• Built-in OTA Online Updater for Alpha edition with interactive post-update Auto Start prompt"
 }
