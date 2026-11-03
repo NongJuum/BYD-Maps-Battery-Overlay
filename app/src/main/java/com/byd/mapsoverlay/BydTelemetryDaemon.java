@@ -47,9 +47,18 @@ public final class BydTelemetryDaemon {
             }
         }
         @Override public void onEVRemainingBatteryPowerChanged(float remainingKwh) {
+            acceptRemainingEnergy("onEVRemainingBatteryPowerChanged", remainingKwh);
+        }
+        public void onRemainingBatteryPowerChanged(float remainingKwh) {
+            acceptRemainingEnergy("onRemainingBatteryPowerChanged(float)", remainingKwh);
+        }
+        public void onRemainingBatteryPowerChanged(double remainingKwh) {
+            acceptRemainingEnergy("onRemainingBatteryPowerChanged(double)", (float) remainingKwh);
+        }
+        private void acceptRemainingEnergy(String source, float remainingKwh) {
             if (remainingKwh >= 0.0f && remainingKwh <= 200.0f) {
                 callbackRemainKwh = remainingKwh;
-                log("BYD callback onEVRemainingBatteryPowerChanged=" + remainingKwh);
+                log("BYD callback " + source + "=" + remainingKwh);
             }
         }
     };
@@ -181,14 +190,17 @@ public final class BydTelemetryDaemon {
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
 
                 Double polledSoc = number(statistic, "getElecPercentageValue");
+                if (polledSoc != null && polledSoc > 100.0 && polledSoc <= 1000.0) polledSoc /= 10.0;
                 Double soc = callbackSoc >= 0.0 ? callbackSoc : polledSoc;
                 Double statisticRemaining = number(statistic, "getStatisticRemainingBatteryPower");
                 Double lastConsumption = number(statistic, "getLastElecConPHMValue");
                 Integer polledRange = integer(statistic, "getElecDrivingRangeValue");
                 Integer range = callbackRangeKm >= 0 ? callbackRangeKm : polledRange;
-                Double polledRemain = number(power, "getBatteryRemainPowerEV");
+                // Support getter names observed across BYD SDK builds.
+                Double polledRemain = numberAny(power, "getBatteryRemainPowerEV", "getRemainingBatteryPower", "getEVRemainingBatteryPower");
                 Double remain = callbackRemainKwh >= 0.0f ? (double) callbackRemainKwh : polledRemain;
                 Double consumption = number(instrument, "getLast50KmPowerConsume");
+                if (consumption == null || consumption <= 0.0) consumption = lastConsumption;
                 if (soc != null && soc >= 0 && soc <= 100) {
                     JSONObject socObject = new JSONObject();
                     socObject.put("percent", soc);
@@ -317,6 +329,14 @@ public final class BydTelemetryDaemon {
             log(methodName + " failed: " + t);
             return null;
         }
+    }
+
+    private static Double numberAny(Object target, String... methodNames) {
+        for (String methodName : methodNames) {
+            Double value = number(target, methodName);
+            if (value != null && value > 0.0) return value;
+        }
+        return null;
     }
 
     private static Integer integer(Object target, String methodName) {
