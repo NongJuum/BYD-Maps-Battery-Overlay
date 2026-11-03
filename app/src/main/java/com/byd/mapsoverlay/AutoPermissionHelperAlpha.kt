@@ -260,30 +260,54 @@ object AutoPermissionHelperAlpha {
                 }
 
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
-                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 60000).use { dadb ->
-                    val tmpTarget = "/data/local/tmp/alpha_update.apk"
-                    val copyScript = "cat '${apkFile.absolutePath}' > $tmpTarget 2>/dev/null || cp '${apkFile.absolutePath}' $tmpTarget 2>/dev/null"
-                    dadb.shell(copyScript)
-
+                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5000, 60000).use { dadb ->
+                    val tmpTarget = "/data/local/tmp/beta_update.apk"
+                    val localSize = apkFile.length()
+                    val localSha = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(apkFile.readBytes()).joinToString("") { "%02x".format(it) }
+                    val copyScript = """
+                        rm -f '$tmpTarget'
+                        cat '\${apkFile.absolutePath}' > '$tmpTarget' 2>/dev/null
+                        COPY_RC=$?
+                        if [ $COPY_RC -ne 0 ] || [ ! -f '$tmpTarget' ]; then
+                          rm -f '$tmpTarget'; echo COPY_FAILED; exit 21
+                        fi
+                        SIZE=$(wc -c < '$tmpTarget' 2>/dev/null | tr -d ' ')
+                        HASH=$(sha256sum '$tmpTarget' 2>/dev/null | awk '{print $1}')
+                        echo "COPY_SIZE=$SIZE"
+                        echo "COPY_SHA256=$HASH"
+                        [ "$SIZE" = "$localSize" ] && [ "$HASH" = "$localSha" ] || { rm -f '$tmpTarget'; echo COPY_VERIFY_FAILED; exit 22; }
+                        echo COPY_VERIFIED
+                    """.trimIndent()
+                    val copyResp = dadb.shell(copyScript)
+                    if (copyResp.exitCode != 0 || !copyResp.output.contains("COPY_VERIFIED")) {
+                        onResult(false, "ส่งไฟล์ APK เข้า DiLink ไม่สำเร็จ หรือข้อมูลไม่ตรงกัน: \${copyResp.output}")
+                        return@use
+                    }
                     val installScript = """
-                        pm install -r -d $tmpTarget
-                        STATUS=${'$'}?
-                        rm -f $tmpTarget
-                        if [ ${'$'}STATUS -eq 0 ]; then
-                          sleep 1
-                          am start -n ${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
-                          echo INSTALL_SUCCESS
+                        PM_OUT=$(pm install -r -d '$tmpTarget' 2>&1)
+                        INSTALL_RC=$?
+                        rm -f '$tmpTarget'
+                        echo "INSTALL_RC=$INSTALL_RC"
+                        echo "INSTALL_OUTPUT=$PM_OUT"
+                        if [ "$INSTALL_RC" -eq 0 ] && echo "$PM_OUT" | grep -qx 'Success'; then
+                          sleep 2
+                          am start -n \${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
+                          START_RC=$?
+                          echo "START_RC=$START_RC"
+                          [ "$START_RC" -eq 0 ] && echo INSTALL_AND_START_OK || echo INSTALL_OK_START_FAILED
                         else
-                          echo INSTALL_FAILED_${'$'}STATUS
+                          echo INSTALL_FAILED; exit "$INSTALL_RC"
                         fi
                     """.trimIndent()
-
                     val resp = dadb.shell(installScript)
                     val out = resp.output
-                    if (out.contains("INSTALL_SUCCESS") || out.contains("Success", ignoreCase = true)) {
-                        onResult(true, "ติดตั้งเวอร์ชัน Alpha สำเร็จ กำลังเริ่มระบบใหม่...")
+                    if (resp.exitCode == 0 && out.contains("INSTALL_AND_START_OK")) {
+                        onResult(true, "ติดตั้ง Beta สำเร็จและส่งคำสั่งเปิดแอปใหม่แล้ว")
+                    } else if (out.contains("INSTALL_OK_START_FAILED")) {
+                        onResult(false, "ติดตั้ง APK สำเร็จ แต่เปิดแอปใหม่ไม่สำเร็จ: $out")
                     } else {
-                        onResult(false, "ติดตั้งไม่สำเร็จ: $out")
+                        onResult(false, "ติดตั้งไม่สำเร็จ (exit=\${resp.exitCode}): $out")
                     }
                 }
             } catch (t: Throwable) {
