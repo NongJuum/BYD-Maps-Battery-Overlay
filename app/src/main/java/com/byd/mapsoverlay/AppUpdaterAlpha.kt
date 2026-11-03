@@ -24,7 +24,7 @@ data class UpdateInfo(
 
 object AppUpdaterAlpha {
     private const val TAG = "AppUpdaterAlpha"
-    private const val VERSION_URL = "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/version.json"
+    private const val VERSION_URL = "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/version.json"
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun getCurrentVersionCode(context: Context): Int {
@@ -109,7 +109,7 @@ object AppUpdaterAlpha {
         Thread {
             try {
                 mainHandler.post { onStatus("กำลังเชื่อมต่อดาวน์โหลด...") }
-                val targetFile = File(appContext.cacheDir, "alpha_update.apk")
+                val targetFile = File(appContext.cacheDir, "beta_update.apk")
                 if (targetFile.exists()) targetFile.delete()
 
                 val url = URL(info.apkUrl)
