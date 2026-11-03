@@ -17,8 +17,11 @@ android {
 
     signingConfigs {
         debug {
-            // Some vendor IVI package installers only accept legacy JAR (v1)
-            // signatures. Keep modern APK signing too for Android 7+.
+            // Stable Beta signing identity for all future in-place updates.
+            storeFile file("$rootDir/beta-debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
             enableV1Signing true
             enableV2Signing true
         }
