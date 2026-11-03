@@ -67,10 +67,9 @@ class BydVehicleBridge(
             applyUserVehicleProfile()
             // 1. Direct native BYD hardware API reading with BydPermissionContext
             pollDirectBydHardwareApi()
-            // 2. Fallback / supplementary check via telemetry daemon
-            if (currentSoc <= 0.0) {
-                fetchTelemetryDaemonStatus()
-            }
+            // 2. Read the shell daemon on every cycle so it can supplement
+            // fields the direct app-context BYD API cannot provide on this firmware.
+            fetchTelemetryDaemonStatus()
         }, 0, 2, TimeUnit.SECONDS)
     }
 
@@ -140,7 +139,7 @@ class BydVehicleBridge(
             ),
             ApiCandidate(
                 "android.hardware.bydauto.power.BYDAutoPowerDevice",
-                listOf("getBatteryRemainPowerEV")
+                listOf("getBatteryRemainPowerEV", "getRemainingBatteryPower", "getEVRemainingBatteryPower")
             )
         )
 
@@ -178,9 +177,9 @@ class BydVehicleBridge(
 
                     val raw = number.toDouble()
                     when (methodName) {
-                        "getElecPercentageValue" -> if (raw in 1.0..1000.0) {
+                        "getElecPercentageValue" -> if (raw in 0.0..1000.0) {
                             val soc = if (raw > 100.0) raw / 10.0 else raw
-                            if (soc in 1.0..100.0 && soc != currentSoc) {
+                            if (soc in 0.0..100.0 && soc != currentSoc) {
                                 currentSoc = soc
                                 updated = true
                             }
@@ -203,7 +202,7 @@ class BydVehicleBridge(
                             diagnostics += "$methodName: OK=$range"
                         } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
 
-                        "getBatteryRemainPowerEV" -> if (raw in 0.5..150.0) {
+                        "getBatteryRemainPowerEV", "getRemainingBatteryPower", "getEVRemainingBatteryPower" -> if (raw in 0.1..200.0) {
                             if (raw != remainEnergyKwh) {
                                 remainEnergyKwh = raw
                                 updated = true
@@ -345,34 +344,40 @@ class BydVehicleBridge(
                 val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                 val daemonStatus = json.optString("status", "UNKNOWN")
                 val daemonError = json.optString("error", "")
-                diagnosticStatus = if (daemonError.isNotBlank()) {
-                    "Shell telemetry daemon: $daemonStatus ($daemonError)"
-                } else {
-                    "Shell telemetry daemon: $daemonStatus (uid=${json.optInt("uid", -1)})"
-                }
                 val socObject = json.optJSONObject("soc")
                 val soc = socObject?.optDouble("percent", -1.0) ?: -1.0
-                if (soc in 0.0..100.0) currentSoc = soc
-
                 val rangeObject = json.optJSONObject("range")
                 val range = rangeObject?.optInt("elecRangeKm", 0) ?: 0
-                if (range > 0) elecRangeKm = range
-
                 val remain = json.optDouble("remainEnergyKwh", -1.0)
-                if (remain in 0.1..150.0) remainEnergyKwh = remain
-
                 val consumptionObject = json.optJSONObject("consumption")
                 val consumption = consumptionObject?.optDouble("kwhPer100km", -1.0) ?: -1.0
-                if (consumption in 1.0..60.0) {
-                    applyConsumptionUpdate(consumption)
+
+                // Direct app-context reads remain authoritative. The shell daemon
+                // only fills fields that the direct BYD API has not supplied.
+                var supplemented = false
+                if (currentSoc <= 0.0 && soc in 0.0..100.0) {
+                    currentSoc = soc
+                    supplemented = true
+                }
+                if (elecRangeKm <= 0 && range > 0) {
+                    elecRangeKm = range
+                    supplemented = true
+                }
+                if (remainEnergyKwh <= 0.5 && remain in 0.1..150.0) {
+                    remainEnergyKwh = remain
+                    supplemented = true
+                }
+                if (currentConsumption <= 0.0 && consumption in 1.0..60.0) {
+                    supplemented = applyConsumptionUpdate(consumption) || supplemented
                 }
 
-                val hasVehicleData = soc >= 0.0 || range > 0 || remain > 0.0 || consumption > 0.0
-                if (hasVehicleData) {
+                if (supplemented) {
+                    diagnosticStatus = "Shell daemon supplemented missing telemetry (uid=${json.optInt("uid", -1)})"
                     recalculateRealTelemetry()
                     notifyUpdate()
-                } else if (diagnosticStatus != previousStatus) {
-                    notifyUpdate()
+                } else if (currentSoc <= 0.0 && daemonError.isNotBlank()) {
+                    diagnosticStatus = "Shell telemetry daemon: $daemonStatus ($daemonError)"
+                    if (diagnosticStatus != previousStatus) notifyUpdate()
                 }
             } finally {
                 conn.disconnect()
