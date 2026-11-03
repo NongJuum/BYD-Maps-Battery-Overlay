@@ -2,7 +2,10 @@
 
 <p align="center">
   <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest">
-    <img src="https://img.shields.io/badge/Download-Latest%20APK%20(v1.0.0)-00C853?style=for-the-badge&logo=android&logoColor=white" />
+    <img src="https://img.shields.io/badge/Download-Latest%20Release%20(v1.0.0)-00C853?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+  <a href="BYD-Maps-Battery-Overlay-Alpha.apk">
+    <img src="https://img.shields.io/badge/Download-Alpha%20Edition%20(DiLink%203%20Parity)-FF6D00?style=for-the-badge&logo=android&logoColor=white" />
   </a>
 </p>
 
@@ -14,6 +17,44 @@
   <b>A smart, real-time floating overlay application that predicts destination battery percentage (SoC %) and actual remaining range for all BYD electric vehicles.</b><br>
   Works seamlessly alongside Google Maps and directly reads telemetry from vehicle internal systems (OBD / BMS / CAN bus) without requiring any extra OBD dongles or external hardware.
 </p>
+
+---
+
+## 🚀 Alpha Edition (`com.byd.mapsoverlay.alpha`)
+
+> [!TIP]
+> **Independent Package for Side-by-Side Testing**: The Alpha Edition uses `com.byd.mapsoverlay.alpha` and the label **"BYD Maps (Alpha)"**. You can install and test it directly alongside the stable version without overwriting or inheriting permissions.
+
+### 🔬 Architecture & Overdrive Reverse-Engineered Parity
+The Alpha build introduces complete parity with the proven Overdrive architecture for **DiLink 3 (Android 10)**:
+1. **Hidden API Bypass**: Unlocks restricted OEM interfaces via `VMRuntime.getRuntime().setHiddenApiExemptions(["L"])`.
+2. **System Context Acquisition**: Invokes `ActivityThread.systemMain().getSystemContext().createPackageContext(packageName, 3)` to obtain system-privileged Binder context.
+3. **Vehicle Whitelisting via IPC**:
+   - `accmodemanager`: calls `setPkg2AccWhiteList(packageName)` to prevent the IVI from severing telemetry during ACC transitions or driving.
+   - `bg_datacache`: calls `setAppOpsData(uid, 0)` so DiLink 3 vehicle daemons accept connections from our app UID.
+   - `BYDAutoStartupAppDevice`: enables persistent autostart via `setStartupAppEnable(packageName, true)`.
+4. **Resilient Hardware Polling with Singleton Caching**: Direct in-process reading of `BYDAutoStatisticDevice`, `BYDAutoInstrumentDevice`, and `BYDAutoPowerDevice` supporting `self()`, `getInstance(Context)`, and `getInstance()`.
+5. **Zero-Hole ADB Setup & Persistence**:
+   - Probes `127.0.0.1:5555` with a 15-second grace window and a 2.5-minute retry loop while waiting for user confirmation on the car screen.
+   - Automatically executes:
+     ```bash
+     setprop persist.sys.acc.whitelist 'com.byd.mapsoverlay.alpha'
+     service call accmodemanager 1 s16 'com.byd.mapsoverlay.alpha'
+     service call accmodemanager 2 s16 'com.byd.mapsoverlay.alpha'
+     service call accmodemanager 3 s16 'com.byd.mapsoverlay.alpha'
+     appops set com.byd.mapsoverlay.alpha RUN_IN_BACKGROUND allow
+     appops set com.byd.mapsoverlay.alpha RUN_ANY_IN_BACKGROUND allow
+     appops set com.byd.mapsoverlay.alpha WAKE_LOCK allow
+     cmd appops set com.byd.mapsoverlay.alpha AUTO_START allow
+     cmd appops set com.byd.mapsoverlay.alpha BOOT_COMPLETED allow
+     dumpsys deviceidle whitelist +com.byd.mapsoverlay.alpha
+     settings put global ssc_whitelist ...
+     settings put secure ssc_whitelist ...
+     content call --uri content://com.byd.appstartup/whitelist --method add --arg 'com.byd.mapsoverlay.alpha'
+     setprop persist.sys.adb.status_memory_enable true
+     ```
+   - Launches detached telemetry daemon using `nohup` on loopback port `19890`.
+6. **Overlay Self-Recovery**: Automatically recovers and displays the overlay view when permissions are granted or tested.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Developer-Nontarat%20Hasitapong-00E676?style=for-the-badge&logo=android" />

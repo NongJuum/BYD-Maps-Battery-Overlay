@@ -2,7 +2,10 @@
 
 <p align="center">
   <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest">
-    <img src="https://img.shields.io/badge/ดาวน์โหลด-APK%20เวอร์ชันล่าสุด%20(v1.0.0)-00C853?style=for-the-badge&logo=android&logoColor=white" />
+    <img src="https://img.shields.io/badge/ดาวน์โหลด-รุ่นเสถียร%20(v1.0.0)-00C853?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+  <a href="BYD-Maps-Battery-Overlay-Alpha.apk">
+    <img src="https://img.shields.io/badge/ดาวน์โหลด-รุ่นทดสอบ%20Alpha%20(DiLink%203)-FF6D00?style=for-the-badge&logo=android&logoColor=white" />
   </a>
 </p>
 
@@ -14,6 +17,45 @@
   <b>แอปพลิเคชันแถบลอยอัจฉริยะ (Floating Overlay) แสดง % แบตเตอรี่ปลายทาง และระยะวิ่งจริงแบบ Real-Time สำหรับรถยนต์ไฟฟ้า BYD ทุกรุ่น</b><br>
   ทำงานร่วมกับ Google Maps และซิงค์ข้อมูลสดจากกล่องควบคุมรถ (OBD / BMS) โดยไม่ต้องซื้ออุปกรณ์ฮาร์ดแวร์เสริม
 </p>
+
+---
+
+## 🚀 รุ่นทดสอบพิเศษ Alpha Edition (`com.byd.mapsoverlay.alpha`)
+
+> [!TIP]
+> **ติดตั้งคู่กับตัวเดิมได้ทันที (Side-by-Side Test):** รุ่น Alpha ใช้ Package Name แยกเป็น `com.byd.mapsoverlay.alpha` และชื่อแอปแสดงผลว่า **"BYD Maps (Alpha)"** จึงสามารถลงทับคู่กับตัว Release เดิมได้โดยตรง เพื่อทดสอบว่าตัว Alpha ปลดล็อกสิทธิ์และดึงข้อมูลรถได้ด้วยตัวเองจริงหรือไม่ โดยไม่แชร์ผลบุญสิทธิ์จากแอปเดิม
+
+### 🔬 โครงสร้างการทำงานระดับลึก (Overdrive Parity Architecture)
+รุ่น Alpha สร้างขึ้นโดยถอดรหัสกลไกจากแอป Overdrive สำหรับจอ DiLink 3 (Android 10) โดยเฉพาะ:
+1. **Hidden API Bypass:** ปลดล็อกข้อจำกัด Non-SDK Interface ผ่าน `VMRuntime.getRuntime().setHiddenApiExemptions(["L"])` ทำให้เข้าถึง `android.hardware.bydauto.*` ได้โดยตรง
+2. **ดึง System Context ผ่าน ActivityThread:**
+   สร้าง Worker Thread เรียก `ActivityThread.systemMain().getSystemContext().createPackageContext(packageName, 3)` เพื่อให้ได้ Context สิทธิ์ระดับ System (UID 1000)
+3. **ลงทะเบียน Whitelist กับ Service ของ BYD:**
+   - **`accmodemanager`**: ยิงคำสั่ง `setPkg2AccWhiteList(packageName)` ป้องกันระบบรถตัดสัญญาณหรือฆ่าแอปขณะขับขี่และตอนดับ/สตาร์ทรถ
+   - **`bg_datacache`**: สั่ง `setAppOpsData(uid, 0)` ให้ตัวอ่านข้อมูลรถยอมรับการเชื่อมต่อจาก UID ของแอป
+   - **`BYDAutoStartupAppDevice`**: เปิดใช้งาน `setStartupAppEnable(packageName, true)`
+4. **Hardware Polling พร้อม Caching:** ดึงค่าแบตเตอรี่ตรงจากฮาร์ดแวร์รถ รองรับทั้ง `self()` (Singleton ดั้งเดิมของ DiLink 3) และ `getInstance(Context)`
+5. **Zero-Hole ADB Setup:**
+   - มีช่วงรอตรวจจับพอร์ต 5555 นาน 15 วินาที พร้อมลูป Background Polling 2.5 นาที ให้คนขับมีเวลากดติ๊ก `[✓] Always allow from this computer` และ `[OK]` บนจอรถ
+   - รันชุดคำสั่งระบบครบทั้ง 10 คำสั่งของ Overdrive ทันทีที่เชื่อมต่อได้:
+     ```bash
+     setprop persist.sys.acc.whitelist 'com.byd.mapsoverlay.alpha'
+     service call accmodemanager 1 s16 'com.byd.mapsoverlay.alpha'
+     service call accmodemanager 2 s16 'com.byd.mapsoverlay.alpha'
+     service call accmodemanager 3 s16 'com.byd.mapsoverlay.alpha'
+     appops set com.byd.mapsoverlay.alpha RUN_IN_BACKGROUND allow
+     appops set com.byd.mapsoverlay.alpha RUN_ANY_IN_BACKGROUND allow
+     appops set com.byd.mapsoverlay.alpha WAKE_LOCK allow
+     cmd appops set com.byd.mapsoverlay.alpha AUTO_START allow
+     cmd appops set com.byd.mapsoverlay.alpha BOOT_COMPLETED allow
+     dumpsys deviceidle whitelist +com.byd.mapsoverlay.alpha
+     settings put global ssc_whitelist ...
+     settings put secure ssc_whitelist ...
+     content call --uri content://com.byd.appstartup/whitelist --method add --arg 'com.byd.mapsoverlay.alpha'
+     setprop persist.sys.adb.status_memory_enable true
+     ```
+   - รัน Background Telemetry Daemon ผ่านคำสั่ง `nohup` บน Loopback Port 19890 ป้องกันการโดนตัด Process
+6. **ระบบฟื้นฟู Overlay อัตโนมัติ:** เมื่อได้รับสิทธิ์จาก ADB จะรีเซ็ตและนำแถบ Overlay ขึ้นมาแสดงผลบนหน้าจอทันทีโดยไม่ติดสถานะ Error ค้าง
 
 <p align="center">
   <img src="https://img.shields.io/badge/Developer-Nontarat%20Hasitapong-00E676?style=for-the-badge&logo=android" />
