@@ -5,12 +5,16 @@ on:
     branches:
       - fix/byd-native-api-diagnostics
       - fix/alpha-permission-settings
+      - alpha
       - main
   pull_request:
     branches:
       - alpha
       - main
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -45,6 +49,7 @@ jobs:
               --out "${APK}.signed" "$APK"
             mv "${APK}.signed" "$APK"
             cp "$APK" BYD-Maps-Battery-Overlay-Universal.apk
+            cp "$APK" BYD-Maps-Battery-Overlay-Alpha.apk
             "$APKSIGNER" verify --verbose --print-certs "$APK"
           done
       - name: Upload APK
@@ -55,3 +60,14 @@ jobs:
             app/build/outputs/apk/debug/*.apk
             BYD-Maps-Battery-Overlay-Universal.apk
           if-no-files-found: error
+
+      - name: Publish Alpha APK to alpha branch
+        if: github.ref == 'refs/heads/alpha' && github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BYD-Maps-Battery-Overlay-Alpha.apk BYD-Maps-Battery-Overlay-Universal.apk
+          git commit -m "chore(alpha): publish 1.0.1-alpha APK [skip ci]"
+          git push origin HEAD:alpha
