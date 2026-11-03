@@ -253,6 +253,7 @@ object AutoPermissionHelperAlpha {
     ) {
         val appContext = context.applicationContext ?: context
         Thread({
+            var localScript: File? = null
             try {
                 if (!apkFile.exists() || apkFile.length() < 1000) {
                     onResult(false, "ไฟล์ APK ไม่ถูกต้องหรือไม่พบ")
@@ -261,66 +262,101 @@ object AutoPermissionHelperAlpha {
 
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5000, 300000).use { dadb ->
-                    val tmpTarget = "/data/local/tmp/beta_update.apk"
                     val localSize = apkFile.length()
-                    val localSha = java.security.MessageDigest.getInstance("SHA-256")
-                        .digest(apkFile.readBytes()).joinToString("") { "%02x".format(it) }
-                    // Transfer through the ADB sync protocol. The app's private cache
-                    // path is NOT readable by the remote shell UID, so shell-side
-                    // "cat <app cache path>" can never stage this APK correctly.
-                    // Dadb.push streams the local file over the authenticated ADB
-                    // connection directly into the shell-owned /data/local/tmp.
-                    dadb.shell("rm -f '$tmpTarget'")
-                    try {
-                        dadb.push(apkFile, tmpTarget)
-                    } catch (pushError: Throwable) {
-                        try { dadb.shell("rm -f '$tmpTarget'") } catch (_: Throwable) {}
-                        throw pushError
+                    val requiredBytes = maxOf(350L * 1024L * 1024L, localSize * 3L + 128L * 1024L * 1024L)
+
+                    // Match OverDrive's head-unit free-space guard.
+                    val df = dadb.shell("df -k /data/local/tmp")
+                    val freeKb = df.output.trim().lines().lastOrNull()
+                        ?.trim()?.split(Regex("\\s+"))?.getOrNull(3)?.toLongOrNull()
+                    if (freeKb != null && freeKb * 1024L < requiredBytes) {
+                        val freeMb = freeKb / 1024L
+                        val needMb = (requiredBytes + 1024L * 1024L - 1L) / (1024L * 1024L)
+                        onResult(false, "พื้นที่ว่างในรถไม่พอ: เหลือ " + freeMb + " MB ต้องมีอย่างน้อย " + needMb + " MB")
+                        return@use
                     }
+
+                    val digest = java.security.MessageDigest.getInstance("SHA-256")
+                    apkFile.inputStream().use { input ->
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            digest.update(buffer, 0, count)
+                        }
+                    }
+                    val localSha = digest.digest().joinToString("") { "%02x".format(it) }
+
+                    val updateId = System.currentTimeMillis().toString()
+                    val tmpTarget = "/data/local/tmp/beta_update_$updateId.apk"
+                    val scriptPath = "/data/local/tmp/beta_update_$updateId.sh"
+                    val statusPath = "/data/local/tmp/beta_update_$updateId.status"
+                    val logPath = "/data/local/tmp/beta_update_$updateId.log"
+                    val packageName = appContext.packageName
+
+                    dadb.shell("rm -f '$tmpTarget' '$scriptPath' '$statusPath' '$logPath'")
+                    dadb.push(apkFile, tmpTarget)
 
                     val verifyScript = """
                         if [ ! -f '$tmpTarget' ]; then echo PUSH_MISSING; exit 21; fi
                         SIZE=$(wc -c < '$tmpTarget' 2>/dev/null | tr -d ' ')
-                        HASH=$(sha256sum '$tmpTarget' 2>/dev/null | awk '{print $1}')
-                        echo "PUSH_SIZE=$SIZE"
-                        echo "PUSH_SHA256=$HASH"
-                        [ "$SIZE" = "$localSize" ] && [ "$HASH" = "$localSha" ] || { rm -f '$tmpTarget'; echo PUSH_VERIFY_FAILED; exit 22; }
+                        HASH=$(sha256sum '$tmpTarget' 2>/dev/null | awk '{print ${'$'}1}')
+                        echo "PUSH_SIZE=${'$'}SIZE"
+                        echo "PUSH_SHA256=${'$'}HASH"
+                        [ "${'$'}SIZE" = "$localSize" ] && [ "${'$'}HASH" = "$localSha" ] || { rm -f '$tmpTarget'; echo PUSH_VERIFY_FAILED; exit 22; }
                         echo PUSH_VERIFIED
                     """.trimIndent()
-                    val copyResp = dadb.shell(verifyScript)
-                    if (copyResp.exitCode != 0 || !copyResp.output.contains("PUSH_VERIFIED")) {
-                        onResult(false, "ส่งไฟล์ APK เข้า DiLink ไม่สำเร็จ หรือข้อมูลไม่ตรงกัน: ${copyResp.output}")
+                    val verify = dadb.shell(verifyScript)
+                    if (verify.exitCode != 0 || !verify.output.contains("PUSH_VERIFIED")) {
+                        onResult(false, "ส่งไฟล์ APK เข้า DiLink ไม่สำเร็จ: " + verify.output)
                         return@use
                     }
+
+                    // PackageManager terminates the app being replaced. Keep the
+                    // install script independent of this app's ADB client process.
                     val installScript = """
-                        PM_OUT=$(pm install -r -d '$tmpTarget' 2>&1)
-                        INSTALL_RC=$?
-                        rm -f '$tmpTarget'
-                        echo "INSTALL_RC=$INSTALL_RC"
-                        echo "INSTALL_OUTPUT=$PM_OUT"
-                        if [ "$INSTALL_RC" -eq 0 ] && echo "$PM_OUT" | grep -qx 'Success'; then
+                        #!/system/bin/sh
+                        TMP='$tmpTarget'
+                        STATUS='$statusPath'
+                        APP='$packageName'
+                        printf 'RUNNING\n' > "${'$'}STATUS"
+                        chmod 644 "${'$'}STATUS" 2>/dev/null || true
+                        PM_OUT=$(pm install -r -d "${'$'}TMP" 2>&1)
+                        INSTALL_RC=${'$'}?
+                        rm -f "${'$'}TMP"
+                        if [ "${'$'}INSTALL_RC" -eq 0 ] && printf '%s\n' "${'$'}PM_OUT" | grep -qx 'Success'; then
+                          printf 'SUCCESS\n' > "${'$'}STATUS"
+                          chmod 644 "${'$'}STATUS" 2>/dev/null || true
                           sleep 2
-                          am start -n ${appContext.packageName}/com.byd.mapsoverlay.MainActivity --ez post_update true
-                          START_RC=$?
-                          echo "START_RC=$START_RC"
-                          [ "$START_RC" -eq 0 ] && echo INSTALL_AND_START_OK || echo INSTALL_OK_START_FAILED
+                          am start -n "${'$'}APP/com.byd.mapsoverlay.MainActivity" --activity-clear-task --activity-new-task --ez post_update true
                         else
-                          echo INSTALL_FAILED; exit "$INSTALL_RC"
+                          { printf 'FAILED\n'; printf '%s\n' "${'$'}PM_OUT"; } > "${'$'}STATUS"
+                          chmod 644 "${'$'}STATUS" 2>/dev/null || true
+                          am start -n "${'$'}APP/com.byd.mapsoverlay.MainActivity" --activity-clear-task --activity-new-task --ez ota_failed true --es ota_status_file "${'$'}STATUS"
                         fi
                     """.trimIndent()
-                    val resp = dadb.shell(installScript)
-                    val out = resp.output
-                    if (resp.exitCode == 0 && out.contains("INSTALL_AND_START_OK")) {
-                        onResult(true, "ติดตั้ง Beta สำเร็จและส่งคำสั่งเปิดแอปใหม่แล้ว")
-                    } else if (out.contains("INSTALL_OK_START_FAILED")) {
-                        onResult(false, "ติดตั้ง APK สำเร็จ แต่เปิดแอปใหม่ไม่สำเร็จ: $out")
-                    } else {
-                        onResult(false, "ติดตั้งไม่สำเร็จ (exit=\${resp.exitCode}): $out")
+                    localScript = File.createTempFile("beta_update_", ".sh", appContext.cacheDir)
+                    localScript.writeText(installScript)
+                    dadb.push(localScript, scriptPath)
+                    val chmod = dadb.shell("chmod 700 '$scriptPath'")
+                    if (chmod.exitCode != 0) {
+                        onResult(false, "เตรียมสคริปต์ติดตั้งบน DiLink ไม่สำเร็จ: " + chmod.output)
+                        return@use
                     }
+
+                    val launch = dadb.shell("nohup sh '$scriptPath' </dev/null >'$logPath' 2>&1 & echo OTA_INSTALL_STARTED")
+                    if (launch.exitCode != 0 || !launch.output.contains("OTA_INSTALL_STARTED")) {
+                        onResult(false, "เริ่มกระบวนการติดตั้ง OTA ไม่สำเร็จ: " + launch.output)
+                        return@use
+                    }
+
+                    onResult(true, "ส่งงานติดตั้งให้ระบบรถแล้ว รถจะเปิดแอปใหม่เมื่อดำเนินการเสร็จ")
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Silent install failed", t)
-                onResult(false, "เกิดข้อผิดพลาดในการติดตั้ง: ${t.message}")
+                onResult(false, "เริ่มติดตั้ง OTA ไม่สำเร็จ: " + t.javaClass.simpleName + ": " + t.message)
+            } finally {
+                try { localScript?.delete() } catch (_: Throwable) {}
             }
         }, "AdbSilentInstaller").apply {
             isDaemon = true
