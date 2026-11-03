@@ -49,6 +49,9 @@
     <string name="post_update_dialog_desc">แอปเพิ่งได้รับการอัปเดตเวอร์ชันใหม่ ระบบ Android อาจมีการรีเซ็ตสิทธิ์การทำงานเบื้องหลัง\n\nกรุณากดปุ่มด้านล่างเพื่อมอบสิทธิ์ Auto Start และยืนยันการเชื่อมต่อระบบรถ DiLink อีกครั้ง</string>
     <string name="post_update_btn_confirm">⚡ มอบสิทธิ์ Auto Start และเริ่มระบบ</string>
 
+    <string name="label_disable_auto_start">ปิดการเริ่มแอปอัตโนมัติ (Disable Auto Start)</string>
+    <string name="desc_disable_auto_start">ไม่ให้ระบบรถเปิดแอปนี้เองเมื่อสตาร์ตรถ ยังสามารถเปิดแอปด้วยตนเองได้</string>
+
     <!-- Donate Dialog -->
     <string name="donate_dialog_title">☕ ร่วมสนับสนุนผู้พัฒนา (Support &amp; Donate)</string>
     <string name="donate_dialog_author">Developed by Nontarat Hasitapong</string>
