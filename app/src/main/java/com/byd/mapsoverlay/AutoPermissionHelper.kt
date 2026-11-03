@@ -159,7 +159,8 @@ object AutoPermissionHelper {
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
                     val command = """
                         APP_ID=${appContext.packageName}
-                        COMPONENT=${'
+                        COMPONENT=${'$'}APP_ID/com.byd.mapsoverlay.MapsNotificationListener
+                        cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
                         LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
                         case ":${'$'}LISTENERS:" in
                           *":${'$'}COMPONENT:"*) ;;
@@ -171,12 +172,12 @@ object AutoPermissionHelper {
                             fi
                             ;;
                         esac
-                        appops set ${' >/dev/null 2>&1
+                        appops set ${'$'}APP_ID SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
                         for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                          pm grant ${'$'}APP_ID android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                         done
                         VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
-                        OVERLAY=${'$'}(appops get ${')
+                        OVERLAY=${'$'}(appops get ${'$'}APP_ID SYSTEM_ALERT_WINDOW)
                         echo "LISTENER=${'$'}VERIFIED"
                         echo "OVERLAY=${'$'}OVERLAY"
                     """.trimIndent()
