@@ -84,13 +84,33 @@ jobs:
           generate_release_notes: true
           files: BYD-Maps-Battery-Overlay-Beta.apk
 
-      - name: Publish Beta APK to beta branch
+      - name: Prepare OTA metadata after successful signed build
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_CODE="$(sed -nE "s/^[[:space:]]*versionCode ([0-9]+)$/\\1/p" app/build.gradle)"
+          VERSION_NAME="$(sed -nE "s/^[[:space:]]*versionName '([^']+)'$/\\1/p" app/build.gradle)"
+          test -n "$VERSION_CODE"
+          test -n "$VERSION_NAME"
+          cat > version.json <<EOF
+          {
+            "versionCode": $VERSION_CODE,
+            "versionName": "$VERSION_NAME",
+            "channel": "beta",
+            "edition": "Beta",
+            "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
+            "changelogTh": "แก้ OTA ให้ติดตั้งแยกจาก process ของแอป พร้อมตรวจพื้นที่และรายงานข้อผิดพลาดจริง",
+            "changelogEn": "Detached OTA installation, head-unit storage check and real Package Manager error reporting."
+          }
+          EOF
+
+      - name: Publish Beta APK and OTA metadata to beta branch
         if: github.ref == 'refs/heads/beta' && github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add BYD-Maps-Battery-Overlay-Beta.apk
-          git commit -m "chore(beta): publish Beta APK [skip ci]"
+          git add BYD-Maps-Battery-Overlay-Beta.apk version.json
+          git commit -m "chore(beta): publish signed APK and OTA metadata [skip ci]"
           git push origin HEAD:beta
