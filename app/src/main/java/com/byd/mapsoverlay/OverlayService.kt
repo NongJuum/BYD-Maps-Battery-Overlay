@@ -37,6 +37,8 @@ class OverlayService : Service() {
 
     private lateinit var bydBridge: BydVehicleBridge
     private var latestDistanceKm: Double = 0.0
+    private var lockedDestSocMin: Int = -1
+    private var lockedDestSocMax: Int = -1
 
     private lateinit var prefs: SharedPreferences
     private var windowParams: WindowManager.LayoutParams? = null
@@ -69,6 +71,10 @@ class OverlayService : Service() {
                         .takeIf { it > 0 }
                         ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
                     if (dist > 0) {
+                        if (kotlin.math.abs(dist - latestDistanceKm) > 10.0) {
+                            lockedDestSocMin = -1
+                            lockedDestSocMax = -1
+                        }
                         latestDistanceKm = dist
                         showOverlay()
                         renderOverlay()
@@ -141,6 +147,10 @@ class OverlayService : Service() {
                     .takeIf { it > 0 }
                     ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
                 if (distance > 0) {
+                    if (kotlin.math.abs(distance - latestDistanceKm) > 10.0) {
+                        lockedDestSocMin = -1
+                        lockedDestSocMax = -1
+                    }
                     latestDistanceKm = distance
                     showOverlay()
                     renderOverlay()
@@ -299,13 +309,13 @@ class OverlayService : Service() {
         }
 
         val currentSoc = bydBridge.currentSoc
-        val consumption = bydBridge.currentConsumption
+        val consumption = if (bydBridge.smoothedConsumption > 0.0) bydBridge.smoothedConsumption else bydBridge.currentConsumption
         val liveRemainKwh = bydBridge.remainEnergyKwh
         val realRange = bydBridge.realRangeKm
 
         val isUserConfiguredModel = VehicleProfileManager.getSelectedPresetId(this) != VehicleProfileManager.PRESET_AUTO
 
-        val (destSoc, _) = EnergyCalculator.calculateDestinationSoc(
+        val (rawDestSoc, _) = EnergyCalculator.calculateDestinationSoc(
             currentSoc = currentSoc,
             remainingDistanceKm = latestDistanceKm,
             consumptionKwhPer100km = consumption,
@@ -313,11 +323,44 @@ class OverlayService : Service() {
             preferUserCapacity = isUserConfiguredModel
         )
 
-        // เผื่อ Safety Buffer 2% สำหรับการใช้งานจริง (รถติด / แอร์สู้แดด / ขึ้นเขา)
-        val destSocMax = kotlin.math.round(destSoc).toInt().coerceIn(0, 100)
-        val destSocMin = (destSocMax - 2).coerceAtLeast(0)
+        // 2% Step Hysteresis / Deadband Window:
+        // Keeps the display locked to [lockedDestSocMin, lockedDestSocMax]% (e.g. 68-70%)
+        // Only steps down when rawDestSoc actually drops below lockedDestSocMin (e.g. < 68.0%)
+        // This eliminates flickering and high sensitivity while driving.
+        if (lockedDestSocMin < 0 || lockedDestSocMax < 0) {
+            val initialMax = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
+            lockedDestSocMax = initialMax
+            lockedDestSocMin = (initialMax - 2).coerceAtLeast(0)
+        } else {
+            if (rawDestSoc < lockedDestSocMin.toDouble()) {
+                // Fallen below current minimum: step down
+                val diff = lockedDestSocMin.toDouble() - rawDestSoc
+                if (diff >= 4.0) {
+                    // Significant route change / traffic reroute: resynchronize directly
+                    lockedDestSocMax = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
+                    lockedDestSocMin = (lockedDestSocMax - 2).coerceAtLeast(0)
+                } else {
+                    // Normal 2% step down
+                    lockedDestSocMax = lockedDestSocMin
+                    lockedDestSocMin = (lockedDestSocMax - 2).coerceAtLeast(0)
+                }
+            } else if (rawDestSoc > (lockedDestSocMax.toDouble() + 0.5)) {
+                // Regenerated battery (e.g. long downhill) or route shortened: step up
+                val diff = rawDestSoc - lockedDestSocMax.toDouble()
+                if (diff >= 4.0) {
+                    lockedDestSocMax = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
+                    lockedDestSocMin = (lockedDestSocMax - 2).coerceAtLeast(0)
+                } else {
+                    lockedDestSocMin = lockedDestSocMax
+                    lockedDestSocMax = (lockedDestSocMin + 2).coerceIn(0, 100)
+                }
+            }
+        }
 
-        val isBatteryInsufficient = latestDistanceKm > realRange || destSoc <= 2.0 || destSocMin <= 0
+        val destSocMin = lockedDestSocMin
+        val destSocMax = lockedDestSocMax
+
+        val isBatteryInsufficient = latestDistanceKm > realRange || rawDestSoc <= 2.0 || destSocMin <= 0
         val isLowBattery = destSocMin <= 20 || currentSoc <= 20.0
 
         val (socColor, badgeText, showBadge) = when {
@@ -368,6 +411,8 @@ class OverlayService : Service() {
     }
 
     private fun hideOverlay() {
+        lockedDestSocMin = -1
+        lockedDestSocMax = -1
         if (overlayView != null) {
             try {
                 windowManager?.removeView(overlayView)

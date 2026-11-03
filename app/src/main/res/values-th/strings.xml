@@ -36,6 +36,15 @@
     <string name="btn_perm_maps">2. สิทธิ์ Google Maps</string>
     <string name="btn_perm_obd">🔌 3. ขอสิทธิ์ OBD / ซ่อมสิทธิ์อัตโนมัติ</string>
     <string name="btn_donate">☕ สนับสนุนผู้พัฒนา</string>
+    <string name="btn_check_update">🔄 ตรวจสอบอัปเดตออนไลน์ (OTA)</string>
+    <string name="dialog_update_title">🚀 มีการอัปเดตเวอร์ชันใหม่</string>
+    <string name="dialog_update_msg">พบเวอร์ชันใหม่: %1$s (เวอร์ชันปัจจุบัน: %2$s)\n\nรายการอัปเดต:\n%3$s\n\nต้องการดาวน์โหลดและติดตั้งทันทีหรือไม่?</string>
+    <string name="dialog_update_btn_install">ดาวน์โหลดและติดตั้ง</string>
+    <string name="dialog_update_btn_cancel">ไว้ทีหลัง</string>
+    <string name="toast_update_latest">แอปของคุณเป็นเวอร์ชันล่าสุดแล้ว (%s)!</string>
+    <string name="toast_update_downloading">กำลังดาวน์โหลดอัปเดต... (%d%%)</string>
+    <string name="toast_update_installing">กำลังสั่งติดตั้งผ่าน ADB อัตโนมัติ...</string>
+    <string name="toast_post_update_success">🎉 อัปเดตเสร็จสมบูรณ์! ยืนยันสิทธิ์ระบบเรียบร้อยแล้ว</string>
 
     <!-- Donate Dialog -->
     <string name="donate_dialog_title">☕ ร่วมสนับสนุนผู้พัฒนา (Support &amp; Donate)</string>

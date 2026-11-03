@@ -37,6 +37,8 @@ class BydVehicleBridge(
         private set
     var currentConsumption: Double = 0.0 // Live CAN bus 50km (kWh/100km)
         private set
+    var smoothedConsumption: Double = 0.0 // Low-pass EMA smoothed consumption (kWh/100km) for stable display
+        private set
     var remainEnergyKwh: Double = 0.0 // พลังงานแบตที่เหลืออยู่จริง (kWh)
         private set
     var elecRangeKm: Int = 0
@@ -105,6 +107,22 @@ class BydVehicleBridge(
      * ตรวจสอบ API ที่มีอยู่จริงบน firmware ก่อนเรียกใช้งาน
      * ไม่ถือว่า logcat เป็น CAN reader และไม่กลืนข้อผิดพลาดของ reflection
      */
+    fun applyConsumptionUpdate(raw: Double): Boolean {
+        if (raw !in 5.0..50.0) return false
+        val newRaw = (raw * 10.0).roundToInt() / 10.0
+        val changed = newRaw != currentConsumption
+        currentConsumption = newRaw
+        if (smoothedConsumption <= 0.0) {
+            smoothedConsumption = currentConsumption
+        } else {
+            // Low-pass Exponential Moving Average (EMA):
+            // alpha = 0.15 gives smooth transition over ~10-15 seconds, eliminating pedal spikes
+            val filtered = (0.15 * currentConsumption) + (0.85 * smoothedConsumption)
+            smoothedConsumption = (filtered * 10.0).roundToInt() / 10.0
+        }
+        return changed
+    }
+
     private fun pollDirectBydHardwareApi() {
         var updated = false
         val diagnostics = mutableListOf<String>()
@@ -167,13 +185,11 @@ class BydVehicleBridge(
                             diagnostics += "$methodName: OK=$soc"
                         } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
 
-                        "getLastElecConPHMValue", "getLast50KmPowerConsume" -> if (raw in 5.0..40.0) {
-                            val consumption = (raw * 10.0).roundToInt() / 10.0
-                            if (consumption != currentConsumption) {
-                                currentConsumption = consumption
+                        "getLast50KmPowerConsume", "getLastElecConPHMValue" -> if (raw in 5.0..40.0) {
+                            if (applyConsumptionUpdate(raw)) {
                                 updated = true
                             }
-                            diagnostics += "$methodName: OK=$consumption"
+                            diagnostics += "$methodName: OK=$currentConsumption (smooth=$smoothedConsumption)"
                         } else diagnostics += "$methodName: OUT_OF_RANGE=$raw"
 
                         "getElecDrivingRangeValue" -> if (raw in 1.0..1200.0) {
@@ -345,7 +361,9 @@ class BydVehicleBridge(
 
                 val consumptionObject = json.optJSONObject("consumption")
                 val consumption = consumptionObject?.optDouble("kwhPer100km", -1.0) ?: -1.0
-                if (consumption in 1.0..60.0) currentConsumption = consumption
+                if (consumption in 1.0..60.0) {
+                    applyConsumptionUpdate(consumption)
+                }
 
                 val hasVehicleData = soc >= 0.0 || range > 0 || remain > 0.0 || consumption > 0.0
                 if (hasVehicleData) {
@@ -407,7 +425,8 @@ class BydVehicleBridge(
             EnergyCalculator.updateActualCapacity(estimatedCapacityKwh)
         }
 
-        if (currentSoc <= 0.0 || currentConsumption <= 0.0) return
+        val effectiveConsumption = if (smoothedConsumption > 0.0) smoothedConsumption else currentConsumption
+        if (currentSoc <= 0.0 || effectiveConsumption <= 0.0) return
 
         // คำนวณพลังงานที่ใช้ได้จริง ณ ปัจจุบัน (Usable Energy kWh)
         // ถ้าเป็นโหมดพื้นฐาน (ดึงจาก OBD) จะใช้ค่า remainEnergyKwh สดจาก BMS รถเป็นหลัก
@@ -419,13 +438,13 @@ class BydVehicleBridge(
             0.0
         }
 
-        // คำนวณระยะทางวิ่งได้จริงคงเหลือ (Real Remaining Range) จาก OBD SoC + OBD Consumption
-        if (usableEnergyKwh > 0.0 && currentConsumption > 0.0) {
-            realRangeKm = ((usableEnergyKwh / currentConsumption) * 100.0 * 10.0).roundToInt() / 10.0
+        // คำนวณระยะทางวิ่งได้จริงคงเหลือ (Real Remaining Range) จาก Usable Energy + Smoothed Consumption
+        if (usableEnergyKwh > 0.0 && effectiveConsumption > 0.0) {
+            realRangeKm = ((usableEnergyKwh / effectiveConsumption) * 100.0 * 10.0).roundToInt() / 10.0
         }
 
         BydAppWidgetProvider.lastSoc = currentSoc
-        BydAppWidgetProvider.lastConsumption = currentConsumption
+        BydAppWidgetProvider.lastConsumption = effectiveConsumption
         BydAppWidgetProvider.lastRealRange = realRangeKm
         BydAppWidgetProvider.lastSoh = sohPercent
     }
@@ -452,7 +471,7 @@ class BydVehicleBridge(
     fun notifyUpdate() {
         mainHandler.post {
             BydAppWidgetProvider.updateAllWidgets(context)
-            onTelemetryUpdate(currentSoc, currentConsumption)
+            onTelemetryUpdate(currentSoc, if (smoothedConsumption > 0.0) smoothedConsumption else currentConsumption)
         }
     }
 }

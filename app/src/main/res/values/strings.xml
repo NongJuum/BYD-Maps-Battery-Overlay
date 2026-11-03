@@ -36,6 +36,15 @@
     <string name="btn_perm_maps">2. Maps Perm</string>
     <string name="btn_perm_obd">🔌 3. Request OBD Permission / Auto-Fix</string>
     <string name="btn_donate">☕ Support &amp; Donate</string>
+    <string name="btn_check_update">🔄 Check Online Update (OTA)</string>
+    <string name="dialog_update_title">🚀 New Update Available</string>
+    <string name="dialog_update_msg">Found new version: %1$s (Current: %2$s)\n\nChangelog:\n%3$s\n\nDo you want to update now?</string>
+    <string name="dialog_update_btn_install">Download &amp; Install</string>
+    <string name="dialog_update_btn_cancel">Later</string>
+    <string name="toast_update_latest">You are running the latest version (%s)!</string>
+    <string name="toast_update_downloading">Downloading update... (%d%%)</string>
+    <string name="toast_update_installing">Installing update via ADB... please wait</string>
+    <string name="toast_post_update_success">🎉 Update complete! Re-verifying vehicle permissions...</string>
 
     <!-- Donate Dialog -->
     <string name="donate_dialog_title">☕ Support &amp; Donate</string>

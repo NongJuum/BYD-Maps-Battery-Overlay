@@ -1,0 +1,7 @@
+{
+  "versionCode": 2,
+  "versionName": "1.0.0-alpha",
+  "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/BYD-Maps-Battery-Overlay-Alpha.apk",
+  "changelogTh": "• ระบบกรองอัตราสิ้นเปลืองนุ่มนวล (Low-Pass Filter) แก้ปัญหาค่าแกว่งตามคันเร่ง\n• ระบบล็อกช่วงแบตเตอรี่ปลายทางก้าวละ 2% (Hysteresis Deadband) ป้องกันตัวเลขสั่นไหว\n• ระบบอัปเดตออนไลน์ (OTA) ติดตั้งอัตโนมัติผ่าน ADB โดยไม่ต้องเสียบแฟลชไดรฟ์",
+  "changelogEn": "• Smoothed consumption filter (Low-Pass EMA) eliminating pedal spikes\n• 2% Hysteresis Deadband destination SoC stepping to eliminate jitter\n• Built-in OTA Online Updater with silent ADB installation"
+}

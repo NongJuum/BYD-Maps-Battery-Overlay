@@ -16,7 +16,9 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -48,6 +50,15 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
+        // Post-update verification
+        if (intent.getBooleanExtra("post_update", false)) {
+            Toast.makeText(this, getString(R.string.toast_post_update_success), Toast.LENGTH_LONG).show()
+            AutoPermissionHelperAlpha.startAdbAuthPolling(this) { msg, _, _ ->
+                Log.i("MainActivity", "Post-update auth: $msg")
+            }
+            BydDataCacheWhitelist.ensureWhitelisted(this)
+        }
+
         // Language switcher button
         val btnSwitchLanguage = findViewById<Button>(R.id.btn_switch_language)
         val isTh = LanguageHelper.isThai(this)
@@ -56,6 +67,54 @@ class MainActivity : AppCompatActivity() {
             val targetLang = if (isTh) LanguageHelper.LANG_EN else LanguageHelper.LANG_TH
             LanguageHelper.setLanguage(this, targetLang)
             recreate()
+        }
+
+        // Online OTA Update Button
+        val btnCheckUpdate = findViewById<Button>(R.id.btn_check_update)
+        btnCheckUpdate.setOnClickListener {
+            btnCheckUpdate.isEnabled = false
+            btnCheckUpdate.text = "⏳..."
+            AppUpdaterAlpha.checkUpdate(this) { info ->
+                btnCheckUpdate.isEnabled = true
+                btnCheckUpdate.text = getString(R.string.btn_check_update)
+                if (info != null) {
+                    val changelog = if (isTh) info.changelogTh else info.changelogEn
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.dialog_update_title)
+                        .setMessage(getString(R.string.dialog_update_msg, info.versionName, AppUpdaterAlpha.getCurrentVersionName(this), changelog))
+                        .setPositiveButton(R.string.dialog_update_btn_install) { _, _ ->
+                            @Suppress("DEPRECATION")
+                            val progressDialog = android.app.ProgressDialog(this).apply {
+                                setTitle(getString(R.string.dialog_update_title))
+                                setMessage(getString(R.string.toast_update_downloading, 0))
+                                setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
+                                max = 100
+                                isIndeterminate = false
+                                setCancelable(false)
+                                show()
+                            }
+                            AppUpdaterAlpha.downloadAndInstall(
+                                context = this,
+                                info = info,
+                                onProgress = { progress ->
+                                    progressDialog.progress = progress
+                                    progressDialog.setMessage(getString(R.string.toast_update_downloading, progress))
+                                },
+                                onStatus = { status ->
+                                    progressDialog.setMessage(status)
+                                },
+                                onFinished = { success, msg ->
+                                    progressDialog.dismiss()
+                                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        }
+                        .setNegativeButton(R.string.dialog_update_btn_cancel, null)
+                        .show()
+                } else {
+                    Toast.makeText(this, getString(R.string.toast_update_latest, AppUpdaterAlpha.getCurrentVersionName(this)), Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         val tvDetectedModel = findViewById<TextView>(R.id.tv_detected_model)

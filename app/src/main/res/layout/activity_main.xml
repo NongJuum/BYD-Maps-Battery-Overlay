@@ -30,18 +30,37 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btn_switch_language"
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="#263238"
-            android:text="@string/btn_switch_language"
-            android:textColor="#80D8FF"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btn_switch_language"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:backgroundTint="#263238"
+                android:text="@string/btn_switch_language"
+                android:textColor="#80D8FF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp" />
+
+            <Button
+                android:id="@+id/btn_check_update"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="#1B5E20"
+                android:text="@string/btn_check_update"
+                android:textColor="#A7FFEB"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_detected_model"
