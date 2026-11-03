@@ -17,7 +17,7 @@ android {
 
     signingConfigs {
         debug {
-            // Stable Beta signing identity for all future in-place updates.
+            // Stable Beta signing identity for all future in-place updates. Do not rotate this key.
             storeFile file("$rootDir/beta-debug.keystore")
             storePassword "android"
             keyAlias "androiddebugkey"
