@@ -9,59 +9,69 @@ import java.lang.reflect.Method
 
 /**
  * BydDataCacheWhitelist:
- * Complete implementation based on Overdrive's `BydDataCacheWhitelist` & `BydDeviceHelper`.
+ * Exact replica of Overdrive's `BydDataCacheWhitelist` (`com.overdrive.app.util.BydDataCacheWhitelist`).
  *
- * Configures the 4 critical BYD vehicle services required on DiLink 3:
- * 1. `accmodemanager`: `mService.setPkg2AccWhiteList(packageName)` - Prevents the car from cutting power / killing the app in ACC/driving modes.
- * 2. `bg_datacache`: `setAppOpsData(appUid, 0)` - Grants the app access to the vehicle telemetry bus on DiLink 3.
- * 3. `byd_datacached`: `setAppStartupData(appUid, 0)` - Whitelists app startup on DiLink 4/5.
- * 4. `BYDAutoStartupAppDevice`: `setStartupAppEnable(packageName, true)` - Ensures the head unit allows automatic background launch.
+ * Configures the 4 critical BYD vehicle services required on DiLink 3 (Android 10):
+ * 1. Obtains privileged context via `ActivityThread.systemMain().getSystemContext().createPackageContext(..., 3)`.
+ * 2. `accmodemanager`: `mService.setPkg2AccWhiteList(packageName)` - Prevents the car from cutting power / killing the app in ACC/driving modes.
+ * 3. `bg_datacache`: `setAppOpsData(appUid, 0)` - Grants the app access to the vehicle telemetry bus on DiLink 3.
+ * 4. `byd_datacached`: `setAppStartupData(appUid, 0)` - Whitelists app startup on DiLink 4/5.
+ * 5. `BYDAutoStartupAppDevice`: `setStartupAppEnable(packageName, true)` - Ensures the head unit allows automatic background launch.
  */
 object BydDataCacheWhitelist {
     private const val TAG = "BydDataCacheWhitelist"
+    @Volatile private var isWhitelisted = false
 
     fun ensureWhitelisted(context: Context): Boolean {
+        if (isWhitelisted) return true
+
         HiddenApiBypass.exemptAll()
+        val packageName = context.packageName
 
-        var privilegedContext: Context? = null
+        // Overdrive's exact pattern: Obtain privileged system context via ActivityThread.systemMain()
+        var contextCreatePackageContext: Context? = null
         try {
-            val activityThreadClass = Class.forName("android.app.ActivityThread")
-            var activityThreadInstance: Any? = null
-            try {
-                activityThreadInstance = activityThreadClass.getMethod("currentActivityThread").invoke(null)
-            } catch (_: Throwable) {}
-
-            if (activityThreadInstance == null) {
+            val cls = Class.forName("android.app.ActivityThread")
+            val method = cls.getMethod("systemMain")
+            val holder = arrayOfNulls<Any>(1)
+            val thread = Thread({
                 try {
-                    val systemMainMethod = activityThreadClass.getMethod("systemMain")
-                    activityThreadInstance = systemMainMethod.invoke(null)
-                } catch (_: Throwable) {}
+                    holder[0] = method.invoke(null)
+                } catch (t: Throwable) {
+                    Log.d(TAG, "systemMain invoke error: ${t.message}")
+                }
+            }, "SysMainThread")
+            thread.start()
+            thread.join(3000L)
+            if (thread.isAlive) {
+                thread.interrupt()
+            } else {
+                val sysThread = holder[0]
+                if (sysThread != null) {
+                    val systemContextObj = cls.getMethod("getSystemContext").invoke(sysThread)
+                    if (systemContextObj is Context) {
+                        // CONTEXT_INCLUDE_CODE (1) | CONTEXT_IGNORE_SECURITY (2) = 3
+                        contextCreatePackageContext = systemContextObj.createPackageContext(packageName, 3)
+                        Log.i(TAG, "Successfully created privileged package context from systemMain")
+                    }
+                }
             }
-
-            if (activityThreadInstance != null) {
-                val getSystemContextMethod = activityThreadClass.getMethod("getSystemContext")
-                val systemContext = getSystemContextMethod.invoke(activityThreadInstance) as? Context
-                privilegedContext = systemContext?.createPackageContext(
-                    context.packageName,
-                    Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY
-                )
-            }
-        } catch (e: Throwable) {
-            Log.d(TAG, "Privileged context creation fallback: ${e.message}")
+        } catch (t: Throwable) {
+            Log.d(TAG, "systemMain bypass skipped/failed: ${t.message}")
         }
 
-        val targetContext = privilegedContext ?: context
-        val pkg = context.packageName
+        val targetContext = BydPermissionContext.wrap(contextCreatePackageContext ?: context)
 
         // 1. Whitelist in ACC Mode Manager (Prevents vehicle from disconnecting telemetry)
-        whitelistAccMode(targetContext, pkg)
+        whitelistAccMode(targetContext, packageName)
 
         // 2. Whitelist in DataCache service (bg_datacache on DiLink 3)
-        registerDataCache(targetContext, pkg)
+        registerDataCache(targetContext, packageName)
 
         // 3. Enable startup in BYDAutoStartupAppDevice
-        enableStartupApp(targetContext, pkg)
+        enableStartupApp(targetContext, packageName)
 
+        isWhitelisted = true
         return true
     }
 

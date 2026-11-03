@@ -155,10 +155,25 @@ object AutoPermissionHelperAlpha {
                         ;;
                     esac
 
-                    # 4. Background and Doze whitelist (Overdrive style)
-                    appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow >/dev/null 2>&1
-                    appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1
-                    dumpsys deviceidle whitelist +com.byd.mapsoverlay >/dev/null 2>&1
+                    # 4. Overdrive's ACC Mode Manager Service Calls & System Properties
+                    setprop persist.sys.acc.whitelist 'com.byd.mapsoverlay' 2>&1
+                    service call accmodemanager 1 s16 'com.byd.mapsoverlay' 2>/dev/null || true
+                    service call accmodemanager 2 s16 'com.byd.mapsoverlay' 2>/dev/null || true
+                    service call accmodemanager 3 s16 'com.byd.mapsoverlay' 2>/dev/null || true
+
+                    # 5. Overdrive's Background, WAKE_LOCK, AUTO_START and Doze whitelist
+                    appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set com.byd.mapsoverlay WAKE_LOCK allow 2>/dev/null || true
+                    cmd appops set com.byd.mapsoverlay AUTO_START allow 2>/dev/null || true
+                    cmd appops set com.byd.mapsoverlay BOOT_COMPLETED allow 2>/dev/null || true
+                    dumpsys deviceidle whitelist +com.byd.mapsoverlay 2>/dev/null || true
+
+                    # 6. Overdrive's Startup Provider & SSC Whitelists
+                    CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,com.byd.mapsoverlay,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}com.byd.mapsoverlay" 2>/dev/null;; esac
+                    CUR=${'$'}(settings get secure ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,com.byd.mapsoverlay,*) ;; *) settings put secure ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}com.byd.mapsoverlay" 2>/dev/null;; esac
+                    content call --uri content://com.byd.appstartup/whitelist --method add --arg 'com.byd.mapsoverlay' 2>/dev/null || true
+                    setprop persist.sys.adb.status_memory_enable true 2>/dev/null || true
 
                     # 5. Launch auxiliary telemetry daemon if not running (port 19890 = hex 4DAE in /proc/net/tcp)
                     APK_PATH=${'$'}(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
