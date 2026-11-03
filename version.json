@@ -1,9 +1,9 @@
 {
-  "versionCode": 5,
-  "versionName": "1.0.3-alpha",
-  "channel": "alpha",
-  "edition": "Alpha",
-  "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/alpha/BYD-Maps-Battery-Overlay-Alpha.apk",
-  "changelogTh": "• แยกค่าการใช้ไฟจริงบน Overlay ออกจากค่าประมาณแบบปัดขึ้นที่ใช้คำนวณ SoC ปลายทาง",
-  "changelogEn": "• Show live measured consumption on the overlay while retaining conservative rounded-up consumption for destination SoC calculations"
+  "versionCode": 1,
+  "versionName": "1.0.0-beta",
+  "channel": "beta",
+  "edition": "Beta",
+  "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
+  "changelogTh": "• รุ่น Beta สำหรับติดตั้งคู่กับ OverDrive และทดสอบเปรียบเทียบ โดยไม่ทับ Alpha",
+  "changelogEn": "• Separate Beta package for side-by-side comparison with OverDrive without replacing Alpha"
 }
