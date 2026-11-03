@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_LOGS" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- สิทธิ์เข้าถึงกล่องข้อมูลรถยนต์ BYD (OBD / CAN Bus / BMS Hardware Permissions) -->
     <!-- ทำให้ผู้ใช้ทั่วไปที่ติดตั้ง APK ผ่าน USB สามารถอ่านค่าแบตเตอรี่และอัตรากินไฟได้ทันทีโดยไม่ต้องต่อ ADB -->

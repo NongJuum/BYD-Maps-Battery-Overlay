@@ -1,0 +1,268 @@
+package com.byd.mapsoverlay
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.SystemClock
+import android.provider.Settings
+import android.util.Log
+import dadb.AdbKeyPair
+import dadb.Dadb
+import java.io.File
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * AutoPermissionHelperAlpha:
+ * Advanced ADB manager and permission helper engineered from Overdrive reverse-engineering.
+ *
+ * Key features:
+ * 1. Background Polling Loop (`startAdbAuthPolling`):
+ *    Polls every 2.5 seconds for up to 2.5 minutes while waiting for the user to tap
+ *    "[✓] Always allow from this computer" and "[OK]" on the car screen.
+ * 2. Full Privileged Setup:
+ *    Once connected, executes `pm grant` for all BYDAUTO common permissions,
+ *    `appops set SYSTEM_ALERT_WINDOW allow`, notification listener enablement,
+ *    and background doze whitelist (`dumpsys deviceidle whitelist`).
+ * 3. Silent Remote Update (`installApkSilently`):
+ *    Installs APKs silently via ADB `pm install -r -d` and restarts the app,
+ *    identical to Overdrive's updater mechanism.
+ */
+object AutoPermissionHelperAlpha {
+    private const val TAG = "AutoPermHelperAlpha"
+    private const val ADB_HOST = "127.0.0.1"
+    private const val ADB_PORT = 5555
+    private const val DAEMON_PORT = 19890
+    private const val DAEMON_NAME = "bydtelemetry"
+    private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
+
+    private val isPollingActive = AtomicBoolean(false)
+    @Volatile var isAdbAuthorized = false
+        private set
+
+    /**
+     * Start polling ADB connection in the background.
+     * When the "Allow USB debugging?" dialog appears on DiLink 3,
+     * this loop keeps probing until the user taps [OK], then immediately applies permissions.
+     */
+    fun startAdbAuthPolling(
+        context: Context,
+        onStatus: (message: String, isFinished: Boolean, isSuccess: Boolean) -> Unit
+    ) {
+        if (!isPollingActive.compareAndSet(false, true)) {
+            onStatus("กำลังตรวจจับ ADB อยู่แล้ว...", false, false)
+            return
+        }
+
+        val appContext = context.applicationContext ?: context
+        Thread({
+            try {
+                // 1. Check if ADB port 5555 is open
+                onStatus("กำลังตรวจสอบพอร์ต ADB (127.0.0.1:5555)...", false, false)
+                if (!isAdbPortOpen()) {
+                    onStatus(
+                        "พอร์ต ADB 5555 ยังไม่เปิด! กรุณาเปิด 'Developer options -> USB debugging' ในการตั้งค่ารถก่อน",
+                        true,
+                        false
+                    )
+                    return@Thread
+                }
+
+                // 2. Load or generate RSA keypair
+                val keyPair = loadOrCreateAdbKeyPair(appContext)
+                onStatus("กำลังเชื่อมต่อ ADB... หากมีหน้าต่างขึ้นบนจอรถ ให้ติ๊ก [✓] Always allow แล้วกด [OK]", false, false)
+
+                var dadbInstance: Dadb? = null
+                val maxAttempts = 60 // 60 attempts * 2.5s = 150 seconds (2.5 mins)
+                var attempt = 0
+
+                while (attempt < maxAttempts) {
+                    attempt++
+                    try {
+                        // Attempt connection with short timeout so it doesn't freeze
+                        dadbInstance = Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 3000)
+                        if (dadbInstance != null) {
+                            // Test running a simple echo
+                            val testResp = dadbInstance.shell("echo connected")
+                            if (testResp.output.contains("connected")) {
+                                Log.i(TAG, "ADB authorization succeeded on attempt $attempt!")
+                                break
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Attempt $attempt waiting for ADB auth: ${e.message}")
+                    }
+
+                    // Inform user every few attempts
+                    if (attempt % 2 == 0) {
+                        val secondsLeft = ((maxAttempts - attempt) * 2.5).toInt()
+                        onStatus(
+                            "รอการกดยืนยันบนหน้าจอรถ ($secondsLeft วิ)... ติ๊ก [✓] Always allow แล้วกด [OK]",
+                            false,
+                            false
+                        )
+                    }
+
+                    try {
+                        Thread.sleep(2500)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
+                }
+
+                if (dadbInstance == null) {
+                    onStatus("หมดเวลาการรอเชื่อมต่อ ADB กรุณาลองกดปุ่มใหม่อีกครั้ง", true, false)
+                    return@Thread
+                }
+
+                // 3. We are authorized! Execute the complete privilege setup
+                isAdbAuthorized = true
+                onStatus("เชื่อมต่อ ADB สำเร็จแล้ว! กำลังบันทึกสิทธิ์และตั้งค่าระบบ...", false, false)
+
+                val setupScript = """
+                    # 1. Grant BYD common permissions
+                    for P in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON BYDAUTO_SPEED_COMMON BYDAUTO_BODYWORK_COMMON; do
+                      pm grant com.byd.mapsoverlay android.permission.${'$'}P >/dev/null 2>&1 || true
+                    done
+
+                    # 2. Grant Overlay AppOp
+                    appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+
+                    # 3. Grant Notification Listener
+                    COMPONENT=com.byd.mapsoverlay/com.byd.mapsoverlay.MapsNotificationListener
+                    cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
+                    LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
+                    case ":${'$'}LISTENERS:" in
+                      *":${'$'}COMPONENT:"*) ;;
+                      *)
+                        if [ "${'$'}LISTENERS" = "null" ] || [ -z "${'$'}LISTENERS" ]; then
+                          settings put secure enabled_notification_listeners "${'$'}COMPONENT"
+                        else
+                          settings put secure enabled_notification_listeners "${'$'}LISTENERS:${'$'}COMPONENT"
+                        fi
+                        ;;
+                    esac
+
+                    # 4. Background and Doze whitelist (Overdrive style)
+                    appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow >/dev/null 2>&1
+                    appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1
+                    dumpsys deviceidle whitelist +com.byd.mapsoverlay >/dev/null 2>&1
+
+                    # 5. Launch auxiliary telemetry daemon if available
+                    APK_PATH=${'$'}(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
+                    if [ -n "${'$'}APK_PATH" ]; then
+                      if ! nc -z 127.0.0.1 $DAEMON_PORT >/dev/null 2>&1; then
+                        CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                      fi
+                    fi
+                    echo SETUP_COMPLETE
+                """.trimIndent()
+
+                val setupResp = dadbInstance.shell(setupScript)
+                Log.i(TAG, "Setup script exit=${setupResp.exitCode}, output=${setupResp.output}")
+
+                dadbInstance.close()
+
+                onStatus("✅ ปลดล็อกสิทธิ์สำเร็จทั้งหมด (เหมือน Overdrive) รถพร้อมอ่านข้อมูลแล้ว!", true, true)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Error in ADB auth polling", t)
+                onStatus("เกิดข้อผิดพลาด: ${t.javaClass.simpleName} - ${t.message}", true, false)
+            } finally {
+                isPollingActive.set(false)
+            }
+        }, "AdbAuthPollingThread").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    /**
+     * Silent remote update:
+     * Installs an APK file from device storage (/data/local/tmp/...) via ADB and restarts the app.
+     */
+    fun installApkSilently(
+        context: Context,
+        apkFile: File,
+        onResult: (isSuccess: Boolean, message: String) -> Unit
+    ) {
+        val appContext = context.applicationContext ?: context
+        Thread({
+            try {
+                if (!apkFile.exists() || apkFile.length() < 1000) {
+                    onResult(false, "ไฟล์ APK ไม่ถูกต้องหรือไม่พบ")
+                    return@Thread
+                }
+
+                val keyPair = loadOrCreateAdbKeyPair(appContext)
+                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2000, 60000).use { dadb ->
+                    // Copy APK to /data/local/tmp/update.apk
+                    val tmpTarget = "/data/local/tmp/alpha_update.apk"
+                    val copyScript = "cat '${apkFile.absolutePath}' > $tmpTarget 2>/dev/null || cp '${apkFile.absolutePath}' $tmpTarget 2>/dev/null"
+                    dadb.shell(copyScript)
+
+                    // Execute silent install and relaunch
+                    val installScript = """
+                        pm install -r -d $tmpTarget
+                        STATUS=${'$'}?
+                        rm -f $tmpTarget
+                        if [ ${'$'}STATUS -eq 0 ]; then
+                          sleep 1
+                          am start -n com.byd.mapsoverlay/.MainActivity --ez post_update true
+                          echo INSTALL_SUCCESS
+                        else
+                          echo INSTALL_FAILED_${'$'}STATUS
+                        fi
+                    """.trimIndent()
+
+                    val resp = dadb.shell(installScript)
+                    val out = resp.output
+                    if (out.contains("INSTALL_SUCCESS") || out.contains("Success", ignoreCase = true)) {
+                        onResult(true, "ติดตั้งเวอร์ชัน Alpha สำเร็จ กำลังเริ่มระบบใหม่...")
+                    } else {
+                        onResult(false, "ติดตั้งไม่สำเร็จ: $out")
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Silent install failed", t)
+                onResult(false, "เกิดข้อผิดพลาดในการติดตั้ง: ${t.message}")
+            }
+        }, "AdbSilentInstaller").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    fun isAdbPortOpen(): Boolean {
+        return try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(ADB_HOST, ADB_PORT), 800)
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun loadOrCreateAdbKeyPair(context: Context): AdbKeyPair {
+        val privateKey = File(context.filesDir, "adbkey")
+        val publicKey = File(context.filesDir, "adbkey.pub")
+        return if (privateKey.exists() && publicKey.exists()) {
+            AdbKeyPair.read(privateKey, publicKey)
+        } else {
+            AdbKeyPair.generate(privateKey, publicKey)
+            AdbKeyPair.read(privateKey, publicKey)
+        }
+    }
+
+    fun isAllPermissionsReady(context: Context): Boolean {
+        val overlayOk = Settings.canDrawOverlays(context)
+        val enabledListeners = Settings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        ) ?: ""
+        return overlayOk && enabledListeners.contains(context.packageName)
+    }
+}

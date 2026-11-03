@@ -63,10 +63,12 @@ class BydVehicleBridge(
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
             applyUserVehicleProfile()
-            // Self-heal if the shell daemon died or ADB was temporarily
-            // unavailable. The helper rate-limits reconnect attempts.
-            AutoPermissionHelper.ensureTelemetryDaemon(context)
-            fetchOptionalOverDriveStatus()
+            // 1. Direct native BYD hardware API reading (Overdrive style with BydPermissionContext)
+            pollDirectBydHardwareApi()
+            // 2. Fallback / supplementary check via telemetry daemon
+            if (currentSoc <= 0.0) {
+                fetchOptionalOverDriveStatus()
+            }
         }, 0, 2, TimeUnit.SECONDS)
     }
 
@@ -245,8 +247,9 @@ class BydVehicleBridge(
 
         return try {
             factory.isAccessible = true
+            val wrappedContext = BydPermissionContext.wrap(context)
             val instance = if (factory.parameterCount == 1) {
-                factory.invoke(null, context.applicationContext)
+                factory.invoke(null, wrappedContext)
             } else {
                 factory.invoke(null)
             }

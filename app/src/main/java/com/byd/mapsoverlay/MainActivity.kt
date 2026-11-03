@@ -32,8 +32,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        AutoPermissionHelper.grantAllPermissionsSilently(this)
-
         // Start overlay floating service automatically
         try {
             val serviceIntent = Intent(this, OverlayService::class.java)
@@ -198,45 +196,39 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.toast_overlay_reset), Toast.LENGTH_SHORT).show()
         }
 
-        btnOverlay.setOnClickListener {
-            tvStatus.text = if (isTh) "กำลังเปิดสิทธิ์ Overlay ผ่าน IVI ADB..." else "Enabling Overlay permission via IVI ADB..."
-            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
+        val triggerAdbAuth = {
+            tvStatus.text = if (isTh) "กำลังตรวจจับ ADB... หากมีหน้าต่างขึ้น ให้กด [✓] Always allow แล้ว [OK]" else "Connecting ADB... Tap [✓] Always allow and [OK] if prompted"
+            Toast.makeText(this, getString(R.string.toast_obd_requesting), Toast.LENGTH_SHORT).show()
+            AutoPermissionHelperAlpha.startAdbAuthPolling(this) { message, isFinished, isSuccess ->
                 runOnUiThread {
-                    tvStatus.text = result
-                    Toast.makeText(this, result, Toast.LENGTH_LONG).show()
+                    tvStatus.text = message
+                    if (isFinished) {
+                        val toastMsg = if (isSuccess) {
+                            getString(R.string.toast_obd_success)
+                        } else {
+                            message
+                        }
+                        Toast.makeText(this, toastMsg, Toast.LENGTH_LONG).show()
+                        if (isSuccess) {
+                            vehicleBridge.restartConnection()
+                            sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
+                            vehicleBridge.notifyUpdate()
+                        }
+                    }
                 }
             }
+        }
+
+        btnOverlay.setOnClickListener {
+            triggerAdbAuth()
         }
 
         btnNotification.setOnClickListener {
-            tvStatus.text = if (isTh) "กำลังเปิดสิทธิ์อ่านการนำทาง Google Maps ผ่าน IVI ADB..." else "Enabling Google Maps navigation listener via IVI ADB..."
-            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
-                runOnUiThread {
-                    tvStatus.text = result
-                    Toast.makeText(this, result, Toast.LENGTH_LONG).show()
-                    if (result.contains("สำเร็จ") || result.contains("success", ignoreCase = true)) {
-                        vehicleBridge.restartConnection()
-                        vehicleBridge.notifyUpdate()
-                    }
-                }
-            }
+            triggerAdbAuth()
         }
 
         btnObdPermission.setOnClickListener {
-            Toast.makeText(this, getString(R.string.toast_obd_requesting), Toast.LENGTH_SHORT).show()
-            AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
-                runOnUiThread {
-                    vehicleBridge.restartConnection()
-                    sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
-                    val msg = if (ready) {
-                        getString(R.string.toast_obd_success)
-                    } else {
-                        getString(R.string.toast_obd_daemon_started)
-                    }
-                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-                    vehicleBridge.notifyUpdate()
-                }
-            }
+            triggerAdbAuth()
         }
 
         btnDonate.setOnClickListener {
@@ -244,6 +236,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         tvStatus.text = getString(R.string.tv_status_ready)
+
+        // Automatically poll ADB authorization in the background on startup (Alpha DiLink 3)
+        AutoPermissionHelperAlpha.startAdbAuthPolling(this) { message, isFinished, isSuccess ->
+            runOnUiThread {
+                tvStatus.text = message
+                if (isFinished && isSuccess) {
+                    vehicleBridge.restartConnection()
+                    sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
+                    vehicleBridge.notifyUpdate()
+                }
+            }
+        }
     }
 
     private fun showDonateDialog() {

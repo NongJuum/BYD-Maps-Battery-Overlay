@@ -105,7 +105,13 @@ afterEvaluate {
                     into rootProject.projectDir
                     rename { 'BYD-Maps-Battery-Overlay-Universal.apk' }
                 }
+                copy {
+                    from apkFile
+                    into rootProject.projectDir
+                    rename { 'BYD-Maps-Battery-Overlay-Alpha.apk' }
+                }
                 println "✅ Copied Universal APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Universal.apk"
+                println "✅ Copied Alpha APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Alpha.apk"
             }
         }
     }
