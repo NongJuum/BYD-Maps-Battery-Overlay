@@ -45,6 +45,9 @@
     <string name="toast_update_downloading">Downloading update... (%d%%)</string>
     <string name="toast_update_installing">Installing update via ADB... please wait</string>
     <string name="toast_post_update_success">🎉 Update complete! Re-verifying vehicle permissions...</string>
+    <string name="post_update_dialog_title">⚡ Update Complete - Confirm Permissions</string>
+    <string name="post_update_dialog_desc">An update was successfully installed. System updates may reset background execution permissions.\n\nPlease tap the button below to grant Auto Start and re-verify DiLink vehicle permissions.</string>
+    <string name="post_update_btn_confirm">⚡ Grant Auto Start &amp; Apply</string>
 
     <!-- Donate Dialog -->
     <string name="donate_dialog_title">☕ Support &amp; Donate</string>

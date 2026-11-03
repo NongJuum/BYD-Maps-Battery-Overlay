@@ -50,13 +50,27 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // Post-update verification
+        // Post-update verification dialog: requires user to tap and grant Auto Start
         if (intent.getBooleanExtra("post_update", false)) {
-            Toast.makeText(this, getString(R.string.toast_post_update_success), Toast.LENGTH_LONG).show()
-            AutoPermissionHelperAlpha.startAdbAuthPolling(this) { msg, _, _ ->
-                Log.i("MainActivity", "Post-update auth: $msg")
-            }
-            BydDataCacheWhitelist.ensureWhitelisted(this)
+            AlertDialog.Builder(this)
+                .setTitle(R.string.post_update_dialog_title)
+                .setMessage(R.string.post_update_dialog_desc)
+                .setPositiveButton(R.string.post_update_btn_confirm) { _, _ ->
+                    val statusText = findViewById<TextView>(R.id.tv_status)
+                    statusText.text = getString(R.string.toast_obd_requesting)
+                    AutoPermissionHelperAlpha.startAdbAuthPolling(this) { msg, isFinished, _ ->
+                        runOnUiThread {
+                            statusText.text = msg
+                            if (isFinished) {
+                                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                    BydDataCacheWhitelist.ensureWhitelisted(this)
+                }
+                .setNegativeButton(R.string.donate_btn_close, null)
+                .setCancelable(false)
+                .show()
         }
 
         // Language switcher button

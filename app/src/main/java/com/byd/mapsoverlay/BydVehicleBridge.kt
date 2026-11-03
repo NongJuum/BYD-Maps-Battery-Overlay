@@ -113,12 +113,14 @@ class BydVehicleBridge(
         val changed = newRaw != currentConsumption
         currentConsumption = newRaw
         if (smoothedConsumption <= 0.0) {
-            smoothedConsumption = currentConsumption
+            // ปัดเศษขึ้นเสมอ (Ceil to 1 decimal place) ตามหลัก Conservative EV Safety-First
+            smoothedConsumption = kotlin.math.ceil(currentConsumption * 10.0) / 10.0
         } else {
             // Low-pass Exponential Moving Average (EMA):
-            // alpha = 0.15 gives smooth transition over ~10-15 seconds, eliminating pedal spikes
+            // alpha = 0.15 ให้การเปลี่ยนแปลงค่อยๆ ขยับตามค่าเฉลี่ย 50km
             val filtered = (0.15 * currentConsumption) + (0.85 * smoothedConsumption)
-            smoothedConsumption = (filtered * 10.0).roundToInt() / 10.0
+            // ปัดเศษขึ้นเสมอ (Ceil) เพื่อให้คำนวณการใช้พลังงานเผื่อไว้ปลอดภัย ไม่เสี่ยงแบตหมดก่อนถึงที่หมาย
+            smoothedConsumption = kotlin.math.ceil(filtered * 10.0) / 10.0
         }
         return changed
     }

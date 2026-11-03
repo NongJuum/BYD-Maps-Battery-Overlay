@@ -45,6 +45,9 @@
     <string name="toast_update_downloading">กำลังดาวน์โหลดอัปเดต... (%d%%)</string>
     <string name="toast_update_installing">กำลังสั่งติดตั้งผ่าน ADB อัตโนมัติ...</string>
     <string name="toast_post_update_success">🎉 อัปเดตเสร็จสมบูรณ์! ยืนยันสิทธิ์ระบบเรียบร้อยแล้ว</string>
+    <string name="post_update_dialog_title">⚡ อัปเดตแอปเสร็จสิ้น - ยืนยันสิทธิ์ระบบรถ</string>
+    <string name="post_update_dialog_desc">แอปเพิ่งได้รับการอัปเดตเวอร์ชันใหม่ ระบบ Android อาจมีการรีเซ็ตสิทธิ์การทำงานเบื้องหลัง\n\nกรุณากดปุ่มด้านล่างเพื่อมอบสิทธิ์ Auto Start และยืนยันการเชื่อมต่อระบบรถ DiLink อีกครั้ง</string>
+    <string name="post_update_btn_confirm">⚡ มอบสิทธิ์ Auto Start และเริ่มระบบ</string>
 
     <!-- Donate Dialog -->
     <string name="donate_dialog_title">☕ ร่วมสนับสนุนผู้พัฒนา (Support &amp; Donate)</string>
