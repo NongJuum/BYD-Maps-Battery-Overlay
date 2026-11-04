@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
-    <img src="https://img.shields.io/badge/เวอร์ชันล่าสุด-v1.2.0--beta-0284C7?style=for-the-badge&logo=android&logoColor=white" />
+    <img src="https://img.shields.io/badge/เวอร์ชันล่าสุด-v1.3.0--beta-0284C7?style=for-the-badge&logo=android&logoColor=white" />
   </a>
   <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk">
     <img src="https://img.shields.io/badge/ดาวน์โหลด-ไฟล์%20APK%20ตรง-00E676?style=for-the-badge&logo=googleplay&logoColor=black" />
@@ -27,9 +27,29 @@
 
 ---
 
-## ✨ มีอะไรใหม่ในเวอร์ชัน v1.2.0-beta (อัปเกรดใหญ่ล่าสุด)
+## ✨ มีอะไรใหม่ในเวอร์ชัน v1.3.0-beta (อัปเกรดใหญ่ล่าสุด)
 
 <table>
+  <tr>
+    <td width="50%">
+      <h3>🏎️ ระบบเลือก 3 สไตล์ Layout HUD</h3>
+      เลือกปรับดีไซน์แถบลอยได้อิสระตามความถนัด: <b>Modern Capsule</b> (ครบครัน), <b>Minimalist Compact</b> (สลิมบางประหยัดพื้นที่), และ <b>Vertical Flight HUD</b> (ทรงแท่งแนวตั้ง)
+    </td>
+    <td width="50%">
+      <h3>⚡ เปิดสิทธิ์อัตโนมัติในคลิกเดียว (Zero-PC)</h3>
+      ติดตั้งเสร็จแตะปุ่ม "เปิดสิทธิ์อัตโนมัติ" ในแอปบนจอรถได้ทันที ผ่าน localhost ADB ในตัว ไม่ต้องเสียบสาย ไม่ต้องต่อคอมพิวเตอร์พิมพ์คำสั่งใดๆ ให้ยุ่งยาก
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🧭 รองรับ Google Maps & Android Auto ทุกสาย</h3>
+      อ่านค่าระยะทางแม่นยำ 100% ทั้ง <b>Google Maps ตรง, Play Store, GBox, GPack, GSpace, microG, Vanced</b> รวมถึงการแคสต์ผ่าน <b>Android Auto (ZLink / BYDLink / AutoKit)</b>
+    </td>
+    <td width="50%">
+      <h3>🛡️ ระบบตัดปัญหา DUDU / Overdrive กวน</h3>
+      มีระบบ Plausibility Guard ดักจับแยกแยะระยะทางนำทางจริง ออกจากตัวเลขความเร็ว (km/h) หรือ Trip สะสมของ Launcher อย่าง DUDUOS / Overdrive ค่าแบตเตอรี่จึงนิ่งสนิท ไม่วูบวาบ
+    </td>
+  </tr>
   <tr>
     <td width="50%">
       <h3>🔄 จำตำแหน่งแยกแนวนอน/แนวตั้ง</h3>
@@ -47,7 +67,7 @@
     </td>
     <td width="50%">
       <h3>🔌 คำนวณจำนวนครั้งที่ควรแวะชาร์จ</h3>
-      วิเคราะห์ระยะทาง Maps และความจุแบตเตอรี่ พร้อมบอกจำนวนครั้งที่ควรแวะชาร์จด่วน DC Fast Charge (ช่วง 10% ➔ 80%) สำหรับทริปทางไกล
+      วิเคราะห์ระยะทาง Maps และความจุแบตเตอรี่ พร้อมบอกจำนวนครั้งที่ควรแวะชาร์จด่วน DC Fast Charge (ช่วง 10% ➔ 80%) พร้อมระบบ Clamp ความปลอดภัย 1-9 ครั้ง
     </td>
   </tr>
   <tr>
