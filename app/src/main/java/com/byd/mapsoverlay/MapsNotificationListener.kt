@@ -279,11 +279,31 @@ class MapsNotificationListener : NotificationListenerService() {
 
     private fun extractTotalRemainingDistance(vararg sources: String): Double? {
         val allDistances = mutableListOf<Double>()
+        var foundKm = false
+
+        // First pass: look specifically for total destination in km / miles
         for (src in sources) {
             if (src.isBlank()) continue
-            allDistances.addAll(parseDistancesFromText(src))
+            val dists = parseDistancesFromText(src)
+            // If text contains km, mark foundKm
+            val lower = src.lowercase()
+            if (lower.contains("km") || lower.contains("กม") || lower.contains("mi")) {
+                foundKm = true
+            }
+            allDistances.addAll(dists)
         }
-        return allDistances.maxOrNull()
+
+        if (allDistances.isEmpty()) return null
+
+        // If we found kilometers in the text, filter out tiny meter-level turn distances (< 1.5 km)
+        // so a "Turn left in 300 m" doesn't override the real "Remaining 85 km"
+        val maxDist = allDistances.maxOrNull() ?: return null
+        if (foundKm && maxDist < 1.0) {
+            // Text indicated km exists but max was small meter step -> reject turn step glitch
+            return null
+        }
+
+        return maxDist
     }
 
     private fun parseDistancesFromText(input: String): List<Double> {
