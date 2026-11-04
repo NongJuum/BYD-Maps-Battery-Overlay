@@ -1,9 +1,9 @@
 {
-  "versionCode": 10,
-  "versionName": "1.0.9-beta",
+  "versionCode": 11,
+  "versionName": "1.1.0-beta",
   "channel": "beta",
   "edition": "Beta",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-  "changelogTh": "แก้ OTA ให้ติดตั้งแยกจาก process ของแอป พร้อมตรวจพื้นที่และรายงานข้อผิดพลาดจริง",
-  "changelogEn": "Detached OTA installation, head-unit storage check and real Package Manager error reporting."
+  "changelogTh": "เวอร์ชัน 1.1.0: แก้สิทธิ์แผนที่หลุดหลังดับรถสตาร์ทใหม่ (Auto-rebind BootReceiver) และลดการใช้ RAM",
+  "changelogEn": "Version 1.1.0: Fix ACC restart listener persistence with BootReceiver and low-RAM optimization."
 }
