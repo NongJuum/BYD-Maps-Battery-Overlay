@@ -430,6 +430,14 @@ class OverlayService : Service() {
         BydAppWidgetProvider.updateAllWidgets(this)
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_BACKGROUND) {
+            // Low-RAM optimization for DiLink 3.0: Release cached text & triggers GC relief
+            System.gc()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         try {
