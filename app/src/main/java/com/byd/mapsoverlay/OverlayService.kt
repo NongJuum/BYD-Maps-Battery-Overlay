@@ -64,6 +64,8 @@ class OverlayService : Service() {
             lockedSingleDestSoc = -1
         }
         latestDistanceKm = newDistance
+        // Persist last known distance for self-healing recovery if LMK kills service
+        prefs.edit().putFloat("last_known_distance_km", newDistance.toFloat()).apply()
         showOverlay()
         renderOverlay()
     }
@@ -178,7 +180,19 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        // Self-Healing State Recovery (Low-Memory Killer Resilience):
+        // If system restarted service after kill (intent == null), restore state from preferences seamlessly!
+        if (intent == null) {
+            val savedDistance = prefs.getFloat("last_known_distance_km", -1f).toDouble()
+            if (savedDistance > 0.0) {
+                latestDistanceKm = savedDistance
+                showOverlay()
+                renderOverlay()
+            }
+            return START_STICKY
+        }
+
+        when (intent.action) {
             ACTION_UPDATE_DISTANCE -> {
                 val distance = intent.getDoubleExtra(EXTRA_DISTANCE_KM, -1.0)
                     .takeIf { it > 0 }

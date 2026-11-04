@@ -80,6 +80,22 @@
       One-tap background updates directly from your car screen. No PC, ADB, or USB re-plugging needed for future releases!
     </td>
   </tr>
+  <tr>
+    <td width="50%">
+      <h3>⚡ Self-Healing State Recovery (START_STICKY)</h3>
+      When Android's Low-Memory Killer (LMK) reclaims memory during high-load operations (e.g. 360 camera), the service seamlessly restarts and restores navigation distance and layout positions instantly.
+    </td>
+    <td width="50%">
+      <h3>🧠 Ultra-Low RAM Footprint (~15-20 MB)</h3>
+      Zero-allocation background architecture specifically tuned for DiLink head units running heavy launchers (DUDUOS / Overdrive) alongside Spotify and Google Maps simultaneously.
+    </td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2">
+      <h3>📊 Grounded on BYD ECU Last 50km Average</h3>
+      Calculates predicted destination battery percentages based strictly on BYD's factory Last 50km consumption telemetry directly from the vehicle CAN bus, preventing erratic jumps from aggressive acceleration.
+    </td>
+  </tr>
 </table>
 
 ---
