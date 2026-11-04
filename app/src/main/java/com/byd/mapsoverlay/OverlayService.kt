@@ -432,9 +432,18 @@ class OverlayService : Service() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_BACKGROUND) {
-            // Low-RAM optimization for DiLink 3.0: Release cached text & triggers GC relief
-            System.gc()
+        when (level) {
+            TRIM_MEMORY_RUNNING_CRITICAL,
+            TRIM_MEMORY_COMPLETE -> {
+                // DiLink 3.0 Critical: Release heavy caches while preserving active navigation view
+                lockedDestSocMin = -1
+                lockedDestSocMax = -1
+            }
+            TRIM_MEMORY_BACKGROUND,
+            TRIM_MEMORY_MODERATE -> {
+                // Background Trim: Reset non-essential calculation states
+                latestDistanceKm = 0.0
+            }
         }
     }
 
