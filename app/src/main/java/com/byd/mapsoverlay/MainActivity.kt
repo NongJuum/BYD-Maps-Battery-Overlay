@@ -339,17 +339,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Overlay and Maps permissions are Android special-access settings.
-        // Do not route these buttons through the ADB/OBD authorization flow.
+        // DiLink IVI does not implement the standard Android special-access
+        // Settings activities. Use the already-established Alpha ADB permission
+        // flow, which grants SYSTEM_ALERT_WINDOW and Maps notification access.
         btnOverlay.setOnClickListener {
-            openOverlayPermissionSettings()
+            triggerAdbAuth()
         }
 
         btnNotification.setOnClickListener {
-            openNotificationListenerSettings()
+            triggerAdbAuth()
         }
 
-        // OBD/BYD vehicle data permissions remain on the ADB authorization flow.
+        // OBD/BYD vehicle data permissions use the same established ADB flow.
         btnObdPermission.setOnClickListener {
             triggerAdbAuth()
         }
