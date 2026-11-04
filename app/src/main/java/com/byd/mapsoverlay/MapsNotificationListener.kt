@@ -26,15 +26,38 @@ class MapsNotificationListener : NotificationListenerService() {
     }
 
     private val explicitMapsPackages = setOf(
+        // 1. Google Play Store & Official Direct APK releases
         "com.google.android.apps.maps",
         "com.google.android.apps.mapslite",
         "com.google.android.apps.navlite",
+        "com.google.android.apps.gmm",
+        "com.google.android.apps.gmm.car",
+
+        // 2. Vanced, ReVanced & Morphe Patched Maps
         "app.morphe.android.apps.maps",
         "app.revanced.android.apps.maps",
         "app.vanced.android.apps.maps",
-        "com.mgoogle.android.gms",
+        "com.vanced.android.apps.maps",
+
+        // 3. GBox Virtual Containers & Environments (DiLink 3.0 Sandbox)
         "com.gbox.android",
-        "com.gspace.android"
+        "com.gbox.pub",
+        "com.gbox.lite",
+        "com.gbox.pro",
+        "com.gbox.work",
+
+        // 4. GSpace / Dual Space / Parallel App Engines
+        "com.gspace.android",
+        "com.gspace.android.free",
+        "com.ludashi.dualspace",
+        "com.ludashi.dualspacepro",
+        "com.excelliance.dualaid",
+
+        // 5. microG & GmsCore Sandboxed Maps
+        "com.google.android.gms",
+        "com.mgoogle.android.gms",
+        "org.microg.gms.droidguard",
+        "com.android.vending"
     )
 
     override fun onListenerConnected() {
@@ -134,9 +157,13 @@ class MapsNotificationListener : NotificationListenerService() {
         val pkg = sbn.packageName.lowercase()
         val notif = sbn.notification ?: return false
 
-        if (explicitMapsPackages.contains(pkg) || pkg.endsWith(".maps") || pkg.contains("google.android.apps.maps") || pkg.contains("gmaps")) {
-            return true
-        }
+        // Check if package matches known Maps, GBox, Vanced, MicroG or GSpace packages
+        val isExplicitMapsPkg = explicitMapsPackages.contains(pkg) ||
+            pkg.endsWith(".maps") ||
+            pkg.contains("google.android.apps.maps") ||
+            pkg.contains("gmaps") ||
+            pkg.contains("gbox") ||
+            pkg.contains("gspace")
 
         val isNavCategory = notif.category == Notification.CATEGORY_NAVIGATION
         val groupKey = (notif.group ?: "").lowercase()
@@ -144,17 +171,42 @@ class MapsNotificationListener : NotificationListenerService() {
             (notif.channelId ?: "").lowercase()
         } else ""
 
-        if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation")) {
-            return true
-        }
-
+        // Check for navigation exit / dismiss actions (English & Thai)
         val hasExitNavAction = notif.actions?.any { action ->
             val actionTitle = action.title?.toString()?.lowercase() ?: ""
             actionTitle.contains("exit navigation") ||
                 actionTitle.contains("ออกจากการนำทาง") ||
                 actionTitle.contains("หยุดนำทาง") ||
-                actionTitle.contains("dismiss navigation")
+                actionTitle.contains("dismiss navigation") ||
+                actionTitle.contains("ออก")
         } == true
+
+        // Check extras text for navigation keywords when running inside containers (GBox/GSpace)
+        val extras = notif.extras
+        val title = (extras?.getCharSequence(Notification.EXTRA_TITLE) ?: "").toString().lowercase()
+        val text = (extras?.getCharSequence(Notification.EXTRA_TEXT) ?: "").toString().lowercase()
+        val subText = (extras?.getCharSequence(Notification.EXTRA_SUB_TEXT) ?: "").toString().lowercase()
+        val ticker = (notif.tickerText ?: "").toString().lowercase()
+        val allText = "$title $text $subText $ticker"
+
+        val hasNavContent = allText.contains("กม.") ||
+            allText.contains("กม") ||
+            allText.contains("km") ||
+            allText.contains("เมตร") ||
+            allText.contains("มุ่งหน้า") ||
+            allText.contains("toward") ||
+            allText.contains("นาที") ||
+            allText.contains("min")
+
+        if (isExplicitMapsPkg) {
+            if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation") || hasExitNavAction || hasNavContent) {
+                return true
+            }
+        }
+
+        if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation")) {
+            return true
+        }
 
         return hasExitNavAction
     }
