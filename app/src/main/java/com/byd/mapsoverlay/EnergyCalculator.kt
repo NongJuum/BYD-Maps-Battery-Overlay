@@ -83,7 +83,9 @@ object EnergyCalculator {
         }
 
         val safeCapacity = if (dynamicBatteryCapacityKwh > 10.0) dynamicBatteryCapacityKwh else 50.0
-        val kmPerKwh = 100.0 / consumptionKwhPer100km
+        // Clamp consumption to realistic EV limits (8.0 to 35.0 kWh/100km) to prevent stop calculation explosion
+        val clampedConsumption = consumptionKwhPer100km.coerceIn(8.0, 35.0)
+        val kmPerKwh = 100.0 / clampedConsumption
 
         // ขาแรก: วิ่งจาก currentSoc ลงไปเหลือ 10%
         val usableSocFirstLeg = max(0.0, currentSoc - 10.0)
@@ -102,7 +104,8 @@ object EnergyCalculator {
         val legKm = max(30.0, legUsableKwh * kmPerKwh)
 
         val stops = ceil(remainingDeficitKm / legKm).toInt()
-        return max(1, stops)
+        // Clamp charging stops to realistic display bounds (1 to 9 stops) to prevent UI overflow
+        return stops.coerceIn(1, 9)
     }
 
     /**
