@@ -249,6 +249,7 @@ object AutoPermissionHelperAlpha {
     fun installApkSilently(
         context: Context,
         apkFile: File,
+        onStatus: (String) -> Unit = {},
         onResult: (isSuccess: Boolean, message: String) -> Unit
     ) {
         val appContext = context.applicationContext ?: context
@@ -259,8 +260,10 @@ object AutoPermissionHelperAlpha {
                     return@Thread
                 }
 
+                onStatus("ดาวน์โหลดครบแล้ว กำลังเชื่อมต่อ ADB ในรถ...")
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5000, 300000).use { dadb ->
+                    onStatus("เชื่อมต่อ ADB แล้ว กำลังตรวจพื้นที่ว่างในรถ...")
                     val localSize = apkFile.length()
                     val requiredBytes = maxOf(350L * 1024L * 1024L, localSize * 3L + 128L * 1024L * 1024L)
 
@@ -294,7 +297,9 @@ object AutoPermissionHelperAlpha {
                     val packageName = appContext.packageName
 
                     dadb.shell("rm -f '$tmpTarget' '$scriptPath' '$statusPath' '$logPath'")
+                    onStatus("กำลังส่งไฟล์ APK เข้าเครื่องรถ...")
                     dadb.push(apkFile, tmpTarget)
+                    onStatus("ส่งไฟล์แล้ว กำลังตรวจสอบขนาดและ SHA-256...")
 
                     val verifyScript = """
                         if [ ! -f '$tmpTarget' ]; then echo PUSH_MISSING; exit 21; fi
@@ -334,6 +339,7 @@ object AutoPermissionHelperAlpha {
                           am start -n "${'$'}APP/com.byd.mapsoverlay.MainActivity" --activity-clear-task --activity-new-task --ez ota_failed true --es ota_status_file "${'$'}STATUS"
                         fi
                     """.trimIndent()
+                    onStatus("ตรวจสอบ APK ผ่านแล้ว กำลังเตรียมคำสั่งติดตั้ง...")
                     val scriptFile = File.createTempFile("beta_update_", ".sh", appContext.cacheDir)
                     try {
                         scriptFile.writeText(installScript)
@@ -352,6 +358,7 @@ object AutoPermissionHelperAlpha {
                         return@use
                     }
 
+                    onStatus("กำลังส่งคำสั่งติดตั้งให้ Android Package Manager...")
                     val launch = dadb.shell("nohup sh '$scriptPath' </dev/null >'$logPath' 2>&1 & echo OTA_INSTALL_STARTED")
                     if (launch.exitCode != 0 || !launch.output.contains("OTA_INSTALL_STARTED")) {
                         onResult(false, "เริ่มกระบวนการติดตั้ง OTA ไม่สำเร็จ: " + launch.output)
