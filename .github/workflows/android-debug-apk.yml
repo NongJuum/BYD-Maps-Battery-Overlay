@@ -57,8 +57,8 @@ jobs:
             "channel": "beta",
             "edition": "Beta",
             "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-            "changelogTh": "แก้ OTA ให้ติดตั้งแยกจาก process ของแอป พร้อมตรวจพื้นที่และรายงานข้อผิดพลาดจริง",
-            "changelogEn": "Detached OTA installation, head-unit storage check and real Package Manager error reporting."
+            "changelogTh": "v1.2.0: รองรับหมุนจอแยกพิกัด, แปะทับ Status Bar, โหมดกลางคืนหรี่แสง, เลขเดี่ยว ~XX% นิ่งไม่กระตุก, เตือนแวะชาร์จกี่ครั้ง",
+            "changelogEn": "v1.2.0: Dynamic rotation with safe zone, status bar placement, night auto-dimming, single-number Dest SOC, charging stops counter."
           }
           EOF
 
