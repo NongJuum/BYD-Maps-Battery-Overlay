@@ -1,5 +1,7 @@
 package com.byd.mapsoverlay
 
+import android.graphics.Color
+import kotlin.math.ceil
 import kotlin.math.max
 
 object EnergyCalculator {
@@ -58,4 +60,69 @@ object EnergyCalculator {
 
         return Pair(socAtDestination, percentageUsed)
     }
+
+    /**
+     * คำนวณจำนวนครั้งที่ควรแวะชาร์จ (Charging Stops Counter)
+     * อิงตามหลักปฏิบัติของรถ EV สากล:
+     * - ขาแรก (First Leg): วิ่งจาก currentSoc ลงไปเหลือ 10% (Safe Buffer)
+     * - รอบชาร์จ DC Fast Charge บนทางหลวง: ชาร์จจาก 10% -> 80% (70% ของความจุแบตเตอรี่)
+     */
+    fun calculateChargingStops(
+        currentSoc: Double,
+        remainingDistanceKm: Double,
+        consumptionKwhPer100km: Double,
+        realRangeKm: Double
+    ): Int {
+        if (remainingDistanceKm <= 0.0 || currentSoc <= 0.0 || consumptionKwhPer100km <= 0.0) {
+            return 0
+        }
+
+        // ถ้ารถวิ่งได้จริงไกลกว่าระยะทางที่เหลือ ไม่ต้องแวะชาร์จ
+        if (realRangeKm > 0 && remainingDistanceKm <= realRangeKm) {
+            return 0
+        }
+
+        val safeCapacity = if (dynamicBatteryCapacityKwh > 10.0) dynamicBatteryCapacityKwh else 50.0
+        val kmPerKwh = 100.0 / consumptionKwhPer100km
+
+        // ขาแรก: วิ่งจาก currentSoc ลงไปเหลือ 10%
+        val usableSocFirstLeg = max(0.0, currentSoc - 10.0)
+        val firstLegKwh = (usableSocFirstLeg / 100.0) * safeCapacity
+        val firstLegKm = firstLegKwh * kmPerKwh
+
+        if (remainingDistanceKm <= firstLegKm) {
+            return 0
+        }
+
+        // ระยะทางที่ขาดอยู่หลังจากวิ่งขาแรกหมด
+        val remainingDeficitKm = remainingDistanceKm - firstLegKm
+
+        // แต่ละรอบของการแวะชาร์จด่วน (10% -> 80% = 70% usable)
+        val legUsableKwh = 0.70 * safeCapacity
+        val legKm = max(30.0, legUsableKwh * kmPerKwh)
+
+        val stops = ceil(remainingDeficitKm / legKm).toInt()
+        return max(1, stops)
+    }
+
+    /**
+     * ระบบไล่เฉดสีแบตเตอรี่ 6 สเต็ป (แดง ➔ ฟ้า):
+     * 0-10%: แดงสด (#FF1744) - วิกฤต/โหมดเต่า
+     * 10-30%: ส้ม (#FF6D00) - แบตเตอรี่ต่ำ
+     * 30-50%: เหลือง (#FFD600) - ปานกลาง
+     * 50-75%: เขียวอ่อน (#AEEA00) - พอดี ปลอดภัย
+     * 75-95%: เขียวเข้ม (#00E676) - แบตเตอรี่เหลือเฟือ
+     * 95-100%: ฟ้าสว่าง (#00E5FF) - เต็มเปี่ยม
+     */
+    fun getDynamicSocColor(soc: Double): Int {
+        return when {
+            soc <= 10.0 -> Color.parseColor("#FF1744")
+            soc <= 30.0 -> Color.parseColor("#FF6D00")
+            soc <= 50.0 -> Color.parseColor("#FFD600")
+            soc <= 75.0 -> Color.parseColor("#AEEA00")
+            soc <= 95.0 -> Color.parseColor("#00E676")
+            else -> Color.parseColor("#00E5FF")
+        }
+    }
 }
+

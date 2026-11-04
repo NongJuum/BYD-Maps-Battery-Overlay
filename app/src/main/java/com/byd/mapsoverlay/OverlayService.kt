@@ -34,10 +34,19 @@ class OverlayService : Service() {
     private var tvConsumption: TextView? = null
     private var tvWarningBadge: TextView? = null
 
+    // Containers & Dividers for custom toggling
+    private var containerDestSoc: View? = null
+    private var containerRealRange: View? = null
+    private var containerMapsDistance: View? = null
+    private var containerConsumption: View? = null
+    private var divider1: View? = null
+    private var divider2: View? = null
+    private var divider3: View? = null
+
     private lateinit var bydBridge: BydVehicleBridge
     private var latestDistanceKm: Double = 0.0
-    private var lockedDestSocMin: Int = -1
-    private var lockedDestSocMax: Int = -1
+    private var lockedSingleDestSoc: Int = -1
+    private var lastRawDestSoc: Double = -1.0
 
     private lateinit var prefs: SharedPreferences
     private var windowParams: WindowManager.LayoutParams? = null
@@ -59,6 +68,10 @@ class OverlayService : Service() {
         private const val KEY_POS_X = "pos_x"
         private const val KEY_POS_Y = "pos_y"
         private const val KEY_SCALE = "scale"
+        const val KEY_SHOW_DEST_SOC = "show_dest_soc"
+        const val KEY_SHOW_REAL_RANGE = "show_real_range"
+        const val KEY_SHOW_MAPS_DIST = "show_maps_dist"
+        const val KEY_SHOW_CONSUMPTION = "show_consumption"
         private const val CHANNEL_ID = "byd_overlay_channel"
     }
 
@@ -71,8 +84,7 @@ class OverlayService : Service() {
                         ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
                     if (dist > 0) {
                         if (kotlin.math.abs(dist - latestDistanceKm) > 10.0) {
-                            lockedDestSocMin = -1
-                            lockedDestSocMax = -1
+                            lockedSingleDestSoc = -1
                         }
                         latestDistanceKm = dist
                         showOverlay()
@@ -151,8 +163,7 @@ class OverlayService : Service() {
                     ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
                 if (distance > 0) {
                     if (kotlin.math.abs(distance - latestDistanceKm) > 10.0) {
-                        lockedDestSocMin = -1
-                        lockedDestSocMax = -1
+                        lockedSingleDestSoc = -1
                     }
                     latestDistanceKm = distance
                     showOverlay()
@@ -213,6 +224,19 @@ class OverlayService : Service() {
         tvMapsDistance = view.findViewById(R.id.tv_maps_distance)
         tvConsumption = view.findViewById(R.id.tv_consumption)
         tvWarningBadge = view.findViewById(R.id.tv_warning_badge)
+
+        containerDestSoc = view.findViewById(R.id.container_dest_soc)
+        containerRealRange = view.findViewById(R.id.container_real_range)
+        containerMapsDistance = view.findViewById(R.id.container_maps_distance)
+        containerConsumption = view.findViewById(R.id.container_consumption)
+        divider1 = view.findViewById(R.id.divider_1)
+        divider2 = view.findViewById(R.id.divider_2)
+        divider3 = view.findViewById(R.id.divider_3)
+
+        // Apply saved scale
+        currentScale = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.4f)
+        view.scaleX = currentScale
+        view.scaleY = currentScale
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -320,6 +344,21 @@ class OverlayService : Service() {
 
         val isUserConfiguredModel = VehicleProfileManager.getSelectedPresetId(this) != VehicleProfileManager.PRESET_AUTO
 
+        // Apply user visibility preferences
+        val showDestSoc = prefs.getBoolean(KEY_SHOW_DEST_SOC, true)
+        val showRealRange = prefs.getBoolean(KEY_SHOW_REAL_RANGE, true)
+        val showMapsDist = prefs.getBoolean(KEY_SHOW_MAPS_DIST, true)
+        val showConsumption = prefs.getBoolean(KEY_SHOW_CONSUMPTION, true)
+
+        containerDestSoc?.visibility = if (showDestSoc) View.VISIBLE else View.GONE
+        containerRealRange?.visibility = if (showRealRange) View.VISIBLE else View.GONE
+        containerMapsDistance?.visibility = if (showMapsDist) View.VISIBLE else View.GONE
+        containerConsumption?.visibility = if (showConsumption) View.VISIBLE else View.GONE
+
+        divider1?.visibility = if (showDestSoc && (showRealRange || showMapsDist || showConsumption)) View.VISIBLE else View.GONE
+        divider2?.visibility = if (showRealRange && (showMapsDist || showConsumption)) View.VISIBLE else View.GONE
+        divider3?.visibility = if (showMapsDist && showConsumption) View.VISIBLE else View.GONE
+
         val (rawDestSoc, _) = EnergyCalculator.calculateDestinationSoc(
             currentSoc = currentSoc,
             remainingDistanceKm = latestDistanceKm,
@@ -328,64 +367,52 @@ class OverlayService : Service() {
             preferUserCapacity = isUserConfiguredModel
         )
 
-        // 2% Step Hysteresis / Deadband Window:
-        // Keeps the display locked to [lockedDestSocMin, lockedDestSocMax]% (e.g. 68-70%)
-        // Only steps down when rawDestSoc actually drops below lockedDestSocMin (e.g. < 68.0%)
-        // This eliminates flickering and high sensitivity while driving.
-        if (lockedDestSocMin < 0 || lockedDestSocMax < 0) {
-            val initialMax = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
-            lockedDestSocMax = initialMax
-            lockedDestSocMin = (initialMax - 2).coerceAtLeast(0)
+        // 1.5% Deadband Window for Single Number Display:
+        // Keeps the display locked to `lockedSingleDestSoc` (e.g. ~69%)
+        // Only updates when rawDestSoc changes by >= 1.0% to prevent flickering while driving.
+        if (lockedSingleDestSoc < 0) {
+            lockedSingleDestSoc = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
         } else {
-            if (rawDestSoc < lockedDestSocMin.toDouble()) {
-                // Fallen below current minimum: step down
-                val diff = lockedDestSocMin.toDouble() - rawDestSoc
-                if (diff >= 4.0) {
-                    // Significant route change / traffic reroute: resynchronize directly
-                    lockedDestSocMax = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
-                    lockedDestSocMin = (lockedDestSocMax - 2).coerceAtLeast(0)
-                } else {
-                    // Normal 2% step down
-                    lockedDestSocMax = lockedDestSocMin
-                    lockedDestSocMin = (lockedDestSocMax - 2).coerceAtLeast(0)
-                }
-            } else if (rawDestSoc > (lockedDestSocMax.toDouble() + 0.5)) {
-                // Regenerated battery (e.g. long downhill) or route shortened: step up
-                val diff = rawDestSoc - lockedDestSocMax.toDouble()
-                if (diff >= 4.0) {
-                    lockedDestSocMax = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
-                    lockedDestSocMin = (lockedDestSocMax - 2).coerceAtLeast(0)
-                } else {
-                    lockedDestSocMin = lockedDestSocMax
-                    lockedDestSocMax = (lockedDestSocMin + 2).coerceIn(0, 100)
-                }
+            val delta = rawDestSoc - lockedSingleDestSoc.toDouble()
+            if (kotlin.math.abs(delta) >= 1.0) {
+                lockedSingleDestSoc = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
             }
         }
+        val destSoc = lockedSingleDestSoc
 
-        val destSocMin = lockedDestSocMin
-        val destSocMax = lockedDestSocMax
-
-        val isBatteryInsufficient = latestDistanceKm > realRange || rawDestSoc <= 2.0 || destSocMin <= 0
-        val isLowBattery = destSocMin <= 20 || currentSoc <= 20.0
-
-        val (socColor, badgeText, showBadge) = when {
-            isBatteryInsufficient -> {
-                Triple(Color.parseColor("#FF1744"), "⚠️🔌", true)
-            }
-            isLowBattery -> {
-                Triple(Color.parseColor("#FFD600"), "⚠️🪫", true)
-            }
-            else -> {
-                Triple(Color.parseColor("#69F0AE"), "", false)
-            }
-        }
-
-        // 1. แบตเตอรี่ปลายทางแบบช่วงปลอดภัย (🏁🔋 เช่น 88-90%)
+        // 6-Tier Dynamic Color (Red 0-10% -> Orange 10-30% -> Yellow 30-50% -> Light Green 50-75% -> Dark Green 75-95% -> Cyan 95-100%)
+        val socColor = EnergyCalculator.getDynamicSocColor(destSoc.toDouble())
         tvSocDisplay?.setTextColor(socColor)
-        if (isBatteryInsufficient) {
-            tvSocDisplay?.text = if (destSocMax > 0) "0-$destSocMax%" else "0%"
+
+        // Calculate Charging Stops Counter
+        val stopsNeeded = EnergyCalculator.calculateChargingStops(
+            currentSoc = currentSoc,
+            remainingDistanceKm = latestDistanceKm,
+            consumptionKwhPer100km = calculationConsumption,
+            realRangeKm = realRange
+        )
+
+        val isBatteryInsufficient = latestDistanceKm > realRange || destSoc <= 0
+        val isCriticalLow = destSoc <= 10 || currentSoc <= 10.0
+
+        if (isBatteryInsufficient || stopsNeeded > 0) {
+            tvSocDisplay?.text = "~$destSoc%"
+            tvWarningBadge?.visibility = View.VISIBLE
+            if (stopsNeeded > 0) {
+                tvWarningBadge?.text = "⚠️🔌 ชาร์จ ~$stopsNeeded ครั้ง"
+                tvWarningBadge?.setBackgroundColor(Color.parseColor("#D50000"))
+            } else {
+                tvWarningBadge?.text = "⚠️🔌 แบตไม่พอ"
+                tvWarningBadge?.setBackgroundColor(Color.parseColor("#D50000"))
+            }
+        } else if (isCriticalLow) {
+            tvSocDisplay?.text = "~$destSoc%"
+            tvWarningBadge?.visibility = View.VISIBLE
+            tvWarningBadge?.text = "⚠️🪫 แบตวิกฤต"
+            tvWarningBadge?.setBackgroundColor(Color.parseColor("#FF1744"))
         } else {
-            tvSocDisplay?.text = "$destSocMin-$destSocMax%"
+            tvSocDisplay?.text = "~$destSoc%"
+            tvWarningBadge?.visibility = View.GONE
         }
 
         // 2. ระยะที่รถวิ่งได้จริงคงเหลือ (🚗)
@@ -397,27 +424,17 @@ class OverlayService : Service() {
         // 4. อัตราสิ้นเปลืองปัจจุบันจาก CAN/OBD (⚡)
         tvConsumption?.text = String.format("%.1f", displayConsumption)
 
-        if (showBadge) {
-            tvWarningBadge?.visibility = View.VISIBLE
-            tvWarningBadge?.text = badgeText
-            tvWarningBadge?.setBackgroundColor(
-                if (isBatteryInsufficient) Color.parseColor("#D50000") else Color.parseColor("#F57F17")
-            )
+        BydAppWidgetProvider.lastDestText = if (stopsNeeded > 0) {
+            String.format("🏁 ปลายทาง: แบต ~$destSoc%% (แวะชาร์จ ~$stopsNeeded ครั้ง, อีก %.1f km)", latestDistanceKm)
         } else {
-            tvWarningBadge?.visibility = View.GONE
-        }
-
-        BydAppWidgetProvider.lastDestText = if (isBatteryInsufficient) {
-            "🏁 ⚠️ แบตฉิวเฉียด/ไม่พอถึงจุดหมาย! (คาดการณ์ $destSocMin-$destSocMax%)"
-        } else {
-            String.format("🏁 ปลายทาง: แบตเหลือ %d-%d%% (อีก %.1f km)", destSocMin, destSocMax, latestDistanceKm)
+            String.format("🏁 ปลายทาง: แบตเหลือ ~$destSoc%% (อีก %.1f km)", latestDistanceKm)
         }
         BydAppWidgetProvider.updateAllWidgets(this)
     }
 
     private fun hideOverlay() {
-        lockedDestSocMin = -1
-        lockedDestSocMax = -1
+        lockedSingleDestSoc = -1
+        lastRawDestSoc = -1.0
         if (overlayView != null) {
             try {
                 windowManager?.removeView(overlayView)
@@ -436,8 +453,7 @@ class OverlayService : Service() {
             TRIM_MEMORY_RUNNING_CRITICAL,
             TRIM_MEMORY_COMPLETE -> {
                 // DiLink 3.0 Critical: Release heavy caches while preserving active navigation view
-                lockedDestSocMin = -1
-                lockedDestSocMax = -1
+                lockedSingleDestSoc = -1
             }
             TRIM_MEMORY_BACKGROUND,
             TRIM_MEMORY_MODERATE -> {

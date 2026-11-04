@@ -341,11 +341,11 @@ object AutoPermissionHelperAlpha {
                           echo "{\"phase\":\"error\",\"message\":\"${'$'}PM_MSG\",\"code\":${'$'}INSTALL_RC}" > $progressJson
                           chmod 666 $progressJson 2>/dev/null
                           sleep 2
-                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez ota_failed true --ez post_update false
+                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' -f 0x14000000 --ez ota_failed true --ez post_update false
                         else
                           rm -f $progressJson
                           sleep 2
-                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez post_update true --ez byd_acc_mode true
+                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' -f 0x14000000 --ez post_update true --ez byd_acc_mode true
                         fi
                         echo "[install] done rc=${'$'}INSTALL_RC at $(date)"
                     """.trimIndent()

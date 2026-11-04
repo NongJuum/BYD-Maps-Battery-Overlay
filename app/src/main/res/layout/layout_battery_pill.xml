@@ -24,6 +24,7 @@
 
     <!-- 1. แบตเตอรี่ที่เหลือเมื่อถึงปลายทาง (SoC Destination) -->
     <LinearLayout
+        android:id="@+id/container_dest_soc"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -48,6 +49,7 @@
 
     <!-- เส้นคั่น 1 -->
     <View
+        android:id="@+id/divider_1"
         android:layout_width="1dp"
         android:layout_height="18dp"
         android:layout_marginStart="10dp"
@@ -56,6 +58,7 @@
 
     <!-- 2. ระยะที่รถวิ่งได้จริงคงเหลือ (Real Remaining Range) -->
     <LinearLayout
+        android:id="@+id/container_real_range"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -80,6 +83,7 @@
 
     <!-- เส้นคั่น 2 -->
     <View
+        android:id="@+id/divider_2"
         android:layout_width="1dp"
         android:layout_height="18dp"
         android:layout_marginStart="10dp"
@@ -88,6 +92,7 @@
 
     <!-- 3. ระยะทางรวมไปจุดปลายทางตาม Google Maps (Total Nav Distance) -->
     <LinearLayout
+        android:id="@+id/container_maps_distance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -112,6 +117,7 @@
 
     <!-- เส้นคั่น 3 -->
     <View
+        android:id="@+id/divider_3"
         android:layout_width="1dp"
         android:layout_height="18dp"
         android:layout_marginStart="10dp"
@@ -120,6 +126,7 @@
 
     <!-- 4. อัตราสิ้นเปลืองปัจจุบัน 50km (Consumption) -->
     <LinearLayout
+        android:id="@+id/container_consumption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
