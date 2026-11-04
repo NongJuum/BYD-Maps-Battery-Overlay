@@ -25,6 +25,21 @@ class MapsNotificationListener : NotificationListenerService() {
         }
     }
 
+    // Strict Launcher & Car System Blacklist (Never read as navigation)
+    private val blacklistedLauncherPackages = setOf(
+        "com.dudu.android",
+        "com.dudu.launcher",
+        "com.dudu.car",
+        "com.dudu.auto",
+        "com.overdrive.auto",
+        "com.carwebguru",
+        "altergames.carlauncher",
+        "com.autonavi.amapauto",
+        "com.byd.launcher",
+        "com.byd.service",
+        "com.byd.dilink"
+    )
+
     private val explicitMapsPackages = setOf(
         // 1. Google Play Store & Official Direct APK releases
         "com.google.android.apps.maps",
@@ -166,6 +181,11 @@ class MapsNotificationListener : NotificationListenerService() {
         val pkg = sbn.packageName.lowercase()
         val notif = sbn.notification ?: return false
 
+        // 1. HARD DROP: If from DUDU, Overdrive, or native car launcher/trip odometers -> Immediately ignore!
+        if (blacklistedLauncherPackages.any { pkg.contains(it) } || pkg.contains("dudu") || pkg.contains("overdrive")) {
+            return false
+        }
+
         // Check if package matches known Maps, GBox, GPack, Vanced, MicroG or GSpace packages
         val isExplicitMapsPkg = explicitMapsPackages.contains(pkg) ||
             pkg.endsWith(".maps") ||
@@ -252,6 +272,16 @@ class MapsNotificationListener : NotificationListenerService() {
     private fun parseDistancesFromText(input: String): List<Double> {
         if (input.isBlank()) return emptyList()
         val normalized = input.replace('\u00A0', ' ').replace('\u202F', ' ')
+
+        // Filter out speed, odometer, and trip info (km/h, กม./ชม., trip, odo)
+        val lower = normalized.lowercase()
+        if (lower.contains("km/h") || lower.contains("กม./ชม") || lower.contains("กม/ชม") || lower.contains("odometer") || lower.contains("odo")) {
+            // If it only contains speed/odo without navigation keywords, ignore
+            if (!lower.contains("มุ่งหน้า") && !lower.contains("toward") && !lower.contains("ทางออก") && !lower.contains("เลี้ยว")) {
+                return emptyList()
+            }
+        }
+
         val foundDistancesKm = mutableListOf<Double>()
 
         try {
