@@ -57,7 +57,8 @@ class BydVehicleBridge(
         private set
 
     private var executor: ScheduledExecutorService? = null
-    private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
+    private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Any, Long>>()
+    private val cacheTtlMs = 60_000L // 60s TTL as dictated by DeepSeek Supreme Auditor
 
     fun startListening() {
         applyUserVehicleProfile()
@@ -251,9 +252,10 @@ class BydVehicleBridge(
     )
 
     private fun obtainDeviceInstance(clazz: Class<*>, diagnostics: MutableList<String>): Any? {
-        val cached = deviceCache[clazz.name]
-        if (cached != null) {
-            return cached
+        val cachedEntry = deviceCache[clazz.name]
+        val now = System.currentTimeMillis()
+        if (cachedEntry != null && (now - cachedEntry.second) < cacheTtlMs) {
+            return cachedEntry.first
         }
 
         val methods = clazz.methods + clazz.declaredMethods
@@ -270,7 +272,7 @@ class BydVehicleBridge(
                 getInstanceWithContext.isAccessible = true
                 val instance = getInstanceWithContext.invoke(null, wrappedContext)
                 if (instance != null) {
-                    deviceCache[clazz.name] = instance
+                    deviceCache[clazz.name] = Pair(instance, System.currentTimeMillis())
                     diagnostics += "${clazz.simpleName}: INSTANCE_OK (getInstance(Context))"
                     return instance
                 }
@@ -290,7 +292,7 @@ class BydVehicleBridge(
                 selfMethod.isAccessible = true
                 val instance = selfMethod.invoke(null)
                 if (instance != null) {
-                    deviceCache[clazz.name] = instance
+                    deviceCache[clazz.name] = Pair(instance, System.currentTimeMillis())
                     diagnostics += "${clazz.simpleName}: INSTANCE_OK (self())"
                     return instance
                 }
@@ -310,7 +312,7 @@ class BydVehicleBridge(
                 getInstanceNoArg.isAccessible = true
                 val instance = getInstanceNoArg.invoke(null)
                 if (instance != null) {
-                    deviceCache[clazz.name] = instance
+                    deviceCache[clazz.name] = Pair(instance, System.currentTimeMillis())
                     diagnostics += "${clazz.simpleName}: INSTANCE_OK (getInstance())"
                     return instance
                 }
