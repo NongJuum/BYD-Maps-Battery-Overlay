@@ -48,6 +48,25 @@ class OverlayService : Service() {
     private lateinit var bydBridge: BydVehicleBridge
     private var latestDistanceKm: Double = 0.0
     private var lockedSingleDestSoc: Int = -1
+
+    private fun updateDistanceSafely(newDistance: Double) {
+        if (newDistance <= 0.0) return
+
+        // Plausibility Guard: Prevent Next-Turn Step Glitch (e.g. dropping from 80 km to 0.4 km)
+        if (latestDistanceKm > 3.0 && newDistance < (latestDistanceKm * 0.25)) {
+            // Sudden drop over 75% while cruising indicates a turn-step (e.g. "400 m left turn")
+            // Ignore turn-step glitch to prevent Yo-Yo Dest SoC fluctuations!
+            android.util.Log.w("OverlayService", "Ignored sudden distance drop glitch: $latestDistanceKm km -> $newDistance km")
+            return
+        }
+
+        if (kotlin.math.abs(newDistance - latestDistanceKm) > 10.0) {
+            lockedSingleDestSoc = -1
+        }
+        latestDistanceKm = newDistance
+        showOverlay()
+        renderOverlay()
+    }
     private var lastRawDestSoc: Double = -1.0
 
     private lateinit var prefs: SharedPreferences
@@ -92,14 +111,7 @@ class OverlayService : Service() {
                     val dist = intent.getDoubleExtra(EXTRA_DISTANCE_KM, -1.0)
                         .takeIf { it > 0 }
                         ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
-                    if (dist > 0) {
-                        if (kotlin.math.abs(dist - latestDistanceKm) > 10.0) {
-                            lockedSingleDestSoc = -1
-                        }
-                        latestDistanceKm = dist
-                        showOverlay()
-                        renderOverlay()
-                    }
+                    updateDistanceSafely(dist)
                 }
                 ACTION_HIDE_OVERLAY -> hideOverlay()
                 ACTION_RESET_POSITION -> resetOverlayPosition()
@@ -171,14 +183,7 @@ class OverlayService : Service() {
                 val distance = intent.getDoubleExtra(EXTRA_DISTANCE_KM, -1.0)
                     .takeIf { it > 0 }
                     ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
-                if (distance > 0) {
-                    if (kotlin.math.abs(distance - latestDistanceKm) > 10.0) {
-                        lockedSingleDestSoc = -1
-                    }
-                    latestDistanceKm = distance
-                    showOverlay()
-                    renderOverlay()
-                }
+                updateDistanceSafely(distance)
             }
             ACTION_HIDE_OVERLAY -> {
                 hideOverlay()
