@@ -130,6 +130,8 @@ object AutoPermissionHelper {
                     appops set $targetPkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
                     appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
                     dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
+                    settings put global byd_data_cache_whitelist $targetPkg 1 2>/dev/null || true
+                    cmd appops set $targetPkg TOAST_WINDOW allow 2>/dev/null || true
                     APK_PATH=$(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then
                       echo APK_NOT_FOUND
@@ -186,6 +188,8 @@ object AutoPermissionHelper {
                     val command = """
                         COMPONENT=$component
                         cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
+                        settings put global byd_data_cache_whitelist $targetPkg 1 >/dev/null 2>&1 || true
+                        cmd appops set $targetPkg TOAST_WINDOW allow >/dev/null 2>&1 || true
                         LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
                         case ":${'$'}LISTENERS:" in
                           *":${'$'}COMPONENT:"*) ;;

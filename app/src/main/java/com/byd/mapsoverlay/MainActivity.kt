@@ -1,5 +1,6 @@
 package com.byd.mapsoverlay
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -431,6 +432,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // 1. DiLink 3.0 Specific: Try BYD's custom PermissionManageActivity first
+        try {
+            val bydSettingsIntent = Intent().apply {
+                component = ComponentName(
+                    "com.byd.carsettings",
+                    "com.byd.carsettings.permission.PermissionManageActivity"
+                )
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(bydSettingsIntent)
+            return
+        } catch (_: Exception) {}
+
+        // 2. Standard Android Overlay Settings
         val intent = Intent(
             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
             Uri.parse("package:$packageName")
@@ -448,7 +463,7 @@ class MainActivity : AppCompatActivity() {
                 )
             } catch (fallbackError: Exception) {
                 Log.e("MainActivity", "Unable to open Overlay permission settings", fallbackError)
-                Toast.makeText(this, "เปิดหน้า Overlay permission ไม่ได้", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "เปิดหน้า Overlay permission ไม่ได้ กรุณากดปุ่มเปิดสิทธิ์ผ่าน ADB", Toast.LENGTH_LONG).show()
             }
         }
     }

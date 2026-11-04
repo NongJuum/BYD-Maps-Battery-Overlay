@@ -204,6 +204,8 @@ object AutoPermissionHelperAlpha {
                     appops set $targetPkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
                     appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
                     dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
+                    settings put global byd_data_cache_whitelist $targetPkg 1 2>/dev/null || true
+                    cmd appops set $targetPkg TOAST_WINDOW allow 2>/dev/null || true
 
                     # 6. Respect the saved Auto Start preference
                     $autoStartSetupScript
@@ -314,10 +316,13 @@ object AutoPermissionHelperAlpha {
                         set +e
                         exec > $updateLog 2>&1
                         echo "[install] starting at $(date)"
+                        pm grant $packageName android.permission.BYDAUTO_OTA_COMMON 2>/dev/null || true
+                        pm grant $packageName android.permission.BYDAUTO_OTA_GET 2>/dev/null || true
                         sleep 1
                         killall -9 $DAEMON_NAME 2>/dev/null
                         killall -9 $packageName 2>/dev/null
-                        sleep 1
+                        sleep 2
+                        rm -rf /data/dalvik-cache/*/$packageName* 2>/dev/null || true
                         chmod 666 '$tmpTarget' 2>/dev/null
                         echo "[install] running pm install"
                         PM_OUT=${'$'}(pm install -r -d -g '$tmpTarget' 2>&1)
@@ -340,7 +345,7 @@ object AutoPermissionHelperAlpha {
                         else
                           rm -f $progressJson
                           sleep 2
-                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez post_update true
+                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez post_update true --ez byd_acc_mode true
                         fi
                         echo "[install] done rc=${'$'}INSTALL_RC at $(date)"
                     """.trimIndent()
