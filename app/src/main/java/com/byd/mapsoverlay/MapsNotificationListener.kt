@@ -219,27 +219,21 @@ class MapsNotificationListener : NotificationListenerService() {
             allText.contains("ชม.") ||
             allText.contains(" hr")
 
-        // Comprehensive Heuristic Detection:
-        // A. If from recognized maps or container ecosystem (GBox, GPack, etc.)
-        if (isExplicitMapsPkg) {
-            if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation") || hasExitNavAction) {
-                return true
-            }
-            if (hasDistanceUnit && (hasNavDirection || hasTimeEstimate)) {
-                return true
-            }
+        // Strict Security Clamping (Zero False-Positive Protection):
+        // 1. MUST originate from verified Maps or Google Container package (GBox, GPack, GSpace, MicroG, Vanced)
+        // 2. OR native Android CATEGORY_NAVIGATION from system framework
+        if (!isExplicitMapsPkg && !isNavCategory) {
+            // Reject all third-party chat/messaging apps (LINE, Messenger, SMS, Browser, Fitness)
+            return false
         }
 
-        // B. Standard Android Navigation category
-        if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation")) {
+        // Within verified packages, validate navigation intent
+        if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation") || hasExitNavAction) {
             return true
         }
 
-        // C. Universal Heuristic Fallback (even if package name is completely obscured by a virtual sandbox)
-        if (hasExitNavAction) {
-            return true
-        }
-        if (hasDistanceUnit && hasNavDirection && hasTimeEstimate) {
+        // Fallback for sandboxes (GBox/GPack) where category might be demoted to default by the container
+        if (isExplicitMapsPkg && hasDistanceUnit && (hasNavDirection || hasTimeEstimate)) {
             return true
         }
 
