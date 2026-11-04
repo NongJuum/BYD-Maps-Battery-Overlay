@@ -305,28 +305,57 @@ object AutoPermissionHelperAlpha {
                     }
 
                     onStatus("กำลังส่งคำสั่งติดตั้งให้ Android Package Manager...")
-                    // POSIX subshell detachment: completely independent of parent process and ADB socket.
-                    // When PackageManager terminates the running app process, this detached subshell continues to run.
-                    val launchScript = """
-                        chmod 666 '$tmpTarget'
-                        (
+                    val scriptPath = "/data/local/tmp/beta_update.sh"
+                    val progressJson = "/data/local/tmp/beta_update_progress.json"
+                    val updateLog = "/data/local/tmp/beta_update.log"
+
+                    val scriptContent = """
+                        #!/system/bin/sh
+                        set +e
+                        exec > $updateLog 2>&1
+                        echo "[install] starting at $(date)"
+                        sleep 1
+                        killall -9 $DAEMON_NAME 2>/dev/null
+                        killall -9 $packageName 2>/dev/null
+                        sleep 1
+                        chmod 666 '$tmpTarget' 2>/dev/null
+                        echo "[install] running pm install"
+                        PM_OUT=${'$'}(pm install -r -d -g '$tmpTarget' 2>&1)
+                        INSTALL_RC=${'$'}?
+                        echo "${'$'}PM_OUT"
+                        rm -f '$tmpTarget'
+                        if [ "${'$'}INSTALL_RC" -ne 0 ] || ! echo "${'$'}PM_OUT" | grep -qi 'success'; then
+                          case "${'$'}PM_OUT" in
+                            *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*signatures*do*not*match*)
+                              PM_MSG="ลายเซ็น APK ไม่ตรงกับเวอร์ชันปัจจุบัน กรุณาถอนการติดตั้งตัวเก่าออกก่อน" ;;
+                            *INSTALL_FAILED_INSUFFICIENT_STORAGE*|*No*space*left*)
+                              PM_MSG="พื้นที่ว่างบนจอรถไม่เพียงพอ กรุณาลบไฟล์หรือแอปอื่นออกก่อน" ;;
+                            *)
+                              PM_MSG="${'$'}PM_OUT" ;;
+                          esac
+                          echo "{\"phase\":\"error\",\"message\":\"${'$'}PM_MSG\",\"code\":${'$'}INSTALL_RC}" > $progressJson
+                          chmod 666 $progressJson 2>/dev/null
                           sleep 2
-                          PM_OUT=${'$'}(pm install -r -d -g '$tmpTarget' 2>&1)
-                          RC=${'$'}?
-                          rm -f '$tmpTarget'
-                          if [ ${'$'}RC -eq 0 ] && echo "${'$'}PM_OUT" | grep -qi 'success'; then
-                            sleep 2
-                            am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez post_update true
-                          else
-                            echo "${'$'}PM_OUT" > /data/local/tmp/ota_error.log
-                            chmod 666 /data/local/tmp/ota_error.log
-                            am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez ota_failed true --es ota_status_file /data/local/tmp/ota_error.log
-                          fi
-                        ) </dev/null >/data/local/tmp/ota_log.txt 2>&1 &
-                        echo OTA_LAUNCHED
+                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez ota_failed true --ez post_update false
+                        else
+                          rm -f $progressJson
+                          sleep 2
+                          am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez post_update true
+                        fi
+                        echo "[install] done rc=${'$'}INSTALL_RC at $(date)"
                     """.trimIndent()
 
-                    val launch = dadb.shell(launchScript)
+                    val tempScriptFile = File.createTempFile("beta_upd_", ".sh", appContext.cacheDir)
+                    try {
+                        tempScriptFile.writeText(scriptContent)
+                        dadb.push(tempScriptFile, scriptPath)
+                    } finally {
+                        tempScriptFile.delete()
+                    }
+                    dadb.shell("chmod 755 '$scriptPath'")
+
+                    // Detached execution: completely independent of parent process and ADB socket.
+                    val launch = dadb.shell("( sh '$scriptPath' </dev/null >/dev/null 2>&1 & )\necho OTA_LAUNCHED")
                     if (launch.exitCode != 0 || !launch.output.contains("OTA_LAUNCHED")) {
                         onResult(false, "เริ่มกระบวนการติดตั้ง OTA ไม่สำเร็จ: " + launch.output)
                         return@use

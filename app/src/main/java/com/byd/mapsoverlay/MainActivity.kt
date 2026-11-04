@@ -52,10 +52,30 @@ class MainActivity : AppCompatActivity() {
         }
         MapsNotificationListener.requestRebindIfDisconnected(this)
 
+        // Check for OTA update failure report from detached script
+        val otaProgressFile = java.io.File("/data/local/tmp/beta_update_progress.json")
+        if (otaProgressFile.exists()) {
+            try {
+                val jsonStr = otaProgressFile.readText().trim()
+                if (jsonStr.isNotBlank()) {
+                    val jsonObj = org.json.JSONObject(jsonStr)
+                    if (jsonObj.optString("phase") == "error") {
+                        val errMsg = jsonObj.optString("message", "อัปเดตไม่สำเร็จ")
+                        Toast.makeText(this, "อัปเดตไม่สำเร็จ: $errMsg", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("MainActivity", "Error reading OTA progress file", e)
+            } finally {
+                otaProgressFile.delete()
+            }
+        }
+
         // Post-update: use the stable Main-branch silent BYD permission bootstrap.
         if (intent.getBooleanExtra("post_update", false)) {
             val statusText = findViewById<TextView>(R.id.tv_status)
             statusText.text = getString(R.string.toast_obd_requesting)
+            Toast.makeText(this, "✅ อัปเดตเวอร์ชันใหม่เรียบร้อยแล้ว!", Toast.LENGTH_SHORT).show()
             AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
                 runOnUiThread {
                     statusText.text = if (ready) getString(R.string.toast_obd_success)
@@ -71,11 +91,13 @@ class MainActivity : AppCompatActivity() {
             val statusPath = intent.getStringExtra("ota_status_file")
             val details = try {
                 statusPath?.let { java.io.File(it).readLines().drop(1).joinToString(" ").trim() }
-                    ?.takeIf { it.isNotBlank() } ?: "ไม่พบรายละเอียดจากระบบติดตั้ง"
+                    ?.takeIf { it.isNotBlank() } ?: ""
             } catch (_: Exception) {
-                "ไม่สามารถอ่านรายละเอียดข้อผิดพลาดได้"
+                ""
             }
-            Toast.makeText(this, "อัปเดตไม่สำเร็จ: $details", Toast.LENGTH_LONG).show()
+            if (details.isNotBlank()) {
+                Toast.makeText(this, "อัปเดตไม่สำเร็จ: $details", Toast.LENGTH_LONG).show()
+            }
         }
 
         // Language switcher button

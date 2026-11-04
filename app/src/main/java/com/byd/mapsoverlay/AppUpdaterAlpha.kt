@@ -175,6 +175,46 @@ object AppUpdaterAlpha {
                     return@Thread
                 }
 
+                // Signature Compatibility Check (Pre-check to eliminate Error 255 / INSTALL_FAILED_UPDATE_INCOMPATIBLE)
+                var sigMatch = true
+                try {
+                    val pm = appContext.packageManager
+                    val pkgName = appContext.packageName
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        val currentInfo = pm.getPackageInfo(pkgName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+                        val downInfo = if (android.os.Build.VERSION.SDK_INT >= 33) {
+                            pm.getPackageArchiveInfo(targetFile.absolutePath, android.content.pm.PackageManager.PackageInfoFlags.of(android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES.toLong()))
+                        } else {
+                            pm.getPackageArchiveInfo(targetFile.absolutePath, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+                        }
+                        val currentSigner = currentInfo.signingInfo?.apkContentsSigners?.firstOrNull()
+                        val downSigner = downInfo?.signingInfo?.apkContentsSigners?.firstOrNull()
+                        if (currentSigner != null && downSigner != null) {
+                            sigMatch = java.security.MessageDigest.isEqual(currentSigner.toByteArray(), downSigner.toByteArray())
+                        }
+                    } else {
+                        @Suppress("DEPRECATION")
+                        val currentInfo = pm.getPackageInfo(pkgName, android.content.pm.PackageManager.GET_SIGNATURES)
+                        @Suppress("DEPRECATION")
+                        val downInfo = pm.getPackageArchiveInfo(targetFile.absolutePath, android.content.pm.PackageManager.GET_SIGNATURES)
+                        @Suppress("DEPRECATION")
+                        val currentSigner = currentInfo.signatures?.firstOrNull()
+                        @Suppress("DEPRECATION")
+                        val downSigner = downInfo?.signatures?.firstOrNull()
+                        if (currentSigner != null && downSigner != null) {
+                            sigMatch = java.security.MessageDigest.isEqual(currentSigner.toByteArray(), downSigner.toByteArray())
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Signature pre-check warning", e)
+                }
+
+                if (!sigMatch) {
+                    targetFile.delete()
+                    mainHandler.post { onFinished(false, "ลายเซ็น APK ไม่ตรงกับเวอร์ชันปัจจุบัน กรุณาถอนการติดตั้งแอปเก่าออกก่อน") }
+                    return@Thread
+                }
+
                 mainHandler.post { onStatus("ดาวน์โหลดเสร็จสิ้น กำลังตรวจสอบช่องทางติดตั้ง...") }
                 // Always attempt a real authenticated ADB install; a listening TCP port is not authorization.
                 // On any ADB/auth/install failure, fall back to Android Package Installer for user confirmation.
