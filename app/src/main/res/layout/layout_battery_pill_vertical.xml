@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pill_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_pill_vertical"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:paddingStart="8dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp"
+    android:elevation="10dp">
+
+    <!-- จุดจับลาก (Drag Handle) -->
+    <TextView
+        android:id="@+id/tv_drag_handle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="••••"
+        android:textColor="#55FFFFFF"
+        android:textSize="12sp"
+        android:layout_marginBottom="4dp" />
+
+    <!-- 1. แบตเตอรี่ปลายทาง (SoC Destination) -->
+    <LinearLayout
+        android:id="@+id/container_dest_soc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🏁"
+            android:textSize="12sp"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_destination_soc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--%"
+            android:textColor="#69F0AE"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- เส้นคั่น 1 -->
+    <View
+        android:id="@+id/divider_1"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:background="#26FFFFFF" />
+
+    <!-- 2. ระยะที่รถวิ่งได้จริงคงเหลือ (Real Remaining Range) -->
+    <LinearLayout
+        android:id="@+id/container_real_range"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚗"
+            android:textSize="12sp"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_real_range"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-- km"
+            android:textColor="#40C4FF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- เส้นคั่น 2 -->
+    <View
+        android:id="@+id/divider_2"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:background="#26FFFFFF" />
+
+    <!-- 3. ระยะทางรวม Maps -->
+    <LinearLayout
+        android:id="@+id/container_maps_distance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📍"
+            android:textSize="12sp"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_maps_distance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-- km"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- เส้นคั่น 3 -->
+    <View
+        android:id="@+id/divider_3"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:background="#26FFFFFF" />
+
+    <!-- 4. อัตราสิ้นเปลือง -->
+    <LinearLayout
+        android:id="@+id/container_consumption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚡"
+            android:textSize="12sp"
+            android:paddingEnd="2dp" />
+
+        <TextView
+            android:id="@+id/tv_consumption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#FFD54F"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- สัญลักษณ์แจ้งเตือนแวะชาร์จ -->
+    <TextView
+        android:id="@+id/tv_warning_badge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_alert_badge"
+        android:gravity="center"
+        android:paddingStart="4dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="2dp"
+        android:text="⚠️🔌"
+        android:textColor="#FFFFFF"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+</LinearLayout>

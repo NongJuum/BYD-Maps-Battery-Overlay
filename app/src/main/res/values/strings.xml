@@ -30,6 +30,13 @@
     <string name="legend_content" formatted="false">• 🏁🔋 88-90% = Destination SoC (2% buffer) | 🚗 = Real remaining range\n• 📍 = Distance to destination (Google Maps) | ⚡ = Past 50km avg (kWh/100km)\n• ⚠️🪫 (Yellow) = Battery &lt; 20% | ⚠️🔌 (Red) = Battery insufficient to destination</string>
 
     <!-- Buttons -->
+    <!-- Layout Theme Selector -->
+    <string name="section_layout_title">🎨 3. Overlay Layout &amp; HUD Style</string>
+    <string name="section_layout_desc">Choose your preferred floating HUD layout and display elements.</string>
+    <string name="theme_capsule_name">Modern Capsule (Standard 4 Items)</string>
+    <string name="theme_compact_name">Minimalist Compact (SoC &amp; Real Range)</string>
+    <string name="theme_vertical_name">Vertical Flight HUD (Edge Docking)</string>
+    <string name="btn_one_click_activate">⚡ One-Click Auto Activate (No PC Required)</string>
     <string name="btn_test_overlay">👁️ Test Overlay</string>
     <string name="btn_reset_pos">🔄 Reset Pos</string>
     <string name="btn_perm_overlay">1. Overlay Perm</string>

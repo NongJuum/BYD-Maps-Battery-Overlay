@@ -20,6 +20,8 @@ import android.widget.TextView
 import android.util.Log
 import android.widget.Toast
 import android.widget.Switch
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
@@ -410,6 +412,53 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     tvStatus.text = message
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        val btnOneClickActivate = findViewById<Button>(R.id.btn_one_click_activate)
+        val rgOverlayTheme = findViewById<RadioGroup>(R.id.rg_overlay_theme)
+        val rbThemeCapsule = findViewById<RadioButton>(R.id.rb_theme_capsule)
+        val rbThemeCompact = findViewById<RadioButton>(R.id.rb_theme_compact)
+        val rbThemeVertical = findViewById<RadioButton>(R.id.rb_theme_vertical)
+
+        // Load saved overlay theme
+        val overlayPrefs = getSharedPreferences("byd_overlay_prefs", MODE_PRIVATE)
+        when (overlayPrefs.getInt(OverlayService.KEY_OVERLAY_THEME, OverlayService.THEME_CAPSULE)) {
+            OverlayService.THEME_COMPACT -> rbThemeCompact.isChecked = true
+            OverlayService.THEME_VERTICAL -> rbThemeVertical.isChecked = true
+            else -> rbThemeCapsule.isChecked = true
+        }
+
+        rgOverlayTheme.setOnCheckedChangeListener { _, checkedId ->
+            val selectedTheme = when (checkedId) {
+                R.id.rb_theme_compact -> OverlayService.THEME_COMPACT
+                R.id.rb_theme_vertical -> OverlayService.THEME_VERTICAL
+                else -> OverlayService.THEME_CAPSULE
+            }
+            overlayPrefs.edit().putInt(OverlayService.KEY_OVERLAY_THEME, selectedTheme).apply()
+            sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION).apply {
+                setPackage(packageName)
+            })
+            Toast.makeText(this, "Layout Theme Changed! Re-launching overlay...", Toast.LENGTH_SHORT).show()
+        }
+
+        btnOneClickActivate.setOnClickListener {
+            tvStatus.text = if (isTh) "⚡ กำลังเปิดใช้งานสิทธิ์ทั้งหมดในคลิกเดียว..." else "⚡ One-Click Auto Activating all permissions..."
+            Toast.makeText(this, if (isTh) "หากมีหน้าต่างเตือน ให้ติ๊ก [✓] Always allow แล้วกด [OK]" else "Tap [✓] Always allow & [OK] if prompted", Toast.LENGTH_LONG).show()
+
+            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { mapsResult ->
+                AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
+                    runOnUiThread {
+                        vehicleBridge.restartConnection()
+                        vehicleBridge.notifyUpdate()
+                        sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED).apply {
+                            setPackage(packageName)
+                        })
+                        val successText = if (isTh) "🎉 เปิดสิทธิ์สำเร็จสมบูรณ์! พร้อมใช้งานบนรถได้ทันที" else "🎉 Permissions successfully activated! Ready to use."
+                        tvStatus.text = successText
+                        Toast.makeText(this, successText, Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }

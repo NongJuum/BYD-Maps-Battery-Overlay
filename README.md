@@ -94,21 +94,22 @@ Works out-of-the-box with **DiLink 3.0 (Android 10)**, **DiLink 4.0**, and **DiL
 
 ---
 
-## 📦 Quick Installation Guide
+## 📦 Quick Installation Guide (100% Zero-PC Setup)
 
 ### Step 1: Install APK on Car Head Unit
 1. Download **[BYD-Maps-Battery-Overlay-Beta.apk](https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk)**.
 2. Transfer to a USB drive, plug into vehicle front USB port, and install via native **File Manager**.
-3. Launch the app and grant **Overlay** and **Notification Access** permissions.
+3. Launch the app and grant **Overlay** and **Notification Access** permissions when prompted.
 
-### Step 2: One-Time Zero-Hole ADB Setup (Wireless)
-To enable internal CAN-Bus reading without external dongles, connect to car head unit via Wireless ADB once:
-```bash
-adb connect <CAR_IP_ADDRESS>:5555
-adb shell "appops set com.byd.mapsoverlay.beta SYSTEM_ALERT_WINDOW allow"
-adb shell "cmd notification allow_listener com.byd.mapsoverlay.beta/com.byd.mapsoverlay.MapsNotificationListener"
-```
-*(Or use our built-in one-click AutoPermission helper inside the app!)*
+### Step 2: One-Tap Self-Activation (Directly on Car Screen)
+> ✨ **No Computer or Cable Required!**  
+> The app features an embedded localhost ADB pairing daemon (`dadb 127.0.0.1:5555`).
+
+1. Open the app on your car screen and tap **"⚡ One-Tap Auto Activate"**.
+2. A system prompt will pop up on the car screen:  
+   *`Allow USB debugging from this computer?`*
+3. Check the box **☑️ "Always allow from this computer"** and tap **[OK]**.
+4. That's it! The app automatically grants all CAN-Bus & battery telemetry permissions in the background.
 
 ### Step 3: Enjoy & Update Over-the-Air!
 Whenever you navigate with Google Maps, the smart overlay will automatically wake up and guide your energy trip. When a new release drops, simply tap **"Check Online Update (OTA)"** inside the app!

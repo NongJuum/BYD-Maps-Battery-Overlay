@@ -78,6 +78,10 @@ class OverlayService : Service() {
         const val KEY_SHOW_REAL_RANGE = "show_real_range"
         const val KEY_SHOW_MAPS_DIST = "show_maps_dist"
         const val KEY_SHOW_CONSUMPTION = "show_consumption"
+        const val KEY_OVERLAY_THEME = "overlay_theme"
+        const val THEME_CAPSULE = 0
+        const val THEME_COMPACT = 1
+        const val THEME_VERTICAL = 2
         private const val CHANNEL_ID = "byd_overlay_channel"
     }
 
@@ -282,8 +286,15 @@ class OverlayService : Service() {
     private fun showOverlay() {
         if (overlayView != null) return
 
+        val theme = prefs.getInt(KEY_OVERLAY_THEME, THEME_CAPSULE)
+        val layoutRes = when (theme) {
+            THEME_COMPACT -> R.layout.layout_battery_pill_compact
+            THEME_VERTICAL -> R.layout.layout_battery_pill_vertical
+            else -> R.layout.layout_battery_pill
+        }
+
         val inflater = LayoutInflater.from(this)
-        val view = inflater.inflate(R.layout.layout_battery_pill, null)
+        val view = inflater.inflate(layoutRes, null)
         overlayView = view
 
         tvSocDisplay = view.findViewById(R.id.tv_destination_soc)

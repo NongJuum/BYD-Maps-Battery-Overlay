@@ -258,7 +258,64 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Section 3: Icon Guide -->
+        <!-- Section 3: Overlay Layout Selector -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card_cockpit"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/section_layout_title"
+                android:textColor="#00E5FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/section_layout_desc"
+                android:textColor="#90A4AE"
+                android:textSize="11sp" />
+
+            <RadioGroup
+                android:id="@+id/rg_overlay_theme"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp">
+
+                <RadioButton
+                    android:id="@+id/rb_theme_capsule"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/theme_capsule_name"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_theme_compact"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/theme_compact_name"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_theme_vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/theme_vertical_name"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <!-- Section 4: Icon Guide -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -285,12 +342,25 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
+        <!-- Primary Action: One-Click Auto Activation -->
+        <Button
+            android:id="@+id/btn_one_click_activate"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#00E5FF"
+            android:text="@string/btn_one_click_activate"
+            android:textColor="#000000"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:elevation="6dp" />
+
         <!-- Control and Test Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="8dp">
 
             <Button
                 android:id="@+id/btn_test_overlay"

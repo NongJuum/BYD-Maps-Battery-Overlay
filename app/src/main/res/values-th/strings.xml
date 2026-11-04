@@ -30,6 +30,13 @@
     <string name="legend_content" formatted="false">• 🏁🔋 88-90% = แบตที่จะเหลือเมื่อถึงปลายทาง (เผื่อ Safety Buffer 2%) | 🚗 = ระยะวิ่งจริง\n• 📍 = ระยะทางถึงจุดหมาย (Google Maps) | ⚡ = อัตรากินไฟ 50km (kWh/100km)\n• ⚠️🪫 (สีเหลือง) = แบตต่ำกว่า 20% | ⚠️🔌 (สีแดง) = แบตไม่พอถึงปลายทาง แนะนำแวะชาร์จ!</string>
 
     <!-- Buttons -->
+    <!-- Layout Theme Selector -->
+    <string name="section_layout_title">🎨 3. สไตล์และเลย์เอาต์แถบลอย (Overlay Layout)</string>
+    <string name="section_layout_desc">เลือกรูปแบบแถบลอยและข้อมูลที่ต้องการแสดงตามความถนัดของคนขับ</string>
+    <string name="theme_capsule_name">แคปซูลแนวนอน (Modern Capsule - ครบ 4 ค่า)</string>
+    <string name="theme_compact_name">มินิมอลคอมแพค (Minimalist Compact - แบต &amp; ระยะวิ่ง)</string>
+    <string name="theme_vertical_name">แถบแนวตั้ง (Vertical HUD - แนบขอบจอ/จอตั้ง)</string>
+    <string name="btn_one_click_activate">⚡ เปิดสิทธิ์อัตโนมัติในคลิกเดียว (ไม่ต้องใช้คอมพิวเตอร์)</string>
     <string name="btn_test_overlay">👁️ แสดง/ทดสอบแถบลอย</string>
     <string name="btn_reset_pos">🔄 รีเซ็ตตำแหน่ง</string>
     <string name="btn_perm_overlay">1. สิทธิ์วางทับหน้าจอ</string>
