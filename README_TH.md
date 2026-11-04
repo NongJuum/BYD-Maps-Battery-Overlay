@@ -1,11 +1,18 @@
 # ⚡ BYD Smart EV Route & Battery Overlay
 
 <p align="center">
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/releases/latest">
-    <img src="https://img.shields.io/badge/ดาวน์โหลด-รุ่นเสถียร%20(v1.0.0)-00C853?style=for-the-badge&logo=android&logoColor=white" />
+  <img src="assets/hero_banner.jpg" alt="BYD Smart EV Route &amp; Battery Overlay Hero Banner" width="100%" style="border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
+    <img src="https://img.shields.io/badge/เวอร์ชันล่าสุด-v1.2.0--beta-0284C7?style=for-the-badge&logo=android&logoColor=white" />
   </a>
-  <a href="BYD-Maps-Battery-Overlay-Alpha.apk">
-    <img src="https://img.shields.io/badge/ดาวน์โหลด-รุ่นทดสอบ%20Alpha%20(DiLink%203)-FF6D00?style=for-the-badge&logo=android&logoColor=white" />
+  <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk">
+    <img src="https://img.shields.io/badge/ดาวน์โหลด-ไฟล์%20APK%20ตรง-00E676?style=for-the-badge&logo=googleplay&logoColor=black" />
+  </a>
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
+    <img src="https://img.shields.io/badge/OTA-อัปเดตผ่านจอรถได้ทันที-FFD600?style=for-the-badge&logo=git&logoColor=black" />
   </a>
 </p>
 
@@ -14,212 +21,118 @@
 </p>
 
 <p align="center">
-  <b>แอปพลิเคชันแถบลอยอัจฉริยะ (Floating Overlay) แสดง % แบตเตอรี่ปลายทาง และระยะวิ่งจริงแบบ Real-Time สำหรับรถยนต์ไฟฟ้า BYD ทุกรุ่น</b><br>
-  ทำงานร่วมกับ Google Maps และซิงค์ข้อมูลสดจากกล่องควบคุมรถ (OBD / BMS) โดยไม่ต้องซื้ออุปกรณ์ฮาร์ดแวร์เสริม
+  <b>แอปพลิเคชัน HUD แถบลอยอัจฉริยะ (Floating Overlay) ออกแบบพิเศษสำหรับรถยนต์ไฟฟ้า BYD (DiLink 3 / 4 / 5) โดยเฉพาะ</b><br>
+  คำนวณ <b>% แบตเตอรี่คงเหลือเมื่อถึงจุดหมายปลายทาง (SoC %)</b> และ <b>ระยะทางวิ่งได้จริง (Real Range)</b> แสดงควบคู่กับ Google Maps แบบ Real-time ดึงข้อมูลตรงจากกล่อง CAN-Bus และ BMS ของรถโดยไม่ต้องใช้อุปกรณ์ OBD ภายนอกเสริม!
 </p>
 
 ---
 
-## 🚀 รุ่นทดสอบพิเศษ Alpha Edition (`com.byd.mapsoverlay.alpha`)
+## ✨ มีอะไรใหม่ในเวอร์ชัน v1.2.0-beta (อัปเกรดใหญ่ล่าสุด)
 
-> [!TIP]
-> **ติดตั้งคู่กับตัวเดิมได้ทันที (Side-by-Side Test):** รุ่น Alpha ใช้ Package Name แยกเป็น `com.byd.mapsoverlay.alpha` และชื่อแอปแสดงผลว่า **"BYD Maps (Alpha)"** จึงสามารถลงทับคู่กับตัว Release เดิมได้โดยตรง เพื่อทดสอบว่าตัว Alpha ปลดล็อกสิทธิ์และดึงข้อมูลรถได้ด้วยตัวเองจริงหรือไม่ โดยไม่แชร์ผลบุญสิทธิ์จากแอปเดิม
+<table>
+  <tr>
+    <td width="50%">
+      <h3>🔄 จำตำแหน่งแยกแนวนอน/แนวตั้ง</h3>
+      ตรวจจับการหมุนจอ DiLink อัตโนมัติ (Portrait ↔ Landscape) บันทึกพิกัดแยกกัน และดีดกลับเข้าตำแหน่งที่คนขับตั้งไว้อย่างแม่นยำ ไม่หลุดขอบจอ
+    </td>
+    <td width="50%">
+      <h3>📌 วางทับ Status Bar ด้านบนสุด</h3>
+      ปลดล็อกขอบเขตบนสุด ให้สามารถลากแคปซูลขึ้นไปวางบนแถบ Status Bar ด้านบนได้เนียนตา ช่วยประหยัดพื้นที่แสดงผลแผนที่ได้สูงสุด
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🌙 Night Vision หรี่แสงอัตโนมัติ</h3>
+      ซิงก์กับไฟหน้ารถและโหมดกลางคืนของระบบ DiLink หรี่แสงลงเหลือ 72% แบบ Low-Glow ทันทีเมื่อเข้าอุโมงค์หรือขับเวลากลางคืน ไม่แยงตาคนขับ
+    </td>
+    <td width="50%">
+      <h3>🔌 คำนวณจำนวนครั้งที่ควรแวะชาร์จ</h3>
+      วิเคราะห์ระยะทาง Maps และความจุแบตเตอรี่ พร้อมบอกจำนวนครั้งที่ควรแวะชาร์จด่วน DC Fast Charge (ช่วง 10% ➔ 80%) สำหรับทริปทางไกล
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🎯 ตัวเลขเดี่ยวอ่านง่าย (~XX%)</h3>
+      แสดงตัวเลขแบตปลายทางแบบค่าเดี่ยวชัดเจน พร้อม Deadband Window ป้องกันตัวเลขกระตุกหรือวูบวาบเวลาเหยียบคันเร่งแซง
+    </td>
+    <td width="50%">
+      <h3>📲 อัปเดตผ่านจอรถได้ทันที (OTA)</h3>
+      กดอัปเดตเวอร์ชันใหม่ได้ในคลิกเดียวจากในแอปบนหน้าจอรถ ไม่ต้องใช้คอมพิวเตอร์ ไม่ต้องรัน ADB หรือเสียบแฟลชไดรฟ์ใหม่อีกต่อไป
+    </td>
+  </tr>
+</table>
 
-### 🔬 โครงสร้างการทำงานระดับลึก (Direct Hardware Bus Architecture)
-รุ่น Alpha ออกแบบการเชื่อมต่อระบบระดับลึกสำหรับจอ DiLink 3 (Android 10) โดยเฉพาะ:
-1. **Hidden API Bypass:** ปลดล็อกข้อจำกัด Non-SDK Interface ผ่าน `VMRuntime.getRuntime().setHiddenApiExemptions(["L"])` ทำให้เข้าถึง `android.hardware.bydauto.*` ได้โดยตรง
-2. **ดึง System Context ผ่าน ActivityThread:**
-   สร้าง Worker Thread เรียก `ActivityThread.systemMain().getSystemContext().createPackageContext(packageName, 3)` เพื่อให้ได้ Context สิทธิ์ระดับ System (UID 1000)
-3. **ลงทะเบียน Whitelist กับ Service ของ BYD:**
-   - **`accmodemanager`**: ยิงคำสั่ง `setPkg2AccWhiteList(packageName)` ป้องกันระบบรถตัดสัญญาณหรือฆ่าแอปขณะขับขี่และตอนดับ/สตาร์ทรถ
-   - **`bg_datacache`**: สั่ง `setAppOpsData(uid, 0)` ให้ตัวอ่านข้อมูลรถยอมรับการเชื่อมต่อจาก UID ของแอป
-   - **`BYDAutoStartupAppDevice`**: เปิดใช้งาน `setStartupAppEnable(packageName, true)`
-4. **Hardware Polling พร้อม Caching:** ดึงค่าแบตเตอรี่ตรงจากฮาร์ดแวร์รถ รองรับทั้ง `self()` (Singleton ดั้งเดิมของ DiLink 3) และ `getInstance(Context)`
-5. **Zero-Hole ADB Setup:**
-   - มีช่วงรอตรวจจับพอร์ต 5555 นาน 15 วินาที พร้อมลูป Background Polling 2.5 นาที ให้คนขับมีเวลากดติ๊ก `[✓] Always allow from this computer` และ `[OK]` บนจอรถ
-   - รันชุดคำสั่งปรับแต่งระบบอัตโนมัติ 10 คำสั่งทันทีที่เชื่อมต่อได้:
-     ```bash
-     setprop persist.sys.acc.whitelist 'com.byd.mapsoverlay.alpha'
-     service call accmodemanager 1 s16 'com.byd.mapsoverlay.alpha'
-     service call accmodemanager 2 s16 'com.byd.mapsoverlay.alpha'
-     service call accmodemanager 3 s16 'com.byd.mapsoverlay.alpha'
-     appops set com.byd.mapsoverlay.alpha RUN_IN_BACKGROUND allow
-     appops set com.byd.mapsoverlay.alpha RUN_ANY_IN_BACKGROUND allow
-     appops set com.byd.mapsoverlay.alpha WAKE_LOCK allow
-     cmd appops set com.byd.mapsoverlay.alpha AUTO_START allow
-     cmd appops set com.byd.mapsoverlay.alpha BOOT_COMPLETED allow
-     dumpsys deviceidle whitelist +com.byd.mapsoverlay.alpha
-     settings put global ssc_whitelist ...
-     settings put secure ssc_whitelist ...
-     content call --uri content://com.byd.appstartup/whitelist --method add --arg 'com.byd.mapsoverlay.alpha'
-     setprop persist.sys.adb.status_memory_enable true
-     ```
-   - รัน Background Telemetry Daemon ผ่านคำสั่ง `nohup` บน Loopback Port 19890 ป้องกันการโดนตัด Process
-6. **ระบบฟื้นฟู Overlay อัตโนมัติ:** เมื่อได้รับสิทธิ์จาก ADB จะรีเซ็ตและนำแถบ Overlay ขึ้นมาแสดงผลบนหน้าจอทันทีโดยไม่ติดสถานะ Error ค้าง
+---
+
+## 🎨 ระบบสีแบตเตอรี่แบบไล่เฉด 6 ระดับ (Dynamic 6-Tier Gradient)
+
+สีของตัวเลขแบตเตอรี่ปลายทางจะเปลี่ยนไปตามระดับความปลอดภัยของการขับขี่ EV:
+
+| ช่วง % แบตเตอรี่ | รหัสสี (Hex) | สัญลักษณ์สี | ความหมายเชิงการขับขี่จริง |
+| :---: | :---: | :---: | :--- |
+| **0% – 10%** | `#FF1744` | 🔴 **แดงสด (Crimson Red)** | วิกฤต! เสี่ยงเข้าสู่ Turtle Mode หรือรถดับกลางทาง |
+| **10% – 30%** | `#FF6D00` | 🟠 **ส้มเข้ม (Deep Amber)** | แบตเตอรี่ต่ำ ต้องเตรียมวางแผนแวะชาร์จ |
+| **30% – 50%** | `#FFD600` | 🟡 **เหลืองสด (Electric Yellow)** | ระดับปานกลาง วิ่งได้สบายแต่ต้องคอยสังเกต |
+| **50% – 75%** | `#AEEA00` | 🟢 **เขียวตองอ่อน (Lime Green)** | แบตเตอรี่พอเหมาะ ปลอดภัยสำหรับการเดินทาง |
+| **75% – 95%** | `#00E676` | 🟢 **เขียวมรกต (Vibrant Emerald)** | แบตเตอรี่เหลือเฟือ ขับขี่ได้อย่างไร้กังวล |
+| **95% – 100%** | `#00E5FF` | 🔵 **ฟ้าสว่าง (Electric Cyan)** | แบตเตอรี่เต็มเปี่ยม (เพิ่งชาร์จเต็มหรือวิ่งระยะใกล้) |
+
+---
+
+## 🏎️ รุ่นรถยนต์ BYD ที่รองรับ
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Developer-Nontarat%20Hasitapong-00E676?style=for-the-badge&logo=android" />
-  <img src="https://img.shields.io/badge/Platform-BYD%20DiLink%20%7C%20Android-green?style=for-the-badge&logo=android" />
-  <img src="https://img.shields.io/badge/Google%20Maps-Supported-blue?style=for-the-badge&logo=googlemaps" />
-  <a href="https://www.buymeacoffee.com/nongjuum"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-nongjuum-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" /></a>
-  <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/BYD-Dolphin%20Standard%20%2F%20Extended-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/BYD-Atto%203%20Standard%20%2F%20Extended-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/BYD-Seal%20Dynamic%20%2F%20Premium%20%2F%20Performance-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/BYD-Sealion%206%20%2F%20DM--i-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/BYD-M6%20%2F%20Tang%20%2F%20Han-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/Custom-ตั้งค่าขนาดแบตเองได้-green?style=flat-square" />
 </p>
 
-<p align="center">
-  <img src="assets/hero_banner.jpg" alt="BYD Smart EV Route &amp; Battery Overlay Hero Banner" width="100%" style="border-radius: 12px;" />
-</p>
+รองรับระบบหน้าจอ **DiLink 3.0 (Android 10)**, **DiLink 4.0**, และ **DiLink 5.0** ครบทุกรุ่น และสามารถปรับเปลี่ยนขนาดความจุแบตเตอรี่ (kWh) รวมถึงสุขภาพแบต (SOH %) ได้อย่างอิสระในเมนูตั้งค่า
 
 ---
 
-### 👨‍💻 ข้อมูลผู้พัฒนา (Author & Developer)
-- **ผู้พัฒนา (Developer):** Nontarat Hasitapong
-- **อีเมลติดต่อ / Support:** [canon.non.7@gmail.com](mailto:canon.non.7@gmail.com)
+## 📦 ขั้นตอนการติดตั้งง่ายๆ
 
----
+### ขั้นตอนที่ 1: ติดตั้งแอปบนหน้าจอรถ
+1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Beta.apk](https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk)**
+2. ก๊อปปี้ใส่ USB Flash Drive เสียบเข้าพอร์ต USB หน้ารถ และกดติดตั้งผ่านแอป **ตัวจัดการไฟล์ (File Manager)** ของรถ
+3. เปิดแอปและกดเปิดสิทธิ์ **แสดงทับแอปอื่น (Overlay)** และ **การแจ้งเตือน (Notification)**
 
-## 🌟 ฟีเจอร์เด่น (Key Features)
-
-- **🏁🔋 คำนวณ % แบตเตอรี่ปลายทางล่วงหน้า (Destination SoC %)**:
-  - คำนวณจากพลังงานคงเหลือจริงในแบตเตอรี่ (kWh) จาก BMS + อัตรากินไฟเฉลี่ย 50 กม. ล่าสุด (Past 50 km) + ระยะทางรวมถึงจุดหมายจาก Google Maps
-  - แสดงผลเป็น **ช่วงคาดการณ์ปลอดภัย (เผื่อ Safety Buffer 2%)** เช่น `88-90%` หรือ `48-50%` เพื่อรองรับกรณีรถติด แอร์สู้แดด หรือการขับขึ้นทางชัน
-  - คำนวณใหม่ทันทีแบบเรียลไทม์เมื่อมีการเปลี่ยนเส้นทาง (Reroute) หรือเลี้ยวผิด
-- **🚗 ระยะทางวิ่งได้จริงคงเหลือ (Real Remaining Range)**:
-  - บอกระยะกิโลเมตรที่รถวิ่งได้จริงตามสภาพการขับขี่ปัจจุบัน (ไม่ใช่ตัวเลข NEDC หลอกตาบนหน้าปัด)
-- **⚠️ ระบบแจ้งเตือนอัจฉริยะ (Smart Tri-Color Alert)**:
-  - 🟢 **เขียว**: แบตเตอรี่เพียงพอต่อการเดินทาง
-  - 🟡 **เหลือง (`⚠️🪫`)**: เตือนล่วงหน้าเมื่อแบตเตอรี่ปัจจุบันหรือที่ปลายทางจะเหลือต่ำกว่า 20%
-  - 🔴 **แดง (`⚠️🔌`)**: เตือนทันทีเมื่อแบตเตอรี่ไม่พอถึงปลายทาง (หรือเหลือน้อยกว่า 2%) แนะนำให้หาจุดชาร์จระหว่างทาง
-- **📡 เชื่อมต่อ OBD / BMS ของรถโดยตรง**:
-  - ดึงข้อมูลจากระบบรถยนต์ BYD โดยตรง ไม่ต้องเสียบดองเกิล OBD2 เพิ่มเติม
-  - รองรับรถ BYD ทุกรุ่น (Dolphin Standard/Extended, Atto 3, Seal, M6, Sealion 6 DM-i, Sealion 7 ฯลฯ)
-  - มีเมนูเลือกรุ่นรถ หรือระบุขนาดแบตเตอรี่ (kWh) และค่าสุขภาพแบตเตอรี่ (SOH) ได้เอง
-- **🗺️ รองรับ Google Maps ทุกเวอร์ชัน**:
-  - Google Play Store, Aurora Store, Morphe, Vanced / ReVanced, MicroG, GBox, Gspace, GPad
-  - รองรับทั้งหน้าจอเดิมติดรถ (DiLink) และหน้าจอแต่ง **Dudu Launcher (รวมถึงโหมด PIP ย่อหน้าต่าง)**
-- **🖐️ หน้าต่างลอยปรับแต่งอิสระ (Movable & Pinch-to-Scale)**:
-  - สัญลักษณ์มินิมอล ไม่บดบังแผนที่
-  - แตะลากวางตำแหน่งใดก็ได้บนหน้าจอ (รวมถึงวางทับแถบ Status Bar ด้านบน)
-  - ใช้ 2 นิ้วถ่างเข้า-ออกเพื่อย่อ/ขยายขนาดแถบลอยได้อิสระ
-
----
-
-## 📊 ความหมายของสัญลักษณ์บนแถบลอย (Pill Overlay)
-
-> `⠿` | `🏁🔋 88-90%` | `🚗 410 km` | `📍 25.4 km` | `⚡ 10.2` | `⚠️🔌`
-
-| สัญลักษณ์ | ความหมาย |
-| :---: | :--- |
-| **`⠿`** | จุดจับสำหรับแตะลากย้ายตำแหน่งแถบลอย |
-| **`🏁🔋`** | เปอร์เซ็นต์แบตเตอรี่ที่จะเหลือเมื่อถึงจุดหมายปลายทาง (พร้อม Safety Buffer 2%) |
-| **`🚗`** | ระยะทางที่รถสามารถวิ่งได้จริงคงเหลือในขณะนี้ (คำนวณจาก BMS + Past 50km) |
-| **`📍`** | ระยะทางรวมจากตำแหน่งปัจจุบันไปยังจุดหมายปลายทาง (จาก Google Maps) |
-| **`⚡`** | อัตรากินไฟเฉลี่ย 50 กม. ล่าสุดของตัวรถ (kWh/100km) ดึงสดจากหน้าปัด |
-| **`⚠️🪫`** | ป้ายเตือนสีเหลือง: แบตเตอรี่ต่ำกว่า 20% |
-| **`⚠️🔌`** | ป้ายเตือนสีแดง: พลังงานไม่เพียงพอถึงจุดหมาย กรุณาวางแผนแวะชาร์จระหว่างทาง |
-
----
-
-## 📦 ความต้องการของระบบและแอปที่เกี่ยวข้อง (Prerequisites & Dependencies)
-
-- **🚗 ยานพาหนะที่รองรับ:** รถยนต์ไฟฟ้า BYD ทุกรุ่นที่ใช้หน้าจอระบบ Android DiLink (DiLink 3.0, 4.0, 5.0) เช่น Dolphin, Atto 3, Seal, M6, Sealion 6 DM-i, Sealion 7 ฯลฯ
-- **🔌 อุปกรณ์ฮาร์ดแวร์เสริม:** **ไม่ต้องใช้!** (ไม่ต้องเสียบกล่อง OBD2 หรือหัวแปลง Bluetooth/Wi-Fi Dongle เสริมใดๆ ทั้งสิ้น ดึงข้อมูลสดจากระบบรถโดยตรง)
-- **📱 แอปอื่นๆ เพิ่มเติม:** **ไม่จำเป็นต้องพึ่งพาแอปเสริมใดๆ! (ทำงานอิสระ 100%)**
-  - ไม่จำเป็นต้องติดตั้งแอป Launcher อื่นๆ, Tasker หรือ Shizuku ก็ใช้งานได้สมบูรณ์
-  - รองรับทั้งหน้าจอเดิมติดรถ (DiLink Default Launcher) และหน้าจอแต่ง (เช่น DUDU Launcher)
-- **🗺️ แอปนำทาง (Navigation):** ติดตั้ง **Google Maps** บนจอรถ (รองรับทุกเวอร์ชัน: Google Play Store, Aurora Store, MicroG, Vanced, GBox, Gspace) เพื่อให้ตัวระบบสามารถอ่านระยะทางคงเหลือของเส้นทางมาคำนวณ % แบตเตอรี่ปลายทางได้อย่างแม่นยำ
-
----
-
-## 📥 วิธีติดตั้งและเปิดใช้งาน (Installation & Activation Guide)
-
-### ขั้นตอนที่ 1: ติดตั้งแอป
-1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Alpha.apk (ลิงก์ตรง)](BYD-Maps-Battery-Overlay-Alpha.apk)**
-2. ก๊อปปี้ไฟล์ `.apk` ใส่แฟลชไดรฟ์ USB นำไปเสียบที่พอร์ตคอนโซลรถ แล้วเปิดติดตั้งผ่านแอป **จัดการไฟล์ (File Manager)**
-3. เปิดแอป **BYD Maps (Alpha)** แล้วกดเปิดสิทธิ์ Overlay และ Notification Listener
-
----
-
-### ขั้นตอนที่ 2: ปลดล็อกการอ่านข้อมูลรถ (One-Time Activation via ADB)
-> ⚠️ **ทำไมต้องทำขั้นตอนนี้?**  
-> บนระบบของ BYD (DiLink 3.0 / 4.0 / 5.0) สิทธิ์การอ่านข้อมูลแบตเตอรี่และ CAN-Bus (`BYDAUTO_STATISTIC_GET`) ถูกล็อกไว้เป็น **Signature Permission** ของโรงงาน BYD จึงต้องรัน Service ผ่าน ADB Shell (UID 2000) เพื่อเชื่อมต่อข้อมูลระดับฮาร์ดแวร์โดยตรง:
-
-1. ให้คอมพิวเตอร์และหน้าจอรถเชื่อมต่อ Wi-Fi วงเดียวกัน (หรือแชร์ Wi-Fi Hotspot)
-2. ดู IP Address ของจอรถในการตั้งค่า Wi-Fi ของรถ (เช่น `10.51.77.234` หรือ `192.168.1.xxx`)
-3. เปิด Terminal หรือ PowerShell ในคอมพิวเตอร์ แล้วรันคำสั่ง:
-   ```bash
-   adb connect <IP_ของจอรถ>:5555
-   adb shell "CLASSPATH=\$(pm path com.byd.mapsoverlay.alpha | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &"
-   ```
-4. ที่หน้าจอรถ ข้อมูล % แบตเตอรี่ (SoC), ระยะทางวิ่งจริง และอัตรากินไฟเฉลี่ยจะเริ่มซิงค์สดทันที!
-
-> **💡 หมายเหตุ:**
-> - ระบบทำงานผ่านพอร์ตเฉพาะ (19890) ภายในเครื่องแบบแยกส่วน (Loopback) ไม่รบกวนแอปอื่น
-> - เมื่อเปิด Google Maps ระบบจะคำนวณและแสดงแถบลอยบนหน้าจออัตโนมัติ
-
----
-
-### ขั้นตอนที่ 3: ตั้งค่าให้แอปเริ่มทำงานอัตโนมัติและไม่ถูกระบบปิด (Auto Start & Background Keep-Alive)
-เพื่อให้แอปทำงานได้อย่างต่อเนื่องเมื่อสตาร์ตรถ และไม่ถูกระบบประหยัดพลังงานของ BYD DiLink ปิดการทำงานในพื้นหลัง:
-
-#### 1. อนุญาตผ่านคำสั่ง ADB (รวดเร็วที่สุดในคำสั่งเดียว)
-รันคำสั่งต่อไปนี้ใน Terminal / PowerShell:
+### ขั้นตอนที่ 2: ให้สิทธิ์เข้าถึง CAN-Bus รถ (ครั้งแรกครั้งเดียวผ่าน ADB ไร้สาย)
+เชื่อมต่อคอมพิวเตอร์เข้ากับ Wi-Fi เดียวกับรถยนต์ และพิมพ์คำสั่งใน Terminal:
 ```bash
-adb shell "dumpsys deviceidle whitelist +com.byd.mapsoverlay"
-adb shell "appops set com.byd.mapsoverlay RUN_IN_BACKGROUND allow"
-adb shell "appops set com.byd.mapsoverlay RUN_ANY_IN_BACKGROUND allow"
-adb shell "appops set com.byd.mapsoverlay START_FOREGROUND allow"
+adb connect <ไอพีหน้าจอรถ>:5555
+adb shell "appops set com.byd.mapsoverlay.beta SYSTEM_ALERT_WINDOW allow"
+adb shell "cmd notification allow_listener com.byd.mapsoverlay.beta/com.byd.mapsoverlay.MapsNotificationListener"
 ```
+*(หรือกดปุ่มตัวช่วยอัตโนมัติ AutoPermission ในหน้าแอปได้ทันที!)*
 
-#### 2. เปิดสิทธิ์เริ่มทำงานอัตโนมัติในหน้าจอรถ (BYD App Start Management)
-1. เปิดเมนู **การตั้งค่ารถ (Vehicle Settings)** -> **การจัดการแอปพลิเคชัน (App Management)** -> **การจัดการเริ่มทำงานอัตโนมัติ (App Start Management)**
-2. เลื่อนหาแอป **BYD Maps Battery** แล้วแตะเปิดสวิตช์อนุญาต (Allow Auto Start)
-   *(หรือสามารถเปิดหน้านี้ผ่าน ADB ได้ทันทีด้วยคำสั่ง: `adb shell "am start -n com.byd.appstartmanagement/.frame.AppStartManagement"`)*
-
----
-
-### 📱 วิธีปลุก Service โดยไม่ต้องใช้คอมพิวเตอร์ (เมื่อมีการ Cold Reboot จอ)
-> **💡 ต้องทำตอนไหน?**  
-> ในการใช้งานประจำวันปกติ (ดับรถ, จอดรถ, ล็อครถ) จอรถจะเข้าสู่โหมด Sleep / Suspend to RAM ข้อมูลและ Service จะยังคงทำงานอยู่ **ไม่ต้องรันใหม่**  
-> หากวันใดมีการ **Cold Reboot จอ** (เช่น กดลูกกลิ้งพวงมาลัยค้าง 10 วิเพื่อ Restart จอ หรือรถอัปเดต OTA ใหม่) สามารถใช้สมาร์ทโฟน Android สั่งปลุก Service ได้ในไม่กี่วินาทีโดยไม่ต้องใช้คอมพิวเตอร์:
-
-1. ติดตั้งแอปฟรี **[Bugjaeger Mobile ADB](https://play.google.com/store/apps/details?id=eu.sisik.hackendebug)** จาก Google Play Store บนมือถือ Android
-2. ให้มือถือต่อ Wi-Fi หรือ Hotspot เดียวกันกับจอรถ
-3. เปิดแอป Bugjaeger &rarr; แตะไอคอนปลั๊ก (Connect) &rarr; ใส่ IP ของจอรถ (เช่น `10.51.77.234:5555`) แล้วกด **Connect**
-4. ไปที่แท็บ **Commands** (หรือ **Interactive Shell**) วางคำสั่งนี้แล้วกด Run:
-   ```bash
-   CLASSPATH=$(pm path com.byd.mapsoverlay | cut -d: -f2) app_process / com.byd.mapsoverlay.BydTelemetryDaemon </dev/null >/dev/null 2>&1 &
-   ```
-   *(แนะนำให้กดบันทึกคำสั่งไว้เป็น Favorite ในแอป Bugjaeger เพื่อความสะดวกรวดเร็วในการแตะใช้งาน)*
+### ขั้นตอนที่ 3: พร้อมใช้งานและอัปเดตแบบไร้สาย!
+ทุกครั้งที่เปิด Google Maps นำทาง ตัว Overlay จะลอยขึ้นมาอัตโนมัติ และเมื่อมีฟีเจอร์เวอร์ชันใหม่ เพียงกดปุ่ม **"ตรวจสอบอัปเดตออนไลน์ (OTA)"** ในแอป หน้าจอรถจะโหลดและติดตั้งเองทันที!
 
 ---
 
-> **หมายเหตุ:** หากต้องการลากแถบลอยไปวางตำแหน่งที่ต้องการหรือทดสอบขนาด สามารถกดปุ่ม **"👁️ แสดง/ทดสอบแถบลอย"** ในหน้าแอปได้ทันที
+## ☕ ร่วมสนับสนุนผู้พัฒนา (Community Spirit)
 
----
-
-## ☕ ร่วมสนับสนุนผู้พัฒนา (Support & Donate)
-
-> **💡 นโยบายการนำไปใช้งานต่อ (Open Source & Community Spirit):**  
-> ใครจะนำโปรเจกต์นี้ โค้ด หรือตัวแอปไปใช้งาน ดัดแปลง แก้ไข หรือนำไปพัฒนาปรับปรุงต่อ **สามารถนำไปใช้ได้อย่างอิสระเต็มที่เลยครับ!**  
-> แต่หากมีความเมตตา และเห็นว่าสิ่งนี้มีประโยชน์ อยากแบ่งปัน **ค่าขนม / ค่าลูกอม / ค่าน้ำชา** ให้ผมสักนิดเพื่อเป็นกำลังใจเล็กๆ น้อยๆ ในการสร้างสรรค์ผลงานต่อไป ก็ยินดีและขอบพระคุณจากใจจริงครับ 🙏🍬❤️
+> **💡 ฟรีและโอเพ่นซอร์ส 100%:**  
+> ทุกท่านสามารถนำโปรเจกต์นี้ไปใช้งาน ปรับแต่ง หรือศึกษาได้อย่างอิสระครับ  
+> หากแอปนี้ช่วยให้คุณขับขี่รถยนต์ไฟฟ้า BYD ได้อย่างมั่นใจและสบายใจยิ่งขึ้น การเลี้ยงกาแฟหรือขนมเล็กๆ น้อยๆ แก่ผู้พัฒนา ถือเป็นกำลังใจที่อบอุ่นและมีคุณค่าอย่างยิ่งครับ! 🙏🍬☕❤️
 
 <p align="center">
   <a href="https://www.buymeacoffee.com/nongjuum" target="_blank">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50" />
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="52" />
   </a><br><br>
-  <img src="assets/qr_buymeacoffee.png" width="180" alt="Buy Me A Coffee QR Code" /><br>
+  <img src="assets/qr_buymeacoffee.png" width="180" alt="Buy Me A Coffee QR Code" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);" /><br>
   <b><a href="https://www.buymeacoffee.com/nongjuum">buymeacoffee.com/nongjuum</a></b><br>
-  <i>(รองรับทั้งบัตรเครดิต/เดบิต, Apple Pay, Google Pay ทั่วโลก ปลอดภัย 100%)</i>
+  <i>(รองรับบัตรเดบิต/เครดิต, Apple Pay, Google Pay)</i><br>
+  <b>Skrill:</b> <code>canon.non.7@gmail.com</code>
 </p>
 
-### 🌐 ช่องทางอื่นๆ:
-- **Skrill (ต่างประเทศ / International):** `canon.non.7@gmail.com`
 ---
 
-## 📄 License & Attribution
-
-Copyright (c) 2026 Nontarat Hasitapong.  
-Distributed under the MIT License.
-
-
-<!-- Rebuild trigger: verify legacy APK signature compatibility for Android 10 IVI installers. -->
+## 👨‍💻 ผู้พัฒนาและสัญญาอนุญาต
+- **ผู้พัฒนาหลัก:** นนทราษฎร์ หะสิตะพงษ์ ([canon.non.7@gmail.com](mailto:canon.non.7@gmail.com))
+- **สัญญาอนุญาต:** MIT License — เพื่อสังคมผู้ใช้รถ EV ทุกคน
