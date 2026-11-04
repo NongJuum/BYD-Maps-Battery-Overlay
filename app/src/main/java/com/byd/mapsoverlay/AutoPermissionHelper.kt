@@ -94,6 +94,7 @@ object AutoPermissionHelper {
             return false
         }
 
+        val targetPkg = context.packageName
         return try {
             // Dadb 1.2.8 provides bounded connect and socket timeouts.
             Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
@@ -104,9 +105,83 @@ object AutoPermissionHelper {
                 val command = """
                     # Grant only the runtime COMMON permissions requested by this app.
                     for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                      pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                      pm grant ${' android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                     done
-                    APK_PATH=$(pm path com.byd.mapsoverlay | sed -n 's/^package://p' | head -n 1)
+                    APK_PATH=$(pm path TARGETPKG | sed -n 's/^package://p' | head -n 1)
+                    if [ -z "${'$'}APK_PATH" ]; then
+                      echo APK_NOT_FOUND
+                      exit 21
+                    fi
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo ALREADY_RUNNING
+                      exit 0
+                    fi
+                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    sleep 1
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo STARTED
+                      exit 0
+                    fi
+                    cat /data/local/tmp/$DAEMON_NAME.log 2>/dev/null
+                    echo START_FAILED
+                    exit 22
+                """.trimIndent()
+
+                val response = adb.shell(command)
+                val output = response.output
+                Log.i(TAG, "ADB daemon launch exit=${response.exitCode}; output=${output.take(1200)}")
+                response.exitCode == 0 &&
+                    (output.contains("STARTED") || output.contains("ALREADY_RUNNING"))
+            }
+        } catch (t: Throwable) {
+            Log.e(
+                TAG,
+                "Local ADB connection to 127.0.0.1:5555 failed. Ensure ADB is enabled and authorize this app's key if prompted.",
+                t
+            )
+            false
+        }
+    }
+
+}targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                    done
+                    APK_PATH=$(pm path ${' | sed -n 's/^package://p' | head -n 1)
+                    if [ -z "${'$'}APK_PATH" ]; then
+                      echo APK_NOT_FOUND
+                      exit 21
+                    fi
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo ALREADY_RUNNING
+                      exit 0
+                    fi
+                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    sleep 1
+                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
+                      echo STARTED
+                      exit 0
+                    fi
+                    cat /data/local/tmp/$DAEMON_NAME.log 2>/dev/null
+                    echo START_FAILED
+                    exit 22
+                """.trimIndent()
+
+                val response = adb.shell(command)
+                val output = response.output
+                Log.i(TAG, "ADB daemon launch exit=${response.exitCode}; output=${output.take(1200)}")
+                response.exitCode == 0 &&
+                    (output.contains("STARTED") || output.contains("ALREADY_RUNNING"))
+            }
+        } catch (t: Throwable) {
+            Log.e(
+                TAG,
+                "Local ADB connection to 127.0.0.1:5555 failed. Ensure ADB is enabled and authorize this app's key if prompted.",
+                t
+            )
+            false
+        }
+    }
+
+}targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then
                       echo APK_NOT_FOUND
                       exit 21
@@ -153,12 +228,59 @@ object AutoPermissionHelper {
      */
     fun enableMapsAndOverlayAccess(context: Context, onResult: (String) -> Unit) {
         val appContext = context.applicationContext ?: context
+        val targetPkg = appContext.packageName
         Thread({
             val result = try {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
                     val command = """
-                        COMPONENT=com.byd.mapsoverlay/com.byd.mapsoverlay.MapsNotificationListener
+                        COMPONENT=${'
+                        cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
+                        LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
+                        case ":${'$'}LISTENERS:" in
+                          *":${'$'}COMPONENT:"*) ;;
+                          *)
+                            if [ "${'$'}LISTENERS" = "null" ] || [ -z "${'$'}LISTENERS" ]; then
+                              settings put secure enabled_notification_listeners "${'$'}COMPONENT"
+                            else
+                              settings put secure enabled_notification_listeners "${'$'}LISTENERS:${'$'}COMPONENT"
+                            fi
+                            ;;
+                        esac
+                        appops set ${' allow >/dev/null 2>&1
+                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        done
+                        VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=${'$'}(appops get com.byd.mapsoverlay SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg/com.byd.mapsoverlay.MapsNotificationListener
                         cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
                         LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
                         case ":${'$'}LISTENERS:" in
@@ -183,7 +305,221 @@ object AutoPermissionHelper {
                     val response = adb.shell(command)
                     val output = response.output
                     Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
-                    val listenerOk = output.contains("com.byd.mapsoverlay.MapsNotificationListener")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        done
+                        VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=${'$'}(appops get ${')
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg/com.byd.mapsoverlay.MapsNotificationListener
+                        cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
+                        LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
+                        case ":${'$'}LISTENERS:" in
+                          *":${'$'}COMPONENT:"*) ;;
+                          *)
+                            if [ "${'$'}LISTENERS" = "null" ] || [ -z "${'$'}LISTENERS" ]; then
+                              settings put secure enabled_notification_listeners "${'$'}COMPONENT"
+                            else
+                              settings put secure enabled_notification_listeners "${'$'}LISTENERS:${'$'}COMPONENT"
+                            fi
+                            ;;
+                        esac
+                        appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        done
+                        VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=${'$'}(appops get com.byd.mapsoverlay SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg/com.byd.mapsoverlay.MapsNotificationListener
+                        cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
+                        LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
+                        case ":${'$'}LISTENERS:" in
+                          *":${'$'}COMPONENT:"*) ;;
+                          *)
+                            if [ "${'$'}LISTENERS" = "null" ] || [ -z "${'$'}LISTENERS" ]; then
+                              settings put secure enabled_notification_listeners "${'$'}COMPONENT"
+                            else
+                              settings put secure enabled_notification_listeners "${'$'}LISTENERS:${'$'}COMPONENT"
+                            fi
+                            ;;
+                        esac
+                        appops set ${' allow >/dev/null 2>&1
+                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        done
+                        VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=${'$'}(appops get com.byd.mapsoverlay SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
+                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        done
+                        VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
+                        OVERLAY=${'$'}(appops get ${')
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
+                    val overlayOk = output.contains("OVERLAY=") &&
+                        !output.contains("OVERLAY=No operations") &&
+                        !output.contains("OVERLAY=ignore")
+                    when {
+                        listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
+                        listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
+                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+            }
+            onResult(result)
+        }, "BydIviPermissionSetup").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+}targetPkg SYSTEM_ALERT_WINDOW)
+                        echo "LISTENER=${'$'}VERIFIED"
+                        echo "OVERLAY=${'$'}OVERLAY"
+                    """.trimIndent()
+                    val response = adb.shell(command)
+                    val output = response.output
+                    Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
+                    val listenerOk = output.contains("${appContext.packageName}.MapsNotificationListener")
                     val overlayOk = output.contains("OVERLAY=") &&
                         !output.contains("OVERLAY=No operations") &&
                         !output.contains("OVERLAY=ignore")
