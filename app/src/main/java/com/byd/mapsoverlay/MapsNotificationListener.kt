@@ -46,15 +46,24 @@ class MapsNotificationListener : NotificationListenerService() {
         "com.gbox.pro",
         "com.gbox.work",
 
-        // 4. GSpace / Dual Space / Parallel App Engines
+        // 4. GPack & BYD DiLink Google Framework Installers
+        "com.google.android.apps.gpack",
+        "com.byd.gpack",
+        "com.huawei.gpack",
+        "com.dilink.gpack",
+        "com.gpack.android",
+        "com.gpack.installer",
+
+        // 5. GSpace / Dual Space / Parallel App Engines
         "com.gspace.android",
         "com.gspace.android.free",
         "com.ludashi.dualspace",
         "com.ludashi.dualspacepro",
         "com.excelliance.dualaid",
 
-        // 5. microG & GmsCore Sandboxed Maps
+        // 6. microG & GmsCore Sandboxed Maps
         "com.google.android.gms",
+        "com.google.android.gsf",
         "com.mgoogle.android.gms",
         "org.microg.gms.droidguard",
         "com.android.vending"
@@ -157,13 +166,15 @@ class MapsNotificationListener : NotificationListenerService() {
         val pkg = sbn.packageName.lowercase()
         val notif = sbn.notification ?: return false
 
-        // Check if package matches known Maps, GBox, Vanced, MicroG or GSpace packages
+        // Check if package matches known Maps, GBox, GPack, Vanced, MicroG or GSpace packages
         val isExplicitMapsPkg = explicitMapsPackages.contains(pkg) ||
             pkg.endsWith(".maps") ||
             pkg.contains("google.android.apps.maps") ||
             pkg.contains("gmaps") ||
             pkg.contains("gbox") ||
-            pkg.contains("gspace")
+            pkg.contains("gpack") ||
+            pkg.contains("gspace") ||
+            pkg.contains("microg")
 
         val isNavCategory = notif.category == Notification.CATEGORY_NAVIGATION
         val groupKey = (notif.group ?: "").lowercase()
@@ -181,34 +192,58 @@ class MapsNotificationListener : NotificationListenerService() {
                 actionTitle.contains("ออก")
         } == true
 
-        // Check extras text for navigation keywords when running inside containers (GBox/GSpace)
+        // Check extras text for navigation keywords when running inside containers (GBox/GPack/GSpace)
         val extras = notif.extras
         val title = (extras?.getCharSequence(Notification.EXTRA_TITLE) ?: "").toString().lowercase()
         val text = (extras?.getCharSequence(Notification.EXTRA_TEXT) ?: "").toString().lowercase()
         val subText = (extras?.getCharSequence(Notification.EXTRA_SUB_TEXT) ?: "").toString().lowercase()
+        val bigText = (extras?.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: "").toString().lowercase()
+        val infoText = (extras?.getCharSequence(Notification.EXTRA_INFO_TEXT) ?: "").toString().lowercase()
         val ticker = (notif.tickerText ?: "").toString().lowercase()
-        val allText = "$title $text $subText $ticker"
+        val allText = "$title $text $subText $bigText $infoText $ticker"
 
-        val hasNavContent = allText.contains("กม.") ||
+        // High-confidence navigation cues (bilingual TH/EN)
+        val hasDistanceUnit = allText.contains("กม.") ||
             allText.contains("กม") ||
             allText.contains("km") ||
             allText.contains("เมตร") ||
-            allText.contains("มุ่งหน้า") ||
+            allText.contains(" m")
+        val hasNavDirection = allText.contains("มุ่งหน้า") ||
             allText.contains("toward") ||
-            allText.contains("นาที") ||
-            allText.contains("min")
+            allText.contains("เลี้ยว") ||
+            allText.contains("turn") ||
+            allText.contains("นำทาง") ||
+            allText.contains("navigating")
+        val hasTimeEstimate = allText.contains("นาที") ||
+            allText.contains("min") ||
+            allText.contains("ชม.") ||
+            allText.contains(" hr")
 
+        // Comprehensive Heuristic Detection:
+        // A. If from recognized maps or container ecosystem (GBox, GPack, etc.)
         if (isExplicitMapsPkg) {
-            if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation") || hasExitNavAction || hasNavContent) {
+            if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation") || hasExitNavAction) {
+                return true
+            }
+            if (hasDistanceUnit && (hasNavDirection || hasTimeEstimate)) {
                 return true
             }
         }
 
+        // B. Standard Android Navigation category
         if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation")) {
             return true
         }
 
-        return hasExitNavAction
+        // C. Universal Heuristic Fallback (even if package name is completely obscured by a virtual sandbox)
+        if (hasExitNavAction) {
+            return true
+        }
+        if (hasDistanceUnit && hasNavDirection && hasTimeEstimate) {
+            return true
+        }
+
+        return false
     }
 
     private fun extractTotalRemainingDistance(vararg sources: String): Double? {
