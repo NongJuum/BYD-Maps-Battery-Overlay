@@ -1,18 +1,18 @@
-# ⚡ BYD Smart EV Route & Battery Overlay (ช่องทางสำรอง - Reserve Edition)
+# ⚡ BYD Smart EV Route & Battery Overlay
 
 <p align="center">
   <img src="assets/hero_banner.jpg" alt="BYD Smart EV Route &amp; Battery Overlay Hero Banner" width="100%" style="border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/reserve">
-    <img src="https://img.shields.io/badge/เวอร์ชันสำรอง-v1.3.0--reserve-EA580C?style=for-the-badge&logo=android&logoColor=white" />
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
+    <img src="https://img.shields.io/badge/เวอร์ชันล่าสุด-v1.3.0--beta-0284C7?style=for-the-badge&logo=android&logoColor=white" />
   </a>
   <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk">
     <img src="https://img.shields.io/badge/ดาวน์โหลด-ไฟล์%20APK%20ตรง-00E676?style=for-the-badge&logo=googleplay&logoColor=black" />
   </a>
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/main">
-    <img src="https://img.shields.io/badge/เวอร์ชันหลัก-Main%20(One--Tap)-0284C7?style=for-the-badge&logo=git&logoColor=white" />
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
+    <img src="https://img.shields.io/badge/OTA-อัปเดตผ่านจอรถได้ทันที-FFD600?style=for-the-badge&logo=git&logoColor=black" />
   </a>
 </p>
 
@@ -25,16 +25,31 @@
   คำนวณ <b>% แบตเตอรี่คงเหลือเมื่อถึงจุดหมายปลายทาง (SoC %)</b> และ <b>ระยะทางวิ่งได้จริง (Real Range)</b> แสดงควบคู่กับ Google Maps แบบ Real-time ดึงข้อมูลตรงจากกล่อง CAN-Bus และ BMS ของรถโดยไม่ต้องใช้อุปกรณ์ OBD ภายนอกเสริม!
 </p>
 
-> [!NOTE]
-> **📌 หมายเหตุเกี่ยวกับ Reserve Edition (ช่องทางสำรอง):**  
-> Branch นี้มีฟีเจอร์ โค้ด และดีไซน์หน้าจอ **เหมือนเวอร์ชันใหม่ (Beta / Main) ทุกประการ 100%** (ทั้งระบบ 3 Layout Themes, หรี่แสงกลางคืน, แปะทับ Status Bar, เลขแบตเดี่ยวนิ่งไม่สวิง)  
-> **จุดต่างเพียงข้อเดียว:** ช่องทางสำรองนี้จัดทำขึ้นโดยเปิดสิทธิ์การเข้าถึง CAN-Bus ผ่าน **คอมพิวเตอร์ (PC / Laptop via ADB)** สำหรับผู้ที่ต้องการใช้คอมพิวเตอร์ หรือกรณีที่หน้าจอรถยนต์ของท่านไม่รองรับ Localhost 5555 ภายในรถ
-
 ---
 
-## ✨ มีอะไรใหม่ในเวอร์ชัน v1.3.0-reserve (เทียบเท่าฟีเจอร์ใหม่ทั้งหมด)
+## ✨ มีอะไรใหม่ในเวอร์ชัน v1.3.0-beta (อัปเกรดใหญ่ล่าสุด)
 
 <table>
+  <tr>
+    <td width="50%">
+      <h3>🏎️ ระบบเลือก 3 สไตล์ Layout HUD</h3>
+      เลือกปรับดีไซน์แถบลอยได้อิสระตามความถนัด: <b>Modern Capsule</b> (ครบครัน), <b>Minimalist Compact</b> (สลิมบางประหยัดพื้นที่), และ <b>Vertical Flight HUD</b> (ทรงแท่งแนวตั้ง)
+    </td>
+    <td width="50%">
+      <h3>⚡ เปิดสิทธิ์อัตโนมัติในคลิกเดียว (Zero-PC)</h3>
+      ติดตั้งเสร็จแตะปุ่ม "เปิดสิทธิ์อัตโนมัติ" ในแอปบนจอรถได้ทันที ผ่าน localhost ADB ในตัว ไม่ต้องเสียบสาย ไม่ต้องต่อคอมพิวเตอร์พิมพ์คำสั่งใดๆ ให้ยุ่งยาก
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🧭 รองรับ Google Maps & Android Auto ทุกสาย</h3>
+      อ่านค่าระยะทางแม่นยำ 100% ทั้ง <b>Google Maps ตรง, Play Store, GBox, GPack, GSpace, microG, Vanced</b> รวมถึงการแคสต์ผ่าน <b>Android Auto (ZLink / BYDLink / AutoKit)</b>
+    </td>
+    <td width="50%">
+      <h3>🛡️ ระบบตัดปัญหา DUDU / Overdrive กวน</h3>
+      มีระบบ Plausibility Guard ดักจับแยกแยะระยะทางนำทางจริง ออกจากตัวเลขความเร็ว (km/h) หรือ Trip สะสมของ Launcher อย่าง DUDUOS / Overdrive ค่าแบตเตอรี่จึงนิ่งสนิท ไม่วูบวาบ
+    </td>
+  </tr>
   <tr>
     <td width="50%">
       <h3>🔄 จำตำแหน่งแยกแนวนอน/แนวตั้ง</h3>
@@ -52,7 +67,7 @@
     </td>
     <td width="50%">
       <h3>🔌 คำนวณจำนวนครั้งที่ควรแวะชาร์จ</h3>
-      วิเคราะห์ระยะทาง Maps และความจุแบตเตอรี่ พร้อมบอกจำนวนครั้งที่ควรแวะชาร์จด่วน DC Fast Charge (ช่วง 10% ➔ 80%) สำหรับทริปทางไกล
+      วิเคราะห์ระยะทาง Maps และความจุแบตเตอรี่ พร้อมบอกจำนวนครั้งที่ควรแวะชาร์จด่วน DC Fast Charge (ช่วง 10% ➔ 80%) พร้อมระบบ Clamp ความปลอดภัย 1-9 ครั้ง
     </td>
   </tr>
   <tr>
@@ -99,34 +114,25 @@
 
 ---
 
-## 📦 ขั้นตอนการติดตั้ง (ช่องทางสำรอง: เปิดสิทธิ์ผ่านคอมพิวเตอร์ PC ADB)
+## 📦 ขั้นตอนการติดตั้งง่ายๆ (ทำจบในจอรถ 100% ไม่ต้องใช้คอมพิวเตอร์)
 
 ### ขั้นตอนที่ 1: ติดตั้งแอปบนหน้าจอรถ
 1. ดาวน์โหลดไฟล์ **[BYD-Maps-Battery-Overlay-Beta.apk](https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk)**
 2. ก๊อปปี้ใส่ USB Flash Drive เสียบเข้าพอร์ต USB หน้ารถ และกดติดตั้งผ่านแอป **ตัวจัดการไฟล์ (File Manager)** ของรถ
 3. เปิดแอปและกดเปิดสิทธิ์ **แสดงทับแอปอื่น (Overlay)** และ **การแจ้งเตือน (Notification)**
 
-### ขั้นตอนที่ 2: เปิดสิทธิ์ระบบผ่านคอมพิวเตอร์ (PC / Laptop Terminal)
-> 💻 **ขั้นตอนนี้ทำเพียงครั้งเดียว:** เชื่อมต่อคอมพิวเตอร์เข้ากับ Wi-Fi เดียวกับรถ หรือเสียบสาย USB-A to USB-A เข้าพอร์ตหน้าจอ
+### ขั้นตอนที่ 2: กดเปิดสิทธิ์อัตโนมัติในคลิกเดียว (One-Tap Car Activation)
+> ✨ **ไม่ต้องเสียบสาย ไม่ต้องต่อคอมพิวเตอร์ หรือพิมพ์คำสั่งใดๆ ทั้งสิ้น!**  
+> ตัวแอปมีระบบจับคู่ ADB Localhost ภายในตัว (`dadb 127.0.0.1:5555`) ฝังมาในตัวเรียบร้อยแล้ว
 
-1. **เช็ค IP Address ของหน้าจอรถยนต์**:
-   - ไปที่ `ตั้งค่าระบบรถ (Settings)` ➔ `Wi-Fi` ➔ กดดูรายละเอียด Wi-Fi ที่เชื่อมต่ออยู่เพื่อดู IP Address (เช่น `192.168.1.150`)
+1. เปิดแอปบนหน้าจอรถ แล้วแตะปุ่ม **"⚡ เปิดสิทธิ์อัตโนมัติในคลิกเดียว (One-Tap Auto Activate)"**
+2. บนหน้าจอรถจะมีกล่องข้อความระบบเด้งขึ้นมา:  
+   *`อนุญาตการแก้ไขข้อบกพร่อง USB จากคอมพิวเตอร์เครื่องนี้หรือไม่?`*
+3. ให้ติ๊กถูก **☑️ "อนุญาตเสมอจากคอมพิวเตอร์นี้"** แล้วแตะปุ่ม **[ตกลง]** บนจอรถ
+4. เรียบร้อย! ตัวแอปจะปลุกระบบอ่านข้อมูล CAN-Bus และแบตเตอรี่รถให้ทำงานอัตโนมัติทันที
 
-2. **เปิด Terminal (Mac/Linux) หรือ PowerShell (Windows) บนคอมพิวเตอร์ แล้วรันคำสั่ง:**
-   ```bash
-   # เชื่อมต่อไปยังจอรถ (เปลี่ยนเลข IP ให้ตรงกับรถของคุณ)
-   adb connect 192.168.1.150:5555
-
-   # เปิดสิทธิ์การเข้าถึงข้อมูลระบบและ CAN-Bus
-   adb shell pm grant com.byd.mapsoverlay android.permission.DUMP
-   adb shell appops set com.byd.mapsoverlay SYSTEM_ALERT_WINDOW allow
-   adb shell cmd notification allow_listener com.byd.mapsoverlay/com.byd.mapsoverlay.MapsNotificationListener
-   ```
-
-3. หากบนหน้าจอรถมีป๊อปอัพ *`อนุญาตการแก้ไขข้อบกพร่อง USB จากคอมพิวเตอร์เครื่องนี้หรือไม่?`* ให้ติ๊ก **☑️ อนุญาตเสมอ** แล้วกด **[ตกลง]**
-
-### ขั้นตอนที่ 3: พร้อมใช้งานทันที!
-เปิด Google Maps ใช้งานได้ทันที ตัว Overlay จะลอยขึ้นมาอ่านค่าแบตเตอรี่แบบเรียลไทม์ตามธีมที่คุณเลือก
+### ขั้นตอนที่ 3: พร้อมใช้งานและอัปเดตแบบไร้สาย!
+ทุกครั้งที่เปิด Google Maps นำทาง ตัว Overlay จะลอยขึ้นมาอัตโนมัติ และเมื่อมีฟีเจอร์เวอร์ชันใหม่ เพียงกดปุ่ม **"ตรวจสอบอัปเดตออนไลน์ (OTA)"** ในแอป หน้าจอรถจะโหลดและติดตั้งเองทันที!
 
 ---
 
