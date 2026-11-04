@@ -339,18 +339,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // DiLink IVI does not implement the standard Android special-access
-        // Settings activities. Use the already-established Alpha ADB permission
-        // flow, which grants SYSTEM_ALERT_WINDOW and Maps notification access.
+        // Use the proven Main-branch IVI permission path for Maps and Overlay.
+        // DiLink's Settings activities do not expose these special-access screens;
+        // configure them directly through the authorized local ADB shell.
         btnOverlay.setOnClickListener {
-            triggerAdbAuth()
+            tvStatus.text = if (isTh) "กำลังเปิดสิทธิ์ Overlay ผ่าน IVI ADB..." else "Enabling Overlay permission via IVI ADB..."
+            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
+                runOnUiThread {
+                    tvStatus.text = result
+                    Toast.makeText(this, result, Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         btnNotification.setOnClickListener {
-            triggerAdbAuth()
+            tvStatus.text = if (isTh) "กำลังเปิดสิทธิ์อ่านการนำทาง Google Maps ผ่าน IVI ADB..." else "Enabling Google Maps navigation listener via IVI ADB..."
+            AutoPermissionHelper.enableMapsAndOverlayAccess(this) { result ->
+                runOnUiThread {
+                    tvStatus.text = result
+                    Toast.makeText(this, result, Toast.LENGTH_LONG).show()
+                    if (result.contains("สำเร็จ") || result.contains("success", ignoreCase = true)) {
+                        vehicleBridge.restartConnection()
+                        vehicleBridge.notifyUpdate()
+                    }
+                }
+            }
         }
 
-        // OBD/BYD vehicle data permissions use the same established ADB flow.
+        // Keep the Alpha ADB flow for BYD vehicle-data permissions only.
         btnObdPermission.setOnClickListener {
             triggerAdbAuth()
         }
@@ -376,23 +392,10 @@ class MainActivity : AppCompatActivity() {
 
         tvStatus.text = getString(R.string.tv_status_ready)
 
-        // Automatically poll ADB authorization in the background on startup (Alpha DiLink 3)
-        AutoPermissionHelperAlpha.startAdbAuthPolling(this) { message, isFinished, isSuccess ->
-            runOnUiThread {
-                tvStatus.text = message
-                if (isFinished && isSuccess) {
-                    vehicleBridge.restartConnection()
-                    val updateIntent = Intent(this, OverlayService::class.java).apply {
-                        action = OverlayService.ACTION_PROFILE_UPDATED
-                    }
-                    startService(updateIntent)
-                    sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED).apply {
-                        setPackage(packageName)
-                    })
-                    vehicleBridge.notifyUpdate()
-                }
-            }
-        }
+        // Match the proven Main-branch startup behavior. Do not launch the
+        // Alpha permission poller automatically; Maps/Overlay are granted by
+        // the dedicated IVI ADB action above.
+        AutoPermissionHelper.grantAllPermissionsSilently(this)
     }
 
     private fun openOverlayPermissionSettings() {
