@@ -4,6 +4,6 @@
   "channel": "beta",
   "edition": "Beta",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-  "changelogTh": "แก้ปัญหา Overlay นำทาง Google Maps อัตโนมัติ, สิทธิ์ IVI Notification Listener, ซิงค์ Telemetry Daemon และแก้ไข OTA Error 255",
-  "changelogEn": "Fix Google Maps navigation auto-overlay, IVI notification listener binding, Telemetry Daemon targeting, and OTA Error 255."
+  "changelogTh": "แก้ OTA ให้ติดตั้งแยกจาก process ของแอป พร้อมตรวจพื้นที่และรายงานข้อผิดพลาดจริง",
+  "changelogEn": "Detached OTA installation, head-unit storage check and real Package Manager error reporting."
 }
