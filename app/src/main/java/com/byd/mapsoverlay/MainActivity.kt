@@ -51,27 +51,18 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // Post-update verification dialog: requires user to tap and grant Auto Start
+        // Post-update: use the stable Main-branch silent BYD permission bootstrap.
         if (intent.getBooleanExtra("post_update", false)) {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.post_update_dialog_title)
-                .setMessage(R.string.post_update_dialog_desc)
-                .setPositiveButton(R.string.post_update_btn_confirm) { _, _ ->
-                    val statusText = findViewById<TextView>(R.id.tv_status)
-                    statusText.text = getString(R.string.toast_obd_requesting)
-                    AutoPermissionHelperAlpha.startAdbAuthPolling(this) { msg, isFinished, _ ->
-                        runOnUiThread {
-                            statusText.text = msg
-                            if (isFinished) {
-                                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                    BydDataCacheWhitelist.ensureWhitelisted(this)
+            val statusText = findViewById<TextView>(R.id.tv_status)
+            statusText.text = getString(R.string.toast_obd_requesting)
+            AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
+                runOnUiThread {
+                    statusText.text = if (ready) getString(R.string.toast_obd_success)
+                        else getString(R.string.toast_obd_daemon_started)
+                    Toast.makeText(this, statusText.text, Toast.LENGTH_LONG).show()
                 }
-                .setNegativeButton(R.string.donate_btn_close, null)
-                .setCancelable(false)
-                .show()
+            }
+            BydDataCacheWhitelist.ensureWhitelisted(this)
         }
 
         // Surface the real PackageManager failure returned by the detached OTA script.
@@ -366,9 +357,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Keep the Alpha ADB flow for BYD vehicle-data permissions only.
+        // Keep the proven Main-branch OBD permission bootstrap.
         btnObdPermission.setOnClickListener {
-            triggerAdbAuth()
+            Toast.makeText(this, getString(R.string.toast_obd_requesting), Toast.LENGTH_SHORT).show()
+            AutoPermissionHelper.grantAllPermissionsSilently(this) { ready ->
+                runOnUiThread {
+                    vehicleBridge.restartConnection()
+                    sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
+                    val msg = if (ready) {
+                        getString(R.string.toast_obd_success)
+                    } else {
+                        getString(R.string.toast_obd_daemon_started)
+                    }
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                    vehicleBridge.notifyUpdate()
+                }
+            }
         }
 
         switchDisableAutoStart.isChecked = AutoPermissionHelperAlpha.isAutoStartDisabled(this)
