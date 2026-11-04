@@ -14,7 +14,6 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
-import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -200,10 +199,6 @@ class OverlayService : Service() {
     private fun showOverlay() {
         if (overlayView != null) return
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            android.util.Log.w("OverlayService", "Cannot show overlay: SYSTEM_ALERT_WINDOW not yet granted")
-            return
-        }
 
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.layout_battery_pill, null)
@@ -301,12 +296,10 @@ class OverlayService : Service() {
     }
 
     private fun renderOverlay() {
-        if (overlayView == null) {
-            if (Settings.canDrawOverlays(this) && latestDistanceKm > 0) {
-                showOverlay()
-            }
-            if (overlayView == null) return
+        if (overlayView == null && latestDistanceKm > 0) {
+            showOverlay()
         }
+        if (overlayView == null) return
 
         val currentSoc = bydBridge.currentSoc
         // Overlay must show the live CAN/OBD consumption value. Keep the conservative
