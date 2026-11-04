@@ -115,7 +115,7 @@ object AutoPermissionHelper {
                       echo ALREADY_RUNNING
                       exit 0
                     fi
-                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS com.byd.mapsoverlay.beta </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
                     sleep 1
                     if pidof $DAEMON_NAME >/dev/null 2>&1; then
                       echo STARTED
@@ -173,7 +173,7 @@ object AutoPermissionHelper {
                         esac
                         appops set com.byd.mapsoverlay.beta SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
                         for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                          pm grant com.byd.mapsoverlay android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                          pm grant com.byd.mapsoverlay.beta android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                         done
                         VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
                         OVERLAY=${'$'}(appops get com.byd.mapsoverlay.beta SYSTEM_ALERT_WINDOW)
