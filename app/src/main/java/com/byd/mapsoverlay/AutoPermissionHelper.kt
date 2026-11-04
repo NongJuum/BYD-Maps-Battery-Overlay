@@ -120,6 +120,16 @@ object AutoPermissionHelper {
                     done
                     pm grant $targetPkg com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
                     pm grant $targetPkg com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
+                    setprop persist.adb.tcp.port 5555 2>/dev/null || true
+                    settings put global adb_allowed_connection_time 0 2>/dev/null || true
+                    setprop persist.sys.acc.whitelist '$targetPkg' 2>&1
+                    service call accmodemanager 1 s16 '$targetPkg' 2>/dev/null || true
+                    service call accmodemanager 2 s16 '$targetPkg' 2>/dev/null || true
+                    service call accmodemanager 3 s16 '$targetPkg' 2>/dev/null || true
+                    appops set $targetPkg RUN_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set $targetPkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
+                    dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
                     APK_PATH=$(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then
                       echo APK_NOT_FOUND
