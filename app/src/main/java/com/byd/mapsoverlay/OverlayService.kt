@@ -230,13 +230,14 @@ class OverlayService : Service() {
 
         // In gravity = BOTTOM | CENTER_HORIZONTAL:
         // x moves from -halfWidth to +halfWidth
-        // y moves from 0 (bottom screen edge) to screenH (top status bar)
+        // y moves from 0 (bottom screen edge) to screenH (top screen edge / status bar)
         // DiLink 3.0 safe margins:
-        // Bottom Air-con bar = approx 80dp (120px) -> min Y = 100
-        // Top Status bar = approx 48dp (72px) -> max Y = screenH - 120
-        val halfW = (screenW / 2) - 80
+        // Bottom Air-con bar = approx 80dp (100px) -> min Y = 80
+        // Top Status bar: อนุญาตให้ลากขึ้นไปทับแถบ Status Bar ด้านบนสุดได้เลย (คนขับนิยมวางตรงนี้เพราะพื้นที่ว่างเยอะ)
+        // เราตั้งเพดานบนให้ลากชิดขอบบนสุดได้ถึง screenH - 10px (ไม่หลุดทะลุจอ)
+        val halfW = (screenW / 2) - 40
         val clampedX = x.coerceIn(-halfW, halfW)
-        val clampedY = y.coerceIn(100, (screenH - 140).coerceAtLeast(300))
+        val clampedY = y.coerceIn(80, (screenH - 10).coerceAtLeast(300))
         return Pair(clampedX, clampedY)
     }
 
