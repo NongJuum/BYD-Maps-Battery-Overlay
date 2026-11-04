@@ -11,8 +11,8 @@ android {
         applicationId 'com.byd.mapsoverlay.beta'
         minSdk 26
         targetSdk 34
-        versionCode 5
-        versionName '1.0.4-beta'
+        versionCode 6
+        versionName '1.0.5-beta'
     }
 
     signingConfigs {
@@ -108,12 +108,6 @@ afterEvaluate {
                     into rootProject.projectDir
                     rename { 'BYD-Maps-Battery-Overlay-Beta.apk' }
                 }
-                copy {
-                    from apkFile
-                    into rootProject.projectDir
-                    rename { 'BYD-Maps-Battery-Overlay-Beta.apk' }
-                }
-                println "✅ Copied Beta APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Beta.apk"
                 println "✅ Copied Beta APK to: ${rootProject.projectDir}/BYD-Maps-Battery-Overlay-Beta.apk"
             }
         }
