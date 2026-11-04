@@ -10,10 +10,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -67,6 +69,10 @@ class OverlayService : Service() {
         private const val PREFS_NAME = "byd_overlay_prefs"
         private const val KEY_POS_X = "pos_x"
         private const val KEY_POS_Y = "pos_y"
+        private const val KEY_POS_X_PORTRAIT = "pos_x_portrait"
+        private const val KEY_POS_Y_PORTRAIT = "pos_y_portrait"
+        private const val KEY_POS_X_LANDSCAPE = "pos_x_landscape"
+        private const val KEY_POS_Y_LANDSCAPE = "pos_y_landscape"
         private const val KEY_SCALE = "scale"
         const val KEY_SHOW_DEST_SOC = "show_dest_soc"
         const val KEY_SHOW_REAL_RANGE = "show_real_range"
@@ -186,13 +192,74 @@ class OverlayService : Service() {
         return START_STICKY
     }
 
+    private fun isPortrait(): Boolean {
+        return resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    }
+
+    private fun getSavedPosition(): Pair<Int, Int> {
+        val portrait = isPortrait()
+        val defaultX = 0
+        val defaultY = if (portrait) 180 else 120
+        val keyX = if (portrait) KEY_POS_X_PORTRAIT else KEY_POS_X_LANDSCAPE
+        val keyY = if (portrait) KEY_POS_Y_PORTRAIT else KEY_POS_Y_LANDSCAPE
+
+        // Fallback to legacy generic keys if mode-specific hasn't been set yet
+        val x = prefs.getInt(keyX, prefs.getInt(KEY_POS_X, defaultX))
+        val y = prefs.getInt(keyY, prefs.getInt(KEY_POS_Y, defaultY))
+        return clampToSafeZone(x, y)
+    }
+
+    private fun saveCurrentPosition(x: Int, y: Int) {
+        val (clampedX, clampedY) = clampToSafeZone(x, y)
+        val portrait = isPortrait()
+        val keyX = if (portrait) KEY_POS_X_PORTRAIT else KEY_POS_X_LANDSCAPE
+        val keyY = if (portrait) KEY_POS_Y_PORTRAIT else KEY_POS_Y_LANDSCAPE
+
+        prefs.edit()
+            .putInt(keyX, clampedX)
+            .putInt(keyY, clampedY)
+            .putInt(KEY_POS_X, clampedX)
+            .putInt(KEY_POS_Y, clampedY)
+            .apply()
+    }
+
+    private fun clampToSafeZone(x: Int, y: Int): Pair<Int, Int> {
+        val metrics = resources.displayMetrics
+        val screenW = metrics.widthPixels
+        val screenH = metrics.heightPixels
+
+        // In gravity = BOTTOM | CENTER_HORIZONTAL:
+        // x moves from -halfWidth to +halfWidth
+        // y moves from 0 (bottom screen edge) to screenH (top status bar)
+        // DiLink 3.0 safe margins:
+        // Bottom Air-con bar = approx 80dp (120px) -> min Y = 100
+        // Top Status bar = approx 48dp (72px) -> max Y = screenH - 120
+        val halfW = (screenW / 2) - 80
+        val clampedX = x.coerceIn(-halfW, halfW)
+        val clampedY = y.coerceIn(100, (screenH - 140).coerceAtLeast(300))
+        return Pair(clampedX, clampedY)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Auto-snap overlay to orientation-specific saved coordinates
+        if (overlayView != null && windowParams != null) {
+            val (targetX, targetY) = getSavedPosition()
+            windowParams?.let { p ->
+                p.x = targetX
+                p.y = targetY
+                try {
+                    windowManager?.updateViewLayout(overlayView, p)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     private fun resetOverlayPosition() {
         currentScale = 1.0f
-        prefs.edit()
-            .putInt(KEY_POS_X, 0)
-            .putInt(KEY_POS_Y, 120)
-            .putFloat(KEY_SCALE, 1.0f)
-            .apply()
+        val (defaultX, defaultY) = if (isPortrait()) Pair(0, 180) else Pair(0, 120)
+        saveCurrentPosition(defaultX, defaultY)
+        prefs.edit().putFloat(KEY_SCALE, 1.0f).apply()
 
         if (latestDistanceKm <= 0.0) {
             latestDistanceKm = 25.0
@@ -201,8 +268,8 @@ class OverlayService : Service() {
         overlayView?.scaleX = 1.0f
         overlayView?.scaleY = 1.0f
         windowParams?.let { params ->
-            params.x = 0
-            params.y = 120
+            params.x = defaultX
+            params.y = defaultY
             try {
                 windowManager?.updateViewLayout(overlayView, params)
             } catch (_: Exception) {}
@@ -213,7 +280,6 @@ class OverlayService : Service() {
     @SuppressLint("ClickableViewAccessibility")
     private fun showOverlay() {
         if (overlayView != null) return
-
 
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.layout_battery_pill, null)
@@ -245,8 +311,7 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.TYPE_SYSTEM_ERROR
         }
 
-        val savedX = prefs.getInt(KEY_POS_X, 0).coerceIn(-920, 920)
-        val savedY = prefs.getInt(KEY_POS_Y, 120).coerceIn(0, 1030)
+        val (savedX, savedY) = getSavedPosition()
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -292,18 +357,18 @@ class OverlayService : Service() {
                     }
                     MotionEvent.ACTION_MOVE -> {
                         windowParams?.let { p ->
-                            p.x = (initialX + (event.rawX - initialTouchX).toInt()).coerceIn(-920, 920)
-                            p.y = (initialY - (event.rawY - initialTouchY).toInt()).coerceIn(0, 1030)
+                            val rawTargetX = initialX + (event.rawX - initialTouchX).toInt()
+                            val rawTargetY = initialY - (event.rawY - initialTouchY).toInt()
+                            val (clampedX, clampedY) = clampToSafeZone(rawTargetX, rawTargetY)
+                            p.x = clampedX
+                            p.y = clampedY
                             windowManager?.updateViewLayout(overlayView, p)
                         }
                         true
                     }
                     MotionEvent.ACTION_UP -> {
                         windowParams?.let { p ->
-                            prefs.edit()
-                                .putInt(KEY_POS_X, p.x)
-                                .putInt(KEY_POS_Y, p.y)
-                                .apply()
+                            saveCurrentPosition(p.x, p.y)
                         }
                         true
                     }
@@ -328,6 +393,10 @@ class OverlayService : Service() {
             showOverlay()
         }
         if (overlayView == null) return
+
+        // 1. Night Auto-Dimming & Low-Glow Synchronization
+        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        overlayView?.alpha = if (isNightMode) 0.72f else 0.95f
 
         val currentSoc = bydBridge.currentSoc
         // Overlay must show the live CAN/OBD consumption value. Keep the conservative
