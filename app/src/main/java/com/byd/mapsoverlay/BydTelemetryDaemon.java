@@ -69,7 +69,7 @@ public final class BydTelemetryDaemon {
         log("Starting; uid=" + android.os.Process.myUid());
         try {
             String targetPkg = (args != null && args.length > 0 && args[0] != null && !args[0].isEmpty())
-                    ? args[0] : "com.byd.mapsoverlay.alpha";
+                    ? args[0] : "com.byd.mapsoverlay.beta";
             Context context = createBydContext(targetPkg);
             if (context == null) throw new IllegalStateException("Could not create BYD package context");
             Thread poller = new Thread(() -> pollLoop(context), "BydTelemetryPoller");
@@ -141,10 +141,17 @@ public final class BydTelemetryDaemon {
                     pkgName,
                     Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
         } catch (Throwable t) {
-            log("createPackageContext for " + pkgName + " failed, falling back to com.byd.mapsoverlay");
-            app = system.createPackageContext(
-                    "com.byd.mapsoverlay",
-                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            log("createPackageContext for " + pkgName + " failed, falling back to com.byd.mapsoverlay.beta");
+            try {
+                app = system.createPackageContext(
+                        "com.byd.mapsoverlay.beta",
+                        Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            } catch (Throwable t2) {
+                log("fallback to com.byd.mapsoverlay.beta failed, trying com.byd.mapsoverlay");
+                app = system.createPackageContext(
+                        "com.byd.mapsoverlay",
+                        Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            }
         }
         return new PermissionBypassContext(app);
     }

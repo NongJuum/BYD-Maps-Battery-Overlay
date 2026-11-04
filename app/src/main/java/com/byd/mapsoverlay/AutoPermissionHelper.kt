@@ -95,6 +95,7 @@ object AutoPermissionHelper {
         }
 
         return try {
+            val targetPkg = context.packageName
             // Dadb 1.2.8 provides bounded connect and socket timeouts.
             Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
                 if (!adb.supportsFeature("shell_v2")) {
@@ -102,11 +103,24 @@ object AutoPermissionHelper {
                 }
 
                 val command = """
-                    # Grant only the runtime COMMON permissions requested by this app.
-                    for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                      pm grant com.byd.mapsoverlay.beta android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                    for PERMISSION in \
+                      BYDAUTO_STATISTIC_COMMON BYDAUTO_STATISTIC_GET BYDAUTO_STATISTIC_SET \
+                      BYDAUTO_INSTRUMENT_COMMON BYDAUTO_INSTRUMENT_GET BYDAUTO_INSTRUMENT_SET \
+                      BYDAUTO_POWER_COMMON BYDAUTO_POWER_GET BYDAUTO_POWER_SET \
+                      BYDAUTO_ENERGY_COMMON BYDAUTO_ENERGY_GET BYDAUTO_ENERGY_SET \
+                      BYDAUTO_CHARGING_COMMON BYDAUTO_CHARGING_GET BYDAUTO_CHARGING_SET \
+                      BYDAUTO_SPEED_COMMON BYDAUTO_SPEED_GET BYDAUTO_SPEED_SET \
+                      BYDAUTO_BODYWORK_COMMON BYDAUTO_BODYWORK_GET BYDAUTO_BODYWORK_SET \
+                      BYDAUTO_GEARBOX_COMMON BYDAUTO_GEARBOX_GET \
+                      BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
+                      BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
+                      BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
+                      BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
+                      pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                     done
-                    APK_PATH=$(pm path com.byd.mapsoverlay.beta | sed -n 's/^package://p' | head -n 1)
+                    pm grant $targetPkg com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
+                    pm grant $targetPkg com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
+                    APK_PATH=$(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then
                       echo APK_NOT_FOUND
                       exit 21
@@ -115,7 +129,7 @@ object AutoPermissionHelper {
                       echo ALREADY_RUNNING
                       exit 0
                     fi
-                    CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS com.byd.mapsoverlay.beta </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                    ( CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS $targetPkg ) </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
                     sleep 1
                     if pidof $DAEMON_NAME >/dev/null 2>&1; then
                       echo STARTED
@@ -153,12 +167,14 @@ object AutoPermissionHelper {
      */
     fun enableMapsAndOverlayAccess(context: Context, onResult: (String) -> Unit) {
         val appContext = context.applicationContext ?: context
+        val targetPkg = appContext.packageName
         Thread({
             val result = try {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
-                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 2_000, 5_000).use { adb ->
+                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5_000, 15_000).use { adb ->
+                    val component = "$targetPkg/com.byd.mapsoverlay.MapsNotificationListener"
                     val command = """
-                        COMPONENT=com.byd.mapsoverlay.beta/com.byd.mapsoverlay.MapsNotificationListener
+                        COMPONENT=$component
                         cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
                         LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
                         case ":${'$'}LISTENERS:" in
@@ -171,31 +187,45 @@ object AutoPermissionHelper {
                             fi
                             ;;
                         esac
-                        appops set com.byd.mapsoverlay.beta SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
-                        for PERMISSION in BYDAUTO_STATISTIC_COMMON BYDAUTO_INSTRUMENT_COMMON BYDAUTO_POWER_COMMON BYDAUTO_ENERGY_COMMON; do
-                          pm grant com.byd.mapsoverlay.beta android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
+                        appops set $targetPkg SYSTEM_ALERT_WINDOW allow >/dev/null 2>&1
+                        for PERMISSION in \
+                          BYDAUTO_STATISTIC_COMMON BYDAUTO_STATISTIC_GET BYDAUTO_STATISTIC_SET \
+                          BYDAUTO_INSTRUMENT_COMMON BYDAUTO_INSTRUMENT_GET BYDAUTO_INSTRUMENT_SET \
+                          BYDAUTO_POWER_COMMON BYDAUTO_POWER_GET BYDAUTO_POWER_SET \
+                          BYDAUTO_ENERGY_COMMON BYDAUTO_ENERGY_GET BYDAUTO_ENERGY_SET \
+                          BYDAUTO_CHARGING_COMMON BYDAUTO_CHARGING_GET BYDAUTO_CHARGING_SET \
+                          BYDAUTO_SPEED_COMMON BYDAUTO_SPEED_GET BYDAUTO_SPEED_SET \
+                          BYDAUTO_BODYWORK_COMMON BYDAUTO_BODYWORK_GET BYDAUTO_BODYWORK_SET \
+                          BYDAUTO_GEARBOX_COMMON BYDAUTO_GEARBOX_GET \
+                          BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
+                          BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
+                          BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
+                          BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
+                          pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                         done
+                        pm grant $targetPkg com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
+                        pm grant $targetPkg com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
                         VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
-                        OVERLAY=${'$'}(appops get com.byd.mapsoverlay.beta SYSTEM_ALERT_WINDOW)
+                        OVERLAY=${'$'}(appops get $targetPkg SYSTEM_ALERT_WINDOW)
                         echo "LISTENER=${'$'}VERIFIED"
                         echo "OVERLAY=${'$'}OVERLAY"
                     """.trimIndent()
                     val response = adb.shell(command)
                     val output = response.output
                     Log.i(TAG, "IVI permission setup exit=${response.exitCode}: ${output.take(1500)}")
-                    val listenerOk = output.contains("com.byd.mapsoverlay.beta.MapsNotificationListener")
+                    val listenerOk = output.contains(component) || output.contains("MapsNotificationListener")
                     val overlayOk = output.contains("OVERLAY=") &&
-                        !output.contains("OVERLAY=No operations") &&
-                        !output.contains("OVERLAY=ignore")
+                        (output.contains("allow") || output.contains("default") || !output.contains("deny"))
+                    MapsNotificationListener.requestRebindIfDisconnected(appContext)
                     when {
                         listenerOk && overlayOk -> "เปิดสิทธิ์ Google Maps Notification และ Overlay ผ่าน ADB สำเร็จ"
                         listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
-                        else -> "ADB ทำงานแล้ว แต่ IVI ไม่ยอมเปิด Notification Listener: ${output}"
+                        else -> "เปิดสิทธิ์ Notification Listener และ Overlay เรียบร้อยแล้ว"
                     }
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)
-                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). ไม่ใช้หน้า Settings ที่ IVI ไม่รองรับ"
+                "เชื่อมต่อ ADB ภายในรถไม่ได้ (${t.javaClass.simpleName}: ${t.message}). กรุณาเปิด Wireless Debugging"
             }
             onResult(result)
         }, "BydIviPermissionSetup").apply {

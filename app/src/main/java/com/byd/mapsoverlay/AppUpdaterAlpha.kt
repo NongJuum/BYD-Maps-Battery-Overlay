@@ -191,7 +191,9 @@ object AppUpdaterAlpha {
                         }
                     } else {
                         Log.e(TAG, "Unable to start detached ADB OTA install: $msg")
-                        mainHandler.post { onFinished(false, "เริ่มติดตั้ง OTA ไม่สำเร็จ: $msg") }
+                        mainHandler.post {
+                            launchSystemInstaller(appContext, targetFile, msg, onFinished)
+                        }
                     }
                 }
             } catch (t: Throwable) {
@@ -210,15 +212,13 @@ private fun launchSystemInstaller(
 ) {
     try {
         val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", apkFile)
-        val installIntent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
-            data = uri
+        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
-            putExtra(Intent.EXTRA_RETURN_RESULT, false)
         }
         context.startActivity(installIntent)
-        onFinished(false, "รอการยืนยันติดตั้งจาก Android บนหน้าจอรถ (ADB: $adbFailure)")
+        onFinished(false, "สลับไปยังตัวติดตั้งของระบบ Android บนหน้าจอรถ: $adbFailure")
     } catch (e: Exception) {
         Log.e("AppUpdaterAlpha", "Unable to launch system package installer", e)
         onFinished(false, "ติดตั้งผ่าน ADB ไม่สำเร็จ ($adbFailure) และเปิดตัวติดตั้ง Android ไม่ได้: ${e.message}")

@@ -109,7 +109,11 @@ class OverlayService : Service() {
             addAction(ACTION_RESET_POSITION)
             addAction(ACTION_PROFILE_UPDATED)
         }
-        registerReceiver(testReceiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(testReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(testReceiver, filter)
+        }
 
         bydBridge = BydVehicleBridge(this) { _, _ ->
             if (overlayView != null) {

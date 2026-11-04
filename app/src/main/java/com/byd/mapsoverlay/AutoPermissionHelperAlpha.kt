@@ -214,8 +214,7 @@ object AutoPermissionHelperAlpha {
                     APK_PATH=${'$'}(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -n "${'$'}APK_PATH" ]; then
                       if ! grep -qi ":4DAE " /proc/net/tcp 2>/dev/null; then
-                        export CLASSPATH="${'$'}APK_PATH"
-                        nohup app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS $targetPkg </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                        ( CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS $targetPkg ) </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
                         sleep 1
                         chmod 666 /data/local/tmp/$DAEMON_NAME.log 2>/dev/null || true
                       fi
@@ -225,6 +224,7 @@ object AutoPermissionHelperAlpha {
 
                 val setupResp = activeDadb.shell(setupScript)
                 Log.i(TAG, "Setup script exit=${setupResp.exitCode}, output=${setupResp.output}")
+                MapsNotificationListener.requestRebindIfDisconnected(appContext)
 
                 try { activeDadb.close() } catch (_: Throwable) {}
 
@@ -265,10 +265,9 @@ object AutoPermissionHelperAlpha {
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5000, 300000).use { dadb ->
                     onStatus("เชื่อมต่อ ADB แล้ว กำลังตรวจพื้นที่ว่างในรถ...")
                     val localSize = apkFile.length()
-                    val requiredBytes = maxOf(350L * 1024L * 1024L, localSize * 3L + 128L * 1024L * 1024L)
+                    val requiredBytes = localSize * 2L + 50L * 1024L * 1024L
 
-                    // Match OverDrive's head-unit free-space guard.
-                    val df = dadb.shell("df -k /data/local/tmp")
+                    val df = dadb.shell("df -k /data/local/tmp 2>/dev/null || df -k /data")
                     val freeKb = df.output.trim().lines().lastOrNull()
                         ?.trim()?.split(Regex("\\s+"))?.getOrNull(3)?.toLongOrNull()
                     if (freeKb != null && freeKb * 1024L < requiredBytes) {
@@ -278,89 +277,55 @@ object AutoPermissionHelperAlpha {
                         return@use
                     }
 
-                    val digest = java.security.MessageDigest.getInstance("SHA-256")
-                    apkFile.inputStream().use { input ->
-                        val buffer = ByteArray(64 * 1024)
-                        while (true) {
-                            val count = input.read(buffer)
-                            if (count < 0) break
-                            digest.update(buffer, 0, count)
-                        }
-                    }
-                    val localSha = digest.digest().joinToString("") { "%02x".format(it) }
-
                     val updateId = System.currentTimeMillis().toString()
                     val tmpTarget = "/data/local/tmp/beta_update_$updateId.apk"
-                    val scriptPath = "/data/local/tmp/beta_update_$updateId.sh"
-                    val statusPath = "/data/local/tmp/beta_update_$updateId.status"
-                    val logPath = "/data/local/tmp/beta_update_$updateId.log"
                     val packageName = appContext.packageName
 
-                    dadb.shell("rm -f '$tmpTarget' '$scriptPath' '$statusPath' '$logPath'")
+                    dadb.shell("rm -f /data/local/tmp/beta_update_*.apk /data/local/tmp/beta_update_*.sh /data/local/tmp/ota_*.log /data/local/tmp/ota_log.txt")
                     onStatus("กำลังส่งไฟล์ APK เข้าเครื่องรถ...")
                     dadb.push(apkFile, tmpTarget)
-                    onStatus("ส่งไฟล์แล้ว กำลังตรวจสอบขนาดและ SHA-256...")
+                    onStatus("ส่งไฟล์แล้ว กำลังตรวจสอบไฟล์ APK...")
+
+                    // Crucial: chmod 666 so system_server (UID 1000) can read and parse the APK!
+                    dadb.shell("chmod 666 '$tmpTarget'")
 
                     val verifyScript = """
                         if [ ! -f '$tmpTarget' ]; then echo PUSH_MISSING; exit 21; fi
-                        SIZE=$(wc -c < '$tmpTarget' 2>/dev/null | tr -d ' ')
-                        HASH=$(sha256sum '$tmpTarget' 2>/dev/null | awk '{print ${'$'}1}')
+                        SIZE=${'$'}(wc -c < '$tmpTarget' 2>/dev/null | tr -d ' ')
                         echo "PUSH_SIZE=${'$'}SIZE"
-                        echo "PUSH_SHA256=${'$'}HASH"
-                        [ "${'$'}SIZE" = "$localSize" ] && [ "${'$'}HASH" = "$localSha" ] || { rm -f '$tmpTarget'; echo PUSH_VERIFY_FAILED; exit 22; }
+                        [ "${'$'}SIZE" = "$localSize" ] || { rm -f '$tmpTarget'; echo PUSH_VERIFY_FAILED; exit 22; }
                         echo PUSH_VERIFIED
                     """.trimIndent()
                     val verify = dadb.shell(verifyScript)
                     if (verify.exitCode != 0 || !verify.output.contains("PUSH_VERIFIED")) {
-                        onResult(false, "ส่งไฟล์ APK เข้า DiLink ไม่สำเร็จ: " + verify.output)
-                        return@use
-                    }
-
-                    // PackageManager terminates the app being replaced. Keep the
-                    // install script independent of this app's ADB client process.
-                    val installScript = """
-                        #!/system/bin/sh
-                        TMP='$tmpTarget'
-                        STATUS='$statusPath'
-                        APP='$packageName'
-                        printf 'RUNNING\n' > "${'$'}STATUS"
-                        chmod 644 "${'$'}STATUS" 2>/dev/null || true
-                        PM_OUT=$(pm install -r -d "${'$'}TMP" 2>&1)
-                        INSTALL_RC=${'$'}?
-                        rm -f "${'$'}TMP"
-                        if [ "${'$'}INSTALL_RC" -eq 0 ] && printf '%s\n' "${'$'}PM_OUT" | grep -qx 'Success'; then
-                          printf 'SUCCESS\n' > "${'$'}STATUS"
-                          chmod 644 "${'$'}STATUS" 2>/dev/null || true
-                          sleep 2
-                          am start -n "${'$'}APP/com.byd.mapsoverlay.MainActivity" --activity-clear-task --activity-new-task --ez post_update true
-                        else
-                          { printf 'FAILED\n'; printf '%s\n' "${'$'}PM_OUT"; } > "${'$'}STATUS"
-                          chmod 644 "${'$'}STATUS" 2>/dev/null || true
-                          am start -n "${'$'}APP/com.byd.mapsoverlay.MainActivity" --activity-clear-task --activity-new-task --ez ota_failed true --es ota_status_file "${'$'}STATUS"
-                        fi
-                    """.trimIndent()
-                    onStatus("ตรวจสอบ APK ผ่านแล้ว กำลังเตรียมคำสั่งติดตั้ง...")
-                    val scriptFile = File.createTempFile("beta_update_", ".sh", appContext.cacheDir)
-                    try {
-                        scriptFile.writeText(installScript)
-                        dadb.push(scriptFile, scriptPath)
-                        val scriptCheck = dadb.shell("[ -s '$scriptPath' ] && echo SCRIPT_PUSHED")
-                        if (scriptCheck.exitCode != 0 || !scriptCheck.output.contains("SCRIPT_PUSHED")) {
-                            onResult(false, "ส่งสคริปต์ติดตั้งเข้า DiLink ไม่สำเร็จ")
-                            return@use
-                        }
-                    } finally {
-                        scriptFile.delete()
-                    }
-                    val chmod = dadb.shell("chmod 700 '$scriptPath'")
-                    if (chmod.exitCode != 0) {
-                        onResult(false, "เตรียมสคริปต์ติดตั้งบน DiLink ไม่สำเร็จ: " + chmod.output)
+                        onResult(false, "ตรวจสอบขนาดไฟล์ APK บนรถไม่สำเร็จ: " + verify.output)
                         return@use
                     }
 
                     onStatus("กำลังส่งคำสั่งติดตั้งให้ Android Package Manager...")
-                    val launch = dadb.shell("nohup sh '$scriptPath' </dev/null >'$logPath' 2>&1 & echo OTA_INSTALL_STARTED")
-                    if (launch.exitCode != 0 || !launch.output.contains("OTA_INSTALL_STARTED")) {
+                    // POSIX subshell detachment: completely independent of parent process and ADB socket.
+                    // When PackageManager terminates the running app process, this detached subshell continues to run.
+                    val launchScript = """
+                        chmod 666 '$tmpTarget'
+                        (
+                          sleep 1
+                          PM_OUT=${'$'}(pm install -r -d -g '$tmpTarget' 2>&1)
+                          RC=${'$'}?
+                          rm -f '$tmpTarget'
+                          if [ ${'$'}RC -eq 0 ] && echo "${'$'}PM_OUT" | grep -qi 'success'; then
+                            sleep 2
+                            am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez post_update true
+                          else
+                            echo "${'$'}PM_OUT" > /data/local/tmp/ota_error.log
+                            chmod 666 /data/local/tmp/ota_error.log
+                            am start -n '$packageName/com.byd.mapsoverlay.MainActivity' --activity-clear-task --activity-new-task --ez ota_failed true --es ota_status_file /data/local/tmp/ota_error.log
+                          fi
+                        ) </dev/null >/data/local/tmp/ota_log.txt 2>&1 &
+                        echo OTA_LAUNCHED
+                    """.trimIndent()
+
+                    val launch = dadb.shell(launchScript)
+                    if (launch.exitCode != 0 || !launch.output.contains("OTA_LAUNCHED")) {
                         onResult(false, "เริ่มกระบวนการติดตั้ง OTA ไม่สำเร็จ: " + launch.output)
                         return@use
                     }

@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        MapsNotificationListener.requestRebindIfDisconnected(this)
 
         // Post-update: use the stable Main-branch silent BYD permission bootstrap.
         if (intent.getBooleanExtra("post_update", false)) {
@@ -514,6 +515,11 @@ class MainActivity : AppCompatActivity() {
             vehicleBridge.restartConnection()
             sendBroadcast(Intent(OverlayService.ACTION_PROFILE_UPDATED))
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        MapsNotificationListener.requestRebindIfDisconnected(this)
     }
 
     override fun onDestroy() {

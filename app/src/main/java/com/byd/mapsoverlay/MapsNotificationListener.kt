@@ -66,10 +66,14 @@ class MapsNotificationListener : NotificationListenerService() {
             val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
             val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
             val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
+            val infoText = extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString() ?: ""
+            val summaryText = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString() ?: ""
+            val tickerText = sbn.notification.tickerText?.toString() ?: ""
 
-            val distanceKm = extractTotalRemainingDistance(subText, text, bigText)
+            val distanceKm = extractTotalRemainingDistance(subText, text, bigText, title, infoText, summaryText, tickerText)
             if (distanceKm != null && distanceKm > 0.0) {
                 val broadcastIntent = Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
+                    setPackage(packageName)
                     putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
                 }
                 sendBroadcast(broadcastIntent)
@@ -79,7 +83,11 @@ class MapsNotificationListener : NotificationListenerService() {
                     putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
                 }
                 try {
-                    startService(serviceIntent)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        startForegroundService(serviceIntent)
+                    } else {
+                        startService(serviceIntent)
+                    }
                 } catch (e: Exception) {
                     Log.w(tag, "startService fallback to broadcast", e)
                 }
@@ -90,13 +98,32 @@ class MapsNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         if (sbn != null && isNavigationNotification(sbn)) {
+            val stillNavigating = try {
+                activeNotifications?.any { other ->
+                    other != null && other.id != sbn.id && isNavigationNotification(other)
+                } ?: false
+            } catch (_: Exception) {
+                false
+            }
+            if (stillNavigating) {
+                Log.d(tag, "Other navigation notification still active, keeping overlay")
+                return
+            }
+
             Log.d(tag, "Maps navigation ended [${sbn.packageName}] -> hide overlay")
-            sendBroadcast(Intent(OverlayService.ACTION_HIDE_OVERLAY))
+            val broadcastIntent = Intent(OverlayService.ACTION_HIDE_OVERLAY).apply {
+                setPackage(packageName)
+            }
+            sendBroadcast(broadcastIntent)
             val intent = Intent(this, OverlayService::class.java).apply {
                 action = OverlayService.ACTION_HIDE_OVERLAY
             }
             try {
-                startService(intent)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
             } catch (e: Exception) {
                 Log.w(tag, "startService hide fallback", e)
             }
@@ -132,31 +159,22 @@ class MapsNotificationListener : NotificationListenerService() {
         return hasExitNavAction
     }
 
-    private fun extractTotalRemainingDistance(
-        subText: String,
-        text: String,
-        bigText: String
-    ): Double? {
-        parseMaxDistanceFromText(subText)?.let { return it }
-
-        if (text.contains("·") || text.contains("•")) {
-            parseMaxDistanceFromText(text)?.let { return it }
+    private fun extractTotalRemainingDistance(vararg sources: String): Double? {
+        val allDistances = mutableListOf<Double>()
+        for (src in sources) {
+            if (src.isBlank()) continue
+            allDistances.addAll(parseDistancesFromText(src))
         }
-        if (bigText.contains("·") || bigText.contains("•")) {
-            parseMaxDistanceFromText(bigText)?.let { return it }
-        }
-
-        parseMaxDistanceFromText("$subText | $bigText")?.let { return it }
-
-        return parseMaxDistanceFromText(text)
+        return allDistances.maxOrNull()
     }
 
-    private fun parseMaxDistanceFromText(input: String): Double? {
-        if (input.isBlank()) return null
+    private fun parseDistancesFromText(input: String): List<Double> {
+        if (input.isBlank()) return emptyList()
         val normalized = input.replace('\u00A0', ' ').replace('\u202F', ' ')
         val foundDistancesKm = mutableListOf<Double>()
 
         try {
+            // Kilometers: km, กม., กม
             val kmPattern = Pattern.compile("([0-9]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:km|กม\\.|กม)", Pattern.CASE_INSENSITIVE)
             val kmMatcher = kmPattern.matcher(normalized)
             while (kmMatcher.find()) {
@@ -164,16 +182,48 @@ class MapsNotificationListener : NotificationListenerService() {
                 rawNum?.toDoubleOrNull()?.let { foundDistancesKm.add(it) }
             }
 
+            // Meters: m, ม., เมตร
             val mPattern = Pattern.compile("([0-9]+(?:,[0-9]{3})*)\\s*(?:m(?!in)|ม\\.|เมตร)(?:\\b|\\s|$)", Pattern.CASE_INSENSITIVE)
             val mMatcher = mPattern.matcher(normalized)
             while (mMatcher.find()) {
                 val rawNum = mMatcher.group(1)?.replace(",", "")
                 rawNum?.toDoubleOrNull()?.let { foundDistancesKm.add(it / 1000.0) }
             }
+
+            // Miles: mi, mile, miles
+            val miPattern = Pattern.compile("([0-9]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:mi|miles?)(?:\\b|\\s|$)", Pattern.CASE_INSENSITIVE)
+            val miMatcher = miPattern.matcher(normalized)
+            while (miMatcher.find()) {
+                val rawNum = miMatcher.group(1)?.replace(",", "")
+                rawNum?.toDoubleOrNull()?.let { foundDistancesKm.add(it * 1.60934) }
+            }
         } catch (e: Exception) {
             Log.e(tag, "Parse distance error", e)
         }
 
-        return foundDistancesKm.maxOrNull()
+        return foundDistancesKm
+    }
+
+    companion object {
+        fun requestRebindIfDisconnected(context: android.content.Context) {
+            val componentName = android.content.ComponentName(context, MapsNotificationListener::class.java)
+            try {
+                context.packageManager.setComponentEnabledSetting(
+                    componentName,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+                context.packageManager.setComponentEnabledSetting(
+                    componentName,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    requestRebind(componentName)
+                }
+            } catch (e: Exception) {
+                Log.w("MapsNotification", "Rebind error", e)
+            }
+        }
     }
 }
