@@ -141,7 +141,9 @@ object AppUpdaterAlpha {
                             output.write(buffer, 0, bytesRead)
                             downloaded += bytesRead
                             if (totalLength > 0) {
-                                val progress = ((downloaded.toLong() * 100) / totalLength).toInt()
+                                // 100% means installation has actually been handed to PackageManager,
+                                // not merely that the HTTP download finished.
+                                val progress = ((downloaded.toLong() * 99) / totalLength).toInt()
                                 mainHandler.post { onProgress(progress) }
                             }
                         }
@@ -176,12 +178,17 @@ object AppUpdaterAlpha {
                 mainHandler.post { onStatus("ดาวน์โหลดเสร็จสิ้น กำลังตรวจสอบช่องทางติดตั้ง...") }
                 // Always attempt a real authenticated ADB install; a listening TCP port is not authorization.
                 // On any ADB/auth/install failure, fall back to Android Package Installer for user confirmation.
-                AutoPermissionHelperAlpha.installApkSilently(appContext, targetFile) { started, msg ->
+                AutoPermissionHelperAlpha.installApkSilently(
+                    context = appContext,
+                    apkFile = targetFile,
+                    onStatus = { status -> mainHandler.post { onStatus(status) } }
+                ) { started, msg ->
                     if (started) {
-                        // The remote shell owns the install process. PackageManager
-                        // terminates this app during replacement, so do not wait here
-                        // or launch a second Android installer over the same APK.
-                        mainHandler.post { onFinished(true, msg) }
+                        // The detached PackageManager installer has been launched.
+                        mainHandler.post {
+                            onProgress(100)
+                            onFinished(true, msg)
+                        }
                     } else {
                         Log.e(TAG, "Unable to start detached ADB OTA install: $msg")
                         mainHandler.post { onFinished(false, "เริ่มติดตั้ง OTA ไม่สำเร็จ: $msg") }
