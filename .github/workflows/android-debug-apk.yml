@@ -46,19 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION_CODE="$(sed -nE "s/^[[:space:]]*versionCode ([0-9]+)$/\1/p" app/build.gradle)"
-          VERSION_NAME="$(sed -nE "s/^[[:space:]]*versionName '([^']+)'$/\1/p" app/build.gradle)"
-          test -n "$VERSION_CODE"
-          test -n "$VERSION_NAME"
-          python3 -c "
-import json
-with open('version.json', 'r', encoding='utf-8') as f:
-    d = json.load(f)
-d['versionCode'] = int('$VERSION_CODE')
-d['versionName'] = '$VERSION_NAME'
-with open('version.json', 'w', encoding='utf-8') as f:
-    json.dump(d, f, indent=2, ensure_ascii=False)
-"
+          python3 scripts/update_version_json.py
 
       - name: Publish Beta APK and OTA metadata to beta branch
         if: github.ref == 'refs/heads/beta' && github.event_name == 'push'
