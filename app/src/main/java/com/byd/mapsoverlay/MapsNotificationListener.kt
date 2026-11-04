@@ -81,7 +81,20 @@ class MapsNotificationListener : NotificationListenerService() {
         "com.google.android.gsf",
         "com.mgoogle.android.gms",
         "org.microg.gms.droidguard",
-        "com.android.vending"
+        "com.android.vending",
+
+        // 7. Android Auto Projection Receivers (ZLink / CarLinkit / BYD Auto Link)
+        "com.zjinnova.zlink",
+        "com.zjinnova.zlink5",
+        "com.zjinnova.zlink.auto",
+        "com.byd.bydlink",
+        "com.byd.auto.link",
+        "com.byd.auto.projection",
+        "com.google.android.projection.gearhead",
+        "com.google.android.embedded.projection",
+        "com.autonavi.link",
+        "cn.manstep.phonemirrorbox",
+        "com.carlink.android"
     )
 
     override fun onListenerConnected() {
@@ -186,7 +199,7 @@ class MapsNotificationListener : NotificationListenerService() {
             return false
         }
 
-        // Check if package matches known Maps, GBox, GPack, Vanced, MicroG or GSpace packages
+        // Check if package matches known Maps, GBox, GPack, Vanced, MicroG, GSpace or Android Auto Projection packages
         val isExplicitMapsPkg = explicitMapsPackages.contains(pkg) ||
             pkg.endsWith(".maps") ||
             pkg.contains("google.android.apps.maps") ||
@@ -194,7 +207,11 @@ class MapsNotificationListener : NotificationListenerService() {
             pkg.contains("gbox") ||
             pkg.contains("gpack") ||
             pkg.contains("gspace") ||
-            pkg.contains("microg")
+            pkg.contains("microg") ||
+            pkg.contains("zlink") ||
+            pkg.contains("bydlink") ||
+            pkg.contains("projection") ||
+            pkg.contains("phonemirrorbox")
 
         val isNavCategory = notif.category == Notification.CATEGORY_NAVIGATION
         val groupKey = (notif.group ?: "").lowercase()
