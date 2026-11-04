@@ -46,21 +46,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION_CODE="$(sed -nE "s/^[[:space:]]*versionCode ([0-9]+)$/\\1/p" app/build.gradle)"
-          VERSION_NAME="$(sed -nE "s/^[[:space:]]*versionName '([^']+)'$/\\1/p" app/build.gradle)"
+          VERSION_CODE="$(sed -nE "s/^[[:space:]]*versionCode ([0-9]+)$/\1/p" app/build.gradle)"
+          VERSION_NAME="$(sed -nE "s/^[[:space:]]*versionName '([^']+)'$/\1/p" app/build.gradle)"
           test -n "$VERSION_CODE"
           test -n "$VERSION_NAME"
-          cat > version.json <<EOF
-          {
-            "versionCode": $VERSION_CODE,
-            "versionName": "$VERSION_NAME",
-            "channel": "beta",
-            "edition": "Beta",
-            "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-            "changelogTh": "v1.2.0: รองรับหมุนจอแยกพิกัด, แปะทับ Status Bar, โหมดกลางคืนหรี่แสง, เลขเดี่ยว ~XX% นิ่งไม่กระตุก, เตือนแวะชาร์จกี่ครั้ง",
-            "changelogEn": "v1.2.0: Dynamic rotation with safe zone, status bar placement, night auto-dimming, single-number Dest SOC, charging stops counter."
-          }
-          EOF
+          python3 -c "
+import json
+with open('version.json', 'r', encoding='utf-8') as f:
+    d = json.load(f)
+d['versionCode'] = int('$VERSION_CODE')
+d['versionName'] = '$VERSION_NAME'
+with open('version.json', 'w', encoding='utf-8') as f:
+    json.dump(d, f, indent=2, ensure_ascii=False)
+"
 
       - name: Publish Beta APK and OTA metadata to beta branch
         if: github.ref == 'refs/heads/beta' && github.event_name == 'push'
