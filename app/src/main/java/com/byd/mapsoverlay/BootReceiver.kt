@@ -23,8 +23,11 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_LOCKED_BOOT_COMPLETED,
             Intent.ACTION_USER_PRESENT,
+            Intent.ACTION_POWER_CONNECTED,
             "android.intent.action.QUICKBOOT_POWERON",
-            "com.htc.intent.action.QUICKBOOT_POWERON" -> {
+            "com.htc.intent.action.QUICKBOOT_POWERON",
+            "com.byd.intent.action.POWER_ON",
+            "com.byd.intent.action.ACC_ON" -> {
                 // 1. กู้คืน NotificationListener Proxy
                 MapsNotificationListener.requestRebindIfDisconnected(context)
 

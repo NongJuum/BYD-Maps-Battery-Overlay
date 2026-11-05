@@ -438,7 +438,7 @@ class MainActivity : AppCompatActivity() {
                 else -> OverlayService.THEME_CAPSULE
             }
             overlayPrefs.edit().putInt(OverlayService.KEY_OVERLAY_THEME, selectedTheme).apply()
-            sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION).apply {
+            sendBroadcast(Intent(OverlayService.ACTION_RELOAD_THEME).apply {
                 setPackage(packageName)
             })
             Toast.makeText(this, "Layout Theme Changed! Re-launching overlay...", Toast.LENGTH_SHORT).show()
@@ -451,13 +451,13 @@ class MainActivity : AppCompatActivity() {
         val initialProgress = ((savedScale - 0.7f) * 100).toInt().coerceIn(0, 60)
         sbOverlayScale?.progress = initialProgress
         val initialPct = (savedScale * 100).toInt()
-        tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
+        tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: ${initialPct}%" else "🔍 HUD Size Scale: ${initialPct}%"
 
         sbOverlayScale?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val scale = 0.7f + (progress / 100f)
                 val pct = (scale * 100).toInt()
-                tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
+                tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: ${initialPct}%" else "🔍 HUD Size Scale: ${initialPct}%"
                 if (fromUser) {
                     overlayPrefs.edit().putFloat(OverlayService.KEY_SCALE, scale).apply()
                     // Broadcast updated scale to OverlayService immediately
