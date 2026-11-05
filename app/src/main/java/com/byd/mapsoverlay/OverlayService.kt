@@ -26,6 +26,7 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
 class OverlayService : Service() {
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
@@ -86,6 +87,7 @@ class OverlayService : Service() {
         const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
         const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
         const val ACTION_RELOAD_SCALE = "com.byd.mapsoverlay.ACTION_RELOAD_SCALE"
+        const val ACTION_RELOAD_THEME = "com.byd.mapsoverlay.ACTION_RELOAD_THEME"
         const val ACTION_PROFILE_UPDATED = "com.byd.mapsoverlay.ACTION_PROFILE_UPDATED"
         const val EXTRA_DISTANCE_KM = "EXTRA_DISTANCE_KM"
         private const val PREFS_NAME = "byd_overlay_prefs"
@@ -119,10 +121,18 @@ class OverlayService : Service() {
                 ACTION_HIDE_OVERLAY -> hideOverlay()
                 ACTION_RESET_POSITION -> resetOverlayPosition()
                 ACTION_RELOAD_SCALE -> {
-                    val s = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.4f)
+                    val s = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.5f)
                     currentScale = s
                     overlayView?.scaleX = s
                     overlayView?.scaleY = s
+                }
+                ACTION_RELOAD_THEME -> {
+                    val wasShowing = (overlayView != null)
+                    hideOverlay()
+                    if (wasShowing || latestDistanceKm > 0) {
+                        showOverlay()
+                        renderOverlay()
+                    }
                 }
                 ACTION_PROFILE_UPDATED -> {
                     bydBridge.restartConnection()
@@ -160,8 +170,10 @@ class OverlayService : Service() {
         }
 
         bydBridge = BydVehicleBridge(this) { _, _ ->
-            if (overlayView != null) {
-                renderOverlay()
+            mainHandler.post {
+                if (overlayView != null) {
+                    renderOverlay()
+                }
             }
         }
         bydBridge.startListening()
@@ -212,6 +224,14 @@ class OverlayService : Service() {
             }
             ACTION_RESET_POSITION -> {
                 resetOverlayPosition()
+            }
+            ACTION_RELOAD_THEME -> {
+                val wasShowing = (overlayView != null)
+                hideOverlay()
+                if (wasShowing || latestDistanceKm > 0) {
+                    showOverlay()
+                    renderOverlay()
+                }
             }
             ACTION_PROFILE_UPDATED -> {
                 bydBridge.restartConnection()
@@ -266,20 +286,27 @@ class OverlayService : Service() {
         // Bottom Air-con bar = approx 80dp (100px) -> min Y = 80
         // Top Status bar: อนุญาตให้ลากขึ้นไปทับแถบ Status Bar ด้านบนสุดได้เลย (คนขับนิยมวางตรงนี้เพราะพื้นที่ว่างเยอะ)
         // เราตั้งเพดานบนให้ลากชิดขอบบนสุดได้ถึง screenH - 10px (ไม่หลุดทะลุจอ)
-        val halfW = (screenW / 2) - 40
+        // Safe margins dynamic calculation for both Portrait & Landscape
+        val halfW = (screenW / 2) - 30
         val clampedX = x.coerceIn(-halfW, halfW)
-        val clampedY = y.coerceIn(80, (screenH - 10).coerceAtLeast(300))
+        val maxY = (screenH - 20).coerceAtLeast(200)
+        val clampedY = y.coerceIn(60, maxY)
         return Pair(clampedX, clampedY)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // Auto-snap overlay to orientation-specific saved coordinates
+        // Hole 4 Fix: Reset active drag touch state to prevent coordinate mismatch on 90 deg rotation
+        initialTouchX = 0f
+        initialTouchY = 0f
+        
+        // Auto-snap overlay to orientation-specific safe coordinates
         if (overlayView != null && windowParams != null) {
             val (targetX, targetY) = getSavedPosition()
             windowParams?.let { p ->
-                p.x = targetX
-                p.y = targetY
+                val (clampedX, clampedY) = clampToSafeZone(targetX, targetY)
+                p.x = clampedX
+                p.y = clampedY
                 try {
                     windowManager?.updateViewLayout(overlayView, p)
                 } catch (_: Exception) {}
@@ -437,7 +464,7 @@ class OverlayService : Service() {
         val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         overlayView?.alpha = if (isNightMode) 0.72f else 0.95f
 
-        val currentSoc = bydBridge.currentSoc
+        val currentSoc = bydBridge.currentSoc.coerceIn(0.0, 100.0)
         // Overlay must show the live CAN/OBD consumption value. Keep the conservative
         // rounded-up EMA exclusively for destination SoC estimation below.
         // Keep the live CAN/OBD value for the overlay; use conservative EMA only for destination SoC.
@@ -582,5 +609,10 @@ class OverlayService : Service() {
         }
         bydBridge.stopListening()
         hideOverlay()
+        
+        // Critical Low Memory Cleanup: Release View references & GC hint
+        overlayView = null
+        windowParams = null
+        windowManager = null
     }
 }

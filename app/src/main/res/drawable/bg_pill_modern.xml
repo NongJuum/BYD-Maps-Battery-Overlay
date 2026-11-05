@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Cyber-Glassmorphism Cockpit Pill: High-contrast Dark Slate + Cyan Glow Border -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#E612141A" />
-    <corners android:radius="18dp" />
+    <solid android:color="#F20B1322" />
+    <corners android:radius="24dp" />
     <stroke
-        android:width="1.2dp"
-        android:color="#33FFFFFF" />
+        android:width="1.8dp"
+        android:color="#38BDF8" />
 </shape>

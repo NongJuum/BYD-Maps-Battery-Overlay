@@ -1,9 +1,9 @@
 {
-  "versionCode": 14,
-  "versionName": "1.3.1-beta",
+  "versionCode": 16,
+  "versionName": "1.3.3-beta",
   "channel": "beta",
   "edition": "Beta",
   "apkUrl": "https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk",
-  "changelogTh": "v1.3.1: แก้ปัญหาสตาร์ทรถข้ามคืนสิทธิ์หลุด (เพิ่ม RECEIVE_BOOT_COMPLETED & BYD Power wakeups), เพิ่ม SeekBar ปรับขนาดแถบ HUD ย่อ/ขยาย (70%-130%), จับคู่สีตัวเลขระยะทางให้ Match กับ Dest SoC %, ปลดล็อก Android Auto (ZLink/AutoKit) ให้ Detect ระยะทางทันที",
-  "changelogEn": "v1.3.1: Fix overnight boot receiver permission drop (RECEIVE_BOOT_COMPLETED & BYD Power wakeups), add HUD size scale slider (70%-130%), harmonious distance & Dest SoC color matching, unlock Android Auto (ZLink/AutoKit) instant telemetry hook."
+  "changelogTh": "v1.3.3: อุดรูรั่วความปลอดภัยและเสถียรภาพ (Hole Patches) - แก้ไข UI Thread Safety ใน BydVehicleBridge, ป้องกันพิกัดเพี้ยนขณะหมุนจอ 90 องศา, ดักจับค่า Sensor Glitch ของ BMS ให้เสถียร, ปรับปรุงการจัดการ Socket ให้ปลอดภัย 100%",
+  "changelogEn": "v1.3.3: Comprehensive hole patches - UI thread safety callback, orientation drag coordinate reset, BMS sensor glitch protection, and socket leak prevention."
 }

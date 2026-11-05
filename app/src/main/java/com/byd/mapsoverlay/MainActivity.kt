@@ -438,26 +438,27 @@ class MainActivity : AppCompatActivity() {
                 else -> OverlayService.THEME_CAPSULE
             }
             overlayPrefs.edit().putInt(OverlayService.KEY_OVERLAY_THEME, selectedTheme).apply()
-            sendBroadcast(Intent(OverlayService.ACTION_RESET_POSITION).apply {
+            sendBroadcast(Intent(OverlayService.ACTION_RELOAD_THEME).apply {
                 setPackage(packageName)
             })
             Toast.makeText(this, "Layout Theme Changed! Re-launching overlay...", Toast.LENGTH_SHORT).show()
         }
 
-        // HUD Scale / Size Adjustment Controller (70% - 130%)
+        // HUD Scale / Size Adjustment Controller (70% - 150%)
         val tvScaleLabel = findViewById<TextView>(R.id.tv_scale_label)
         val sbOverlayScale = findViewById<SeekBar>(R.id.sb_overlay_scale)
-        val savedScale = overlayPrefs.getFloat(OverlayService.KEY_SCALE, 1.0f).coerceIn(0.7f, 1.3f)
-        val initialProgress = ((savedScale - 0.7f) * 100).toInt().coerceIn(0, 60)
+        sbOverlayScale?.max = 80 // 0 to 80 corresponds to 70% to 150%
+        val savedScale = overlayPrefs.getFloat(OverlayService.KEY_SCALE, 1.0f).coerceIn(0.7f, 1.5f)
+        val initialProgress = ((savedScale - 0.7f) * 100).toInt().coerceIn(0, 80)
         sbOverlayScale?.progress = initialProgress
         val initialPct = (savedScale * 100).toInt()
-        tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
+        tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: ${initialPct}%" else "🔍 HUD Size Scale: ${initialPct}%"
 
         sbOverlayScale?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val scale = 0.7f + (progress / 100f)
                 val pct = (scale * 100).toInt()
-                tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
+                tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: ${pct}%" else "🔍 HUD Size Scale: ${pct}%"
                 if (fromUser) {
                     overlayPrefs.edit().putFloat(OverlayService.KEY_SCALE, scale).apply()
                     // Broadcast updated scale to OverlayService immediately
