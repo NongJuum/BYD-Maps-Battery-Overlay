@@ -265,12 +265,19 @@ class MapsNotificationListener : NotificationListenerService() {
         }
 
         // Within verified packages, validate navigation intent
+        // For Android Auto projection receivers (ZLink, BYDLink, AutoKit, Gearhead):
+        val isAndroidAutoBridge = pkg.contains("zlink") || pkg.contains("bydlink") || pkg.contains("projection") || pkg.contains("phonemirrorbox") || pkg.contains("gearhead")
+        if (isAndroidAutoBridge && hasDistanceUnit) {
+            // Android Auto projection frames might not transmit exit actions or category -> accept as valid navigation immediately!
+            return true
+        }
+
         if (isNavCategory || groupKey.contains("navigation_status") || channelId.contains("navigation") || hasExitNavAction) {
             return true
         }
 
         // Fallback for sandboxes (GBox/GPack) where category might be demoted to default by the container
-        if (isExplicitMapsPkg && hasDistanceUnit && (hasNavDirection || hasTimeEstimate)) {
+        if (isExplicitMapsPkg && hasDistanceUnit && (hasNavDirection || hasTimeEstimate || isAndroidAutoBridge)) {
             return true
         }
 

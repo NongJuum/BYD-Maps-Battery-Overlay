@@ -22,6 +22,7 @@ import android.widget.Toast
 import android.widget.Switch
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.SeekBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
@@ -442,6 +443,32 @@ class MainActivity : AppCompatActivity() {
             })
             Toast.makeText(this, "Layout Theme Changed! Re-launching overlay...", Toast.LENGTH_SHORT).show()
         }
+
+        // HUD Scale / Size Adjustment Controller (70% - 130%)
+        val tvScaleLabel = findViewById<TextView>(R.id.tv_scale_label)
+        val sbOverlayScale = findViewById<SeekBar>(R.id.sb_overlay_scale)
+        val savedScale = overlayPrefs.getFloat(OverlayService.KEY_SCALE, 1.0f).coerceIn(0.7f, 1.3f)
+        val initialProgress = ((savedScale - 0.7f) * 100).toInt().coerceIn(0, 60)
+        sbOverlayScale?.progress = initialProgress
+        val initialPercent = (savedScale * 100).toInt()
+        tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
+
+        sbOverlayScale.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val scale = 0.7f + (progress / 100f)
+                val percent = (scale * 100).toInt()
+                tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
+                if (fromUser) {
+                    overlayPrefs.edit().putFloat(OverlayService.KEY_SCALE, scale).apply()
+                    // Broadcast updated scale to OverlayService immediately
+                    sendBroadcast(Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
+                        setPackage(packageName)
+                    })
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
 
         btnOneClickActivate.setOnClickListener {
             tvStatus.text = if (isTh) "⚡ กำลังเปิดใช้งานสิทธิ์ทั้งหมดในคลิกเดียว..." else "⚡ One-Click Auto Activating all permissions..."

@@ -313,6 +313,32 @@
                     android:textColor="#FFFFFF"
                     android:textSize="13sp" />
             </RadioGroup>
+
+            <!-- HUD Scale / Size Adjustment Slider -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="12dp">
+
+                <TextView
+                    android:id="@+id/tv_scale_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔍 ขนาดแถบ HUD: 100%"
+                    android:textColor="#38BDF8"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/sb_overlay_scale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:max="60"
+                android:progress="30" />
         </LinearLayout>
 
         <!-- Section 4: Icon Guide -->
