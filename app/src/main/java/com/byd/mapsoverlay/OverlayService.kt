@@ -94,7 +94,7 @@ class OverlayService : Service() {
         private const val KEY_POS_Y_PORTRAIT = "pos_y_portrait"
         private const val KEY_POS_X_LANDSCAPE = "pos_x_landscape"
         private const val KEY_POS_Y_LANDSCAPE = "pos_y_landscape"
-        private const val KEY_SCALE = "scale"
+        const val KEY_SCALE = "scale"
         const val KEY_SHOW_DEST_SOC = "show_dest_soc"
         const val KEY_SHOW_REAL_RANGE = "show_real_range"
         const val KEY_SHOW_MAPS_DIST = "show_maps_dist"
@@ -483,6 +483,8 @@ class OverlayService : Service() {
         // 6-Tier Dynamic Color (Red 0-10% -> Orange 10-30% -> Yellow 30-50% -> Light Green 50-75% -> Dark Green 75-95% -> Cyan 95-100%)
         val socColor = EnergyCalculator.getDynamicSocColor(destSoc.toDouble())
         tvSocDisplay?.setTextColor(socColor)
+        // Match Maps Distance color to Dest SoC for harmonious, elegant cockpit aesthetics
+        tvMapsDistance?.setTextColor(socColor)
 
         // Calculate Charging Stops Counter
         val stopsNeeded = EnergyCalculator.calculateChargingStops(
