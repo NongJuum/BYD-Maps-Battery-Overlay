@@ -85,6 +85,7 @@ class OverlayService : Service() {
         const val ACTION_UPDATE_DISTANCE = "com.byd.mapsoverlay.ACTION_UPDATE_DISTANCE"
         const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
         const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
+        const val ACTION_RELOAD_SCALE = "com.byd.mapsoverlay.ACTION_RELOAD_SCALE"
         const val ACTION_PROFILE_UPDATED = "com.byd.mapsoverlay.ACTION_PROFILE_UPDATED"
         const val EXTRA_DISTANCE_KM = "EXTRA_DISTANCE_KM"
         private const val PREFS_NAME = "byd_overlay_prefs"
@@ -117,6 +118,12 @@ class OverlayService : Service() {
                 }
                 ACTION_HIDE_OVERLAY -> hideOverlay()
                 ACTION_RESET_POSITION -> resetOverlayPosition()
+                ACTION_RELOAD_SCALE -> {
+                    val s = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.4f)
+                    currentScale = s
+                    overlayView?.scaleX = s
+                    overlayView?.scaleY = s
+                }
                 ACTION_PROFILE_UPDATED -> {
                     bydBridge.restartConnection()
                     if (overlayView != null) {
@@ -143,6 +150,7 @@ class OverlayService : Service() {
             addAction(ACTION_UPDATE_DISTANCE)
             addAction(ACTION_HIDE_OVERLAY)
             addAction(ACTION_RESET_POSITION)
+            addAction(ACTION_RELOAD_SCALE)
             addAction(ACTION_PROFILE_UPDATED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
