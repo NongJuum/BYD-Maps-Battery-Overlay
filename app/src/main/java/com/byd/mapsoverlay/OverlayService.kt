@@ -26,6 +26,7 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
 class OverlayService : Service() {
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
@@ -169,8 +170,10 @@ class OverlayService : Service() {
         }
 
         bydBridge = BydVehicleBridge(this) { _, _ ->
-            if (overlayView != null) {
-                renderOverlay()
+            mainHandler.post {
+                if (overlayView != null) {
+                    renderOverlay()
+                }
             }
         }
         bydBridge.startListening()
@@ -293,12 +296,17 @@ class OverlayService : Service() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // Auto-snap overlay to orientation-specific saved coordinates
+        // Hole 4 Fix: Reset active drag touch state to prevent coordinate mismatch on 90 deg rotation
+        initialTouchX = 0f
+        initialTouchY = 0f
+        
+        // Auto-snap overlay to orientation-specific safe coordinates
         if (overlayView != null && windowParams != null) {
             val (targetX, targetY) = getSavedPosition()
             windowParams?.let { p ->
-                p.x = targetX
-                p.y = targetY
+                val (clampedX, clampedY) = clampToSafeZone(targetX, targetY)
+                p.x = clampedX
+                p.y = clampedY
                 try {
                     windowManager?.updateViewLayout(overlayView, p)
                 } catch (_: Exception) {}
@@ -456,7 +464,7 @@ class OverlayService : Service() {
         val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         overlayView?.alpha = if (isNightMode) 0.72f else 0.95f
 
-        val currentSoc = bydBridge.currentSoc
+        val currentSoc = bydBridge.currentSoc.coerceIn(0.0, 100.0)
         // Overlay must show the live CAN/OBD consumption value. Keep the conservative
         // rounded-up EMA exclusively for destination SoC estimation below.
         // Keep the live CAN/OBD value for the overlay; use conservative EMA only for destination SoC.
