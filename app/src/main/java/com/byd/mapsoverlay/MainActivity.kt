@@ -450,18 +450,18 @@ class MainActivity : AppCompatActivity() {
         val savedScale = overlayPrefs.getFloat(OverlayService.KEY_SCALE, 1.0f).coerceIn(0.7f, 1.3f)
         val initialProgress = ((savedScale - 0.7f) * 100).toInt().coerceIn(0, 60)
         sbOverlayScale?.progress = initialProgress
-        val initialPercent = (savedScale * 100).toInt()
+        val initialPct = (savedScale * 100).toInt()
         tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
 
-        sbOverlayScale.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        sbOverlayScale?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val scale = 0.7f + (progress / 100f)
-                val percent = (scale * 100).toInt()
+                val pct = (scale * 100).toInt()
                 tvScaleLabel.text = if (isTh) "🔍 ขนาดแถบ HUD: %" else "🔍 HUD Size Scale: %"
                 if (fromUser) {
                     overlayPrefs.edit().putFloat(OverlayService.KEY_SCALE, scale).apply()
                     // Broadcast updated scale to OverlayService immediately
-                    sendBroadcast(Intent(OverlayService.ACTION_UPDATE_DISTANCE).apply {
+                    sendBroadcast(Intent(OverlayService.ACTION_RELOAD_SCALE).apply {
                         setPackage(packageName)
                     })
                 }
