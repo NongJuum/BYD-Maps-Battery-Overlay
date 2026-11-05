@@ -28,10 +28,19 @@ class BootReceiver : BroadcastReceiver() {
             "com.htc.intent.action.QUICKBOOT_POWERON",
             "com.byd.intent.action.POWER_ON",
             "com.byd.intent.action.ACC_ON" -> {
-                // 1. กู้คืน NotificationListener Proxy
+                Log.i(tag, "Car started / DiLink woke from sleep -> Ensuring services and permissions")
+                
+                // 1. ตรวจสอบและเชื่อมต่อ Local ADB Telemetry Daemon ทันที
+                try {
+                    AutoPermissionHelper.ensureTelemetryDaemon(context)
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to ensure telemetry daemon", e)
+                }
+
+                // 2. กู้คืน NotificationListener Proxy
                 MapsNotificationListener.requestRebindIfDisconnected(context)
 
-                // 2. สตาร์ท Foreground Overlay Service
+                // 3. สตาร์ท Foreground Overlay Service
                 val serviceIntent = Intent(context, OverlayService::class.java)
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -120,7 +120,7 @@ class OverlayService : Service() {
                 ACTION_HIDE_OVERLAY -> hideOverlay()
                 ACTION_RESET_POSITION -> resetOverlayPosition()
                 ACTION_RELOAD_SCALE -> {
-                    val s = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.4f)
+                    val s = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.5f)
                     currentScale = s
                     overlayView?.scaleX = s
                     overlayView?.scaleY = s
@@ -283,9 +283,11 @@ class OverlayService : Service() {
         // Bottom Air-con bar = approx 80dp (100px) -> min Y = 80
         // Top Status bar: อนุญาตให้ลากขึ้นไปทับแถบ Status Bar ด้านบนสุดได้เลย (คนขับนิยมวางตรงนี้เพราะพื้นที่ว่างเยอะ)
         // เราตั้งเพดานบนให้ลากชิดขอบบนสุดได้ถึง screenH - 10px (ไม่หลุดทะลุจอ)
-        val halfW = (screenW / 2) - 40
+        // Safe margins dynamic calculation for both Portrait & Landscape
+        val halfW = (screenW / 2) - 30
         val clampedX = x.coerceIn(-halfW, halfW)
-        val clampedY = y.coerceIn(80, (screenH - 10).coerceAtLeast(300))
+        val maxY = (screenH - 20).coerceAtLeast(200)
+        val clampedY = y.coerceIn(60, maxY)
         return Pair(clampedX, clampedY)
     }
 
@@ -599,5 +601,10 @@ class OverlayService : Service() {
         }
         bydBridge.stopListening()
         hideOverlay()
+        
+        // Critical Low Memory Cleanup: Release View references & GC hint
+        overlayView = null
+        windowParams = null
+        windowManager = null
     }
 }
