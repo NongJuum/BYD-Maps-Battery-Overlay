@@ -1,503 +1,436 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F1115"
-    android:fillViewport="true">
+    android:background="#0A0D14">
 
-    <LinearLayout
+    <!-- Top App Bar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:padding="18dp">
+        android:background="#121721"
+        app:elevation="2dp">
 
-        <!-- Top Header & Language Toggle -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_title"
-            android:textColor="#FFFFFF"
-            android:textSize="21sp"
-            android:textStyle="bold" />
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="🚗 BYD Vehicle Data Overlay 2.0"
+            app:titleTextColor="#FFFFFF"
+            app:subtitle="BYD Telemetry &amp; Independent HUD"
+            app:subtitleTextColor="#80D8FF" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="@string/app_author"
-            android:textColor="#80D8FF"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="40dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btn_switch_language"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:backgroundTint="#263238"
-                android:text="@string/btn_switch_language"
-                android:textColor="#80D8FF"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp" />
-
-            <Button
-                android:id="@+id/btn_check_update"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
-                android:backgroundTint="#1B5E20"
-                android:text="@string/btn_check_update"
-                android:textColor="#A7FFEB"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tv_detected_model"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="🚗 BYD Dolphin Standard / Thai Spec (50.25 kWh)"
-            android:textColor="#69F0AE"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <!-- Section 1: Vehicle & Battery Settings -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="14dp"
-            android:background="#1A1F29"
             android:padding="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/section_profile_title"
-                android:textColor="#FFD54F"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/section_profile_desc"
-                android:textColor="#90A4AE"
-                android:textSize="11sp" />
-
-            <Spinner
-                android:id="@+id/spinner_car_model"
+            <!-- 1. MASTER TOGGLE BANNER CARD -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_master_toggle"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#253244"
+                app:cardBackgroundColor="#161C26">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="18dp">
+
+                    <ImageView
+                        android:id="@+id/iv_overlay_status_dot"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="12dp"
+                        android:src="@drawable/ic_status_dot_active" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Floating Overlay Service"
+                            android:textColor="#FFFFFF"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_master_status_desc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="สถานะ: กำลังแสดงผลบนหน้าจอ (Active)"
+                            android:textColor="#81C784"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_overlay_master"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. TELEMETRY PREVIEW CARD (CAN BUS LIVE FEED) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1F2A38"
+                app:cardBackgroundColor="#131924">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="⚡ Live Vehicle Telemetry"
+                            android:textColor="#40C4FF"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_vehicle_model_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="#1E2B3C"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:text="BYD Dolphin (Live)"
+                            android:textColor="#80D8FF"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Telemetry Metrics Grid -->
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:columnCount="3"
+                        android:rowCount="2">
+
+                        <!-- SoC % -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Battery SoC" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_soc" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- %" android:textColor="#00E676" android:textSize="18sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- Remain kWh -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Remain kWh" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_kwh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#00E5FF" android:textSize="18sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- Real Range -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Real Range" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_real_range" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- km" android:textColor="#FFD54F" android:textSize="18sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- Consumption 50km -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg 50km" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_consumption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- 12V Battery -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12V Aux" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_12v" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="13.8 V" android:textColor="#69F0AE" android:textSize="16sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- Gear & Speed -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Gear / Speed" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_gear_speed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="D / 0 km/h" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                    </GridLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 3. PILL CAPSULE DISPLAY DATA CUSTOMIZATION -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="8dp"
+                android:text="เลือกข้อมูลที่จะแสดงบน FLOATING PILL"
+                android:textColor="#78909C"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <!-- หมวด 1: แบตเตอรี่และระยะทาง -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                app:cardCornerRadius="14dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E2633"
+                app:cardBackgroundColor="#141A24">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔋 หมวด แบตเตอรี่และระยะทาง"
+                        android:textColor="#00E676"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_soc"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ระดับแบตเตอรี่ (SoC %)"
+                        android:textColor="#ECEFF1"
+                        android:checked="true" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_remain_kwh"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ความจุคงเหลือจริงจาก BMS (Remain kWh)"
+                        android:textColor="#ECEFF1"
+                        android:checked="true" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_real_range"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ระยะทางประเมินจริง (Real Range km)"
+                        android:textColor="#ECEFF1"
+                        android:checked="true" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_dash_range"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ระยะทางหน้าปัดเดิม (Dashboard Range)"
+                        android:textColor="#ECEFF1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_soh"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="สุขภาพแบตเตอรี่ (SOH %)"
+                        android:textColor="#ECEFF1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_12v"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="แรงดันไฟแบตเตอรี่ลูกเล็ก (12V Aux)"
+                        android:textColor="#ECEFF1" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- หมวด 2: การขับขี่ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:background="#263238"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp" />
+                app:cardCornerRadius="14dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E2633"
+                app:cardBackgroundColor="#141A24">
 
-            <!-- Custom Inputs -->
-            <LinearLayout
-                android:id="@+id/layout_custom_inputs"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚗 หมวด การขับขี่ (Driving Dynamics)"
+                        android:textColor="#40C4FF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_consume_50km"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="อัตรากินไฟ 50 km ล่าสุด (kWh/100km)"
+                        android:textColor="#ECEFF1"
+                        android:checked="true" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_speed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ความเร็วรถดิจิทัล (Digital Speed)"
+                        android:textColor="#ECEFF1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_gear"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ตำแหน่งเกียร์ปัจจุบัน (Gear P/R/N/D)"
+                        android:textColor="#ECEFF1" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- หมวด 3: ยาง TPMS & อื่นๆ -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp"
-                android:visibility="gone">
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="14dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E2633"
+                app:cardBackgroundColor="#141A24">
 
-                <EditText
-                    android:id="@+id/et_custom_model_name"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1.2"
-                    android:layout_marginEnd="8dp"
-                    android:hint="@string/hint_model_name"
-                    android:inputType="text"
-                    android:textColor="#FFFFFF"
-                    android:textColorHint="#78909C"
-                    android:textSize="13sp" />
+                    android:orientation="vertical"
+                    android:padding="14dp">
 
-                <EditText
-                    android:id="@+id/et_custom_battery_kwh"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🛞 หมวด แรงดันลมยางและอื่นๆ (TPMS / Temp)"
+                        android:textColor="#FFB74D"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_tpms_pressure"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ความดันลมยาง 4 ล้อ (TPMS Bar / PSI)"
+                        android:textColor="#ECEFF1" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_outside_temp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="อุณหภูมิภายนอกรถ (Ambient Temp °C)"
+                        android:textColor="#ECEFF1" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 4. ACTION CONTROLS & RESET BUTTON -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_reset_pos"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="54dp"
                     android:layout_weight="1"
-                    android:hint="@string/hint_battery_kwh"
-                    android:inputType="numberDecimal"
-                    android:textColor="#FFFFFF"
-                    android:textColorHint="#78909C"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                    android:text="🎯 คืนค่าตำแหน่ง Overlay (Reset)"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="12dp"
+                    app:backgroundTint="#0277BD" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/label_soh"
-                    android:textColor="#CFD8DC"
-                    android:textSize="13sp" />
-
-                <EditText
-                    android:id="@+id/et_soh_percent"
-                    android:layout_width="70dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:gravity="center"
-                    android:inputType="number"
-                    android:text="98"
-                    android:textColor="#69F0AE"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_save_config"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="54dp"
                     android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/label_soh_unit"
-                    android:textColor="#78909C"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btn_save_vehicle_profile"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:backgroundTint="#FF8F00"
-                    android:text="@string/btn_save_profile"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Section 2: Live Telemetry -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_pill_modern"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/section_telemetry_title"
-                android:textColor="#40C4FF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="10dp"
-                android:background="#26FFFFFF" />
-
-            <TextView
-                android:id="@+id/tv_live_soc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/tv_live_soc_waiting"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_battery_health"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="🩺 Usable Capacity: -- kWh"
-                android:textColor="#FFD54F"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/tv_live_consumption_real"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/tv_consumption_waiting"
-                android:textColor="#69F0AE"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_real_range"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/tv_real_range_waiting"
-                android:textColor="#40C4FF"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_nedc_range"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="📋 Dashboard NEDC Range: -- km"
-                android:textColor="#9E9E9E"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Section 3: Overlay Layout Selector -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_card_cockpit"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/section_layout_title"
-                android:textColor="#00E5FF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/section_layout_desc"
-                android:textColor="#90A4AE"
-                android:textSize="11sp" />
-
-            <RadioGroup
-                android:id="@+id/rg_overlay_theme"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
-
-                <RadioButton
-                    android:id="@+id/rb_theme_capsule"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/theme_capsule_name"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp" />
-
-                <RadioButton
-                    android:id="@+id/rb_theme_compact"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/theme_compact_name"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp" />
-
-                <RadioButton
-                    android:id="@+id/rb_theme_vertical"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/theme_vertical_name"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp" />
-            </RadioGroup>
-
-            <!-- HUD Scale / Size Adjustment Slider -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="12dp">
-
-                <TextView
-                    android:id="@+id/tv_scale_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🔍 ขนาดแถบ HUD: 100%"
-                    android:textColor="#38BDF8"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:layout_marginStart="10dp"
+                    android:text="💾 บันทึกการตั้งค่า"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="12dp"
+                    app:backgroundTint="#00C853" />
             </LinearLayout>
 
-            <SeekBar
-                android:id="@+id/sb_overlay_scale"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:max="60"
-                android:progress="30" />
         </LinearLayout>
-
-        <!-- Section 4: Icon Guide -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="10dp"
-            android:background="#1A1D24"
-            android:padding="12dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/legend_title"
-                android:textColor="#FFD54F"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/legend_content"
-                android:textColor="#B0BEC5"
-                android:lineSpacingExtra="2dp"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <!-- Primary Action: One-Click Auto Activation -->
-        <Button
-            android:id="@+id/btn_one_click_activate"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="#00E5FF"
-            android:text="@string/btn_one_click_activate"
-            android:textColor="#000000"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:elevation="6dp" />
-
-        <!-- Control and Test Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btn_test_overlay"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:backgroundTint="#00C853"
-                android:text="@string/btn_test_overlay"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btn_reset_position"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="#0288D1"
-                android:text="@string/btn_reset_pos"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="6dp">
-
-            <Button
-                android:id="@+id/btn_permission_overlay"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:backgroundTint="#37474F"
-                android:text="@string/btn_perm_overlay"
-                android:textSize="11sp" />
-
-            <Button
-                android:id="@+id/btn_permission_notification"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="#37474F"
-                android:text="@string/btn_perm_maps"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <!-- OBD Permission Button -->
-        <Button
-            android:id="@+id/btn_permission_obd"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:backgroundTint="#6A1B9A"
-            android:text="@string/btn_perm_obd"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <!-- Auto Start preference -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="8dp"
-            android:background="#1A1F29"
-            android:padding="12dp">
-
-            <Switch
-                android:id="@+id/switch_disable_auto_start"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/label_disable_auto_start"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/desc_disable_auto_start"
-                android:textColor="#90A4AE"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <!-- Donate Button -->
-        <Button
-            android:id="@+id/btn_donate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="#FF6F00"
-            android:text="@string/btn_donate"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:textColor="#81C784"
-            android:textSize="12sp" />
-
-    </LinearLayout>
-</ScrollView>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

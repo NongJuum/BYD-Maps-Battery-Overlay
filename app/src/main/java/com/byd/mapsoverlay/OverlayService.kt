@@ -5,13 +5,9 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.res.Configuration
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -19,600 +15,330 @@ import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
-import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
+/**
+ * OverlayService V2.0:
+ * - Standalone Floating Vehicle HUD
+ * - ไม่ขึ้นกับ Google Maps / Maps Notifications
+ * - รองรับการเลือกเปิด-ปิดฟิลด์ข้อมูลได้อิสระตามความต้องการของผู้ใช้
+ */
 class OverlayService : Service() {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
-
-    private var tvSocDisplay: TextView? = null
-    private var tvRealRange: TextView? = null
-    private var tvMapsDistance: TextView? = null
-    private var tvConsumption: TextView? = null
-    private var tvWarningBadge: TextView? = null
-
-    // Containers & Dividers for custom toggling
-    private var containerDestSoc: View? = null
-    private var containerRealRange: View? = null
-    private var containerMapsDistance: View? = null
-    private var containerConsumption: View? = null
-    private var divider1: View? = null
-    private var divider2: View? = null
-    private var divider3: View? = null
-
-    private lateinit var bydBridge: BydVehicleBridge
-    private var latestDistanceKm: Double = 0.0
-    private var lockedSingleDestSoc: Int = -1
-
-    private fun updateDistanceSafely(newDistance: Double) {
-        if (newDistance <= 0.0) return
-
-        // Plausibility Guard: Prevent Next-Turn Step Glitch (e.g. dropping from 80 km to 0.4 km)
-        if (latestDistanceKm > 3.0 && newDistance < (latestDistanceKm * 0.25)) {
-            // Sudden drop over 75% while cruising indicates a turn-step (e.g. "400 m left turn")
-            // Ignore turn-step glitch to prevent Yo-Yo Dest SoC fluctuations!
-            android.util.Log.w("OverlayService", "Ignored sudden distance drop glitch: $latestDistanceKm km -> $newDistance km")
-            return
-        }
-
-        if (kotlin.math.abs(newDistance - latestDistanceKm) > 10.0) {
-            lockedSingleDestSoc = -1
-        }
-        latestDistanceKm = newDistance
-        // Persist last known distance for self-healing recovery if LMK kills service
-        prefs.edit().putFloat("last_known_distance_km", newDistance.toFloat()).apply()
-        showOverlay()
-        renderOverlay()
-    }
-    private var lastRawDestSoc: Double = -1.0
-
-    private lateinit var prefs: SharedPreferences
     private var windowParams: WindowManager.LayoutParams? = null
 
-    private var initialX = 0
-    private var initialY = 0
-    private var initialTouchX = 0f
-    private var initialTouchY = 0f
-    private var currentScale = 1.0f
-    private lateinit var scaleDetector: ScaleGestureDetector
+    // V2 UI Views
+    private var tvSoc: TextView? = null
+    private var tvKwh: TextView? = null
+    private var tvRealRange: TextView? = null
+    private var tvConsumption: TextView? = null
+    private var tvDashboardRange: TextView? = null
+    private var tvSoh: TextView? = null
+    private var tv12v: TextView? = null
+    private var tvGear: TextView? = null
+    private var tvSpeed: TextView? = null
 
-    companion object {
-        const val ACTION_UPDATE_DISTANCE = "com.byd.mapsoverlay.ACTION_UPDATE_DISTANCE"
-        const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
-        const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
-        const val ACTION_RELOAD_SCALE = "com.byd.mapsoverlay.ACTION_RELOAD_SCALE"
-        const val ACTION_RELOAD_THEME = "com.byd.mapsoverlay.ACTION_RELOAD_THEME"
-        const val ACTION_PROFILE_UPDATED = "com.byd.mapsoverlay.ACTION_PROFILE_UPDATED"
-        const val EXTRA_DISTANCE_KM = "EXTRA_DISTANCE_KM"
-        private const val PREFS_NAME = "byd_overlay_prefs"
-        private const val KEY_POS_X = "pos_x"
-        private const val KEY_POS_Y = "pos_y"
-        private const val KEY_POS_X_PORTRAIT = "pos_x_portrait"
-        private const val KEY_POS_Y_PORTRAIT = "pos_y_portrait"
-        private const val KEY_POS_X_LANDSCAPE = "pos_x_landscape"
-        private const val KEY_POS_Y_LANDSCAPE = "pos_y_landscape"
-        const val KEY_SCALE = "scale"
-        const val KEY_SHOW_DEST_SOC = "show_dest_soc"
-        const val KEY_SHOW_REAL_RANGE = "show_real_range"
-        const val KEY_SHOW_MAPS_DIST = "show_maps_dist"
-        const val KEY_SHOW_CONSUMPTION = "show_consumption"
-        const val KEY_OVERLAY_THEME = "overlay_theme"
-        const val THEME_CAPSULE = 0
-        const val THEME_COMPACT = 1
-        const val THEME_VERTICAL = 2
-        private const val CHANNEL_ID = "byd_overlay_channel"
-    }
+    // Containers
+    private var containerSoc: View? = null
+    private var containerKwh: View? = null
+    private var containerRealRange: View? = null
+    private var containerConsumption: View? = null
+    private var containerDashboardRange: View? = null
+    private var containerSoh: View? = null
+    private var container12v: View? = null
+    private var containerGearSpeed: View? = null
 
-    private val testReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                ACTION_UPDATE_DISTANCE -> {
-                    val dist = intent.getDoubleExtra(EXTRA_DISTANCE_KM, -1.0)
-                        .takeIf { it > 0 }
-                        ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
-                    updateDistanceSafely(dist)
-                }
-                ACTION_HIDE_OVERLAY -> hideOverlay()
-                ACTION_RESET_POSITION -> resetOverlayPosition()
-                ACTION_RELOAD_SCALE -> {
-                    val s = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.5f)
-                    currentScale = s
-                    overlayView?.scaleX = s
-                    overlayView?.scaleY = s
-                }
-                ACTION_RELOAD_THEME -> {
-                    val wasShowing = (overlayView != null)
-                    hideOverlay()
-                    if (wasShowing || latestDistanceKm > 0) {
-                        showOverlay()
-                        renderOverlay()
-                    }
-                }
-                ACTION_PROFILE_UPDATED -> {
-                    bydBridge.restartConnection()
-                    if (overlayView != null) {
-                        renderOverlay()
-                    }
-                }
-            }
-        }
-    }
+    // Dividers
+    private var div1: View? = null
+    private var div2: View? = null
+    private var div3: View? = null
+    private var div4: View? = null
+    private var div5: View? = null
+    private var div6: View? = null
+    private var div7: View? = null
+
+    private lateinit var bydBridge: BydVehicleBridge
+    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        HiddenApiBypass.exemptAll()
-        BydDataCacheWhitelist.ensureWhitelisted(this)
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        currentScale = prefs.getFloat(KEY_SCALE, 1.0f)
+        sharedPreferences = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
 
-        startInForeground()
-
-        val filter = IntentFilter().apply {
-            addAction(ACTION_UPDATE_DISTANCE)
-            addAction(ACTION_HIDE_OVERLAY)
-            addAction(ACTION_RESET_POSITION)
-            addAction(ACTION_RELOAD_SCALE)
-            addAction(ACTION_PROFILE_UPDATED)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(testReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(testReceiver, filter)
-        }
-
-        bydBridge = BydVehicleBridge(this) { _, _ ->
+        // เริ่มต้นการอ่านข้อมูลรถจาก DiLink / Native Daemon
+        bydBridge = BydVehicleBridge(this) { soc, consumption ->
             mainHandler.post {
-                if (overlayView != null) {
-                    renderOverlay()
-                }
+                updateTelemetryDisplay(soc, consumption)
             }
         }
         bydBridge.startListening()
-    }
 
-    private fun startInForeground() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "BYD Maps Overlay Service",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-
-            val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("BYD Maps Battery")
-                .setContentText("รันตรวจจับระยะทางและระดับแบตเตอรี่รถจาก OBD")
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .build()
-
-            startForeground(101, notification)
-        }
+        startForeground(NOTIFICATION_ID, createNotification())
+        createOverlayView()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Self-Healing State Recovery (Low-Memory Killer Resilience):
-        // If system restarted service after kill (intent == null), restore state from preferences seamlessly!
-        if (intent == null) {
-            val savedDistance = prefs.getFloat("last_known_distance_km", -1f).toDouble()
-            if (savedDistance > 0.0) {
-                latestDistanceKm = savedDistance
-                showOverlay()
-                renderOverlay()
-            }
-            return START_STICKY
-        }
-
-        when (intent.action) {
-            ACTION_UPDATE_DISTANCE -> {
-                val distance = intent.getDoubleExtra(EXTRA_DISTANCE_KM, -1.0)
-                    .takeIf { it > 0 }
-                    ?: intent.getFloatExtra(EXTRA_DISTANCE_KM, -1f).toDouble()
-                updateDistanceSafely(distance)
-            }
-            ACTION_HIDE_OVERLAY -> {
-                hideOverlay()
-            }
-            ACTION_RESET_POSITION -> {
-                resetOverlayPosition()
-            }
-            ACTION_RELOAD_THEME -> {
-                val wasShowing = (overlayView != null)
-                hideOverlay()
-                if (wasShowing || latestDistanceKm > 0) {
-                    showOverlay()
-                    renderOverlay()
-                }
-            }
-            ACTION_PROFILE_UPDATED -> {
-                bydBridge.restartConnection()
-                if (overlayView != null) {
-                    renderOverlay()
-                }
-            }
+        when (intent?.action) {
+            ACTION_RESET_POSITION -> resetPosition()
+            ACTION_UPDATE_CONFIG -> applyUserFieldPreferences()
+            else -> applyUserFieldPreferences()
         }
         return START_STICKY
     }
 
-    private fun isPortrait(): Boolean {
-        return resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-    }
-
-    private fun getSavedPosition(): Pair<Int, Int> {
-        val portrait = isPortrait()
-        val defaultX = 0
-        val defaultY = if (portrait) 180 else 120
-        val keyX = if (portrait) KEY_POS_X_PORTRAIT else KEY_POS_X_LANDSCAPE
-        val keyY = if (portrait) KEY_POS_Y_PORTRAIT else KEY_POS_Y_LANDSCAPE
-
-        // Fallback to legacy generic keys if mode-specific hasn't been set yet
-        val x = prefs.getInt(keyX, prefs.getInt(KEY_POS_X, defaultX))
-        val y = prefs.getInt(keyY, prefs.getInt(KEY_POS_Y, defaultY))
-        return clampToSafeZone(x, y)
-    }
-
-    private fun saveCurrentPosition(x: Int, y: Int) {
-        val (clampedX, clampedY) = clampToSafeZone(x, y)
-        val portrait = isPortrait()
-        val keyX = if (portrait) KEY_POS_X_PORTRAIT else KEY_POS_X_LANDSCAPE
-        val keyY = if (portrait) KEY_POS_Y_PORTRAIT else KEY_POS_Y_LANDSCAPE
-
-        prefs.edit()
-            .putInt(keyX, clampedX)
-            .putInt(keyY, clampedY)
-            .putInt(KEY_POS_X, clampedX)
-            .putInt(KEY_POS_Y, clampedY)
-            .apply()
-    }
-
-    private fun clampToSafeZone(x: Int, y: Int): Pair<Int, Int> {
-        val metrics = resources.displayMetrics
-        val screenW = metrics.widthPixels
-        val screenH = metrics.heightPixels
-
-        // In gravity = BOTTOM | CENTER_HORIZONTAL:
-        // x moves from -halfWidth to +halfWidth
-        // y moves from 0 (bottom screen edge) to screenH (top screen edge / status bar)
-        // DiLink 3.0 safe margins:
-        // Bottom Air-con bar = approx 80dp (100px) -> min Y = 80
-        // Top Status bar: อนุญาตให้ลากขึ้นไปทับแถบ Status Bar ด้านบนสุดได้เลย (คนขับนิยมวางตรงนี้เพราะพื้นที่ว่างเยอะ)
-        // เราตั้งเพดานบนให้ลากชิดขอบบนสุดได้ถึง screenH - 10px (ไม่หลุดทะลุจอ)
-        // Safe margins dynamic calculation for both Portrait & Landscape
-        val halfW = (screenW / 2) - 30
-        val clampedX = x.coerceIn(-halfW, halfW)
-        val maxY = (screenH - 20).coerceAtLeast(200)
-        val clampedY = y.coerceIn(60, maxY)
-        return Pair(clampedX, clampedY)
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        // Hole 4 Fix: Reset active drag touch state to prevent coordinate mismatch on 90 deg rotation
-        initialTouchX = 0f
-        initialTouchY = 0f
-        
-        // Auto-snap overlay to orientation-specific safe coordinates
-        if (overlayView != null && windowParams != null) {
-            val (targetX, targetY) = getSavedPosition()
-            windowParams?.let { p ->
-                val (clampedX, clampedY) = clampToSafeZone(targetX, targetY)
-                p.x = clampedX
-                p.y = clampedY
-                try {
-                    windowManager?.updateViewLayout(overlayView, p)
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    private fun resetOverlayPosition() {
-        currentScale = 1.0f
-        val (defaultX, defaultY) = if (isPortrait()) Pair(0, 180) else Pair(0, 120)
-        saveCurrentPosition(defaultX, defaultY)
-        prefs.edit().putFloat(KEY_SCALE, 1.0f).apply()
-
-        if (latestDistanceKm <= 0.0) {
-            latestDistanceKm = 25.0
-        }
-        showOverlay()
-        overlayView?.scaleX = 1.0f
-        overlayView?.scaleY = 1.0f
-        windowParams?.let { params ->
-            params.x = defaultX
-            params.y = defaultY
-            try {
-                windowManager?.updateViewLayout(overlayView, params)
-            } catch (_: Exception) {}
-        }
-        renderOverlay()
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun showOverlay() {
+    @SuppressLint("InflateParams", "ClickableViewAccessibility")
+    private fun createOverlayView() {
         if (overlayView != null) return
 
-        val theme = prefs.getInt(KEY_OVERLAY_THEME, THEME_CAPSULE)
-        val layoutRes = when (theme) {
-            THEME_COMPACT -> R.layout.layout_battery_pill_compact
-            THEME_VERTICAL -> R.layout.layout_battery_pill_vertical
-            else -> R.layout.layout_battery_pill
-        }
-
+        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val inflater = LayoutInflater.from(this)
-        val view = inflater.inflate(layoutRes, null)
-        overlayView = view
+        overlayView = inflater.inflate(R.layout.layout_vehicle_overlay_v2, null)
 
-        tvSocDisplay = view.findViewById(R.id.tv_destination_soc)
-        tvRealRange = view.findViewById(R.id.tv_real_range)
-        tvMapsDistance = view.findViewById(R.id.tv_maps_distance)
-        tvConsumption = view.findViewById(R.id.tv_consumption)
-        tvWarningBadge = view.findViewById(R.id.tv_warning_badge)
+        val v = overlayView ?: return
 
-        containerDestSoc = view.findViewById(R.id.container_dest_soc)
-        containerRealRange = view.findViewById(R.id.container_real_range)
-        containerMapsDistance = view.findViewById(R.id.container_maps_distance)
-        containerConsumption = view.findViewById(R.id.container_consumption)
-        divider1 = view.findViewById(R.id.divider_1)
-        divider2 = view.findViewById(R.id.divider_2)
-        divider3 = view.findViewById(R.id.divider_3)
+        // Bind Text Views
+        tvSoc = v.findViewById(R.id.tv_v2_soc)
+        tvKwh = v.findViewById(R.id.tv_v2_kwh)
+        tvRealRange = v.findViewById(R.id.tv_v2_real_range)
+        tvConsumption = v.findViewById(R.id.tv_v2_consumption)
+        tvDashboardRange = v.findViewById(R.id.tv_v2_dashboard_range)
+        tvSoh = v.findViewById(R.id.tv_v2_soh)
+        tv12v = v.findViewById(R.id.tv_v2_12v)
+        tvGear = v.findViewById(R.id.tv_v2_gear)
+        tvSpeed = v.findViewById(R.id.tv_v2_speed)
 
-        // Apply saved scale
-        currentScale = prefs.getFloat(KEY_SCALE, 1.0f).coerceIn(0.7f, 1.4f)
-        view.scaleX = currentScale
-        view.scaleY = currentScale
+        // Bind Containers
+        containerSoc = v.findViewById(R.id.container_v2_soc)
+        containerKwh = v.findViewById(R.id.container_v2_kwh)
+        containerRealRange = v.findViewById(R.id.container_v2_real_range)
+        containerConsumption = v.findViewById(R.id.container_v2_consumption)
+        containerDashboardRange = v.findViewById(R.id.container_v2_dashboard_range)
+        containerSoh = v.findViewById(R.id.container_v2_soh)
+        container12v = v.findViewById(R.id.container_v2_12v)
+        containerGearSpeed = v.findViewById(R.id.container_v2_gear_speed)
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        // Bind Dividers
+        div1 = v.findViewById(R.id.divider_v2_1)
+        div2 = v.findViewById(R.id.divider_v2_2)
+        div3 = v.findViewById(R.id.divider_v2_3)
+        div4 = v.findViewById(R.id.divider_v2_4)
+        div5 = v.findViewById(R.id.divider_v2_5)
+        div6 = v.findViewById(R.id.divider_v2_6)
+        div7 = v.findViewById(R.id.divider_v2_7)
+
+        applyUserFieldPreferences()
+
+        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
             @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_SYSTEM_ERROR
+            WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        val (savedX, savedY) = getSavedPosition()
+        val savedX = sharedPreferences.getInt("overlay_x", 40)
+        val savedY = sharedPreferences.getInt("overlay_y", 40)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutFlag,
+            layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            gravity = Gravity.TOP or Gravity.START
             x = savedX
             y = savedY
         }
         windowParams = params
 
-        view.scaleX = currentScale
-        view.scaleY = currentScale
+        // Drag & Drop Listener
+        val dragHandle: View = v.findViewById(R.id.tv_drag_handle) ?: v
+        dragHandle.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX = 0
+            private var initialY = 0
+            private var initialTouchX = 0f
+            private var initialTouchY = 0f
+            private var isDragging = false
 
-        scaleDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            override fun onScale(detector: ScaleGestureDetector): Boolean {
-                currentScale *= detector.scaleFactor
-                currentScale = currentScale.coerceIn(0.6f, 1.8f)
-                view.scaleX = currentScale
-                view.scaleY = currentScale
-                prefs.edit().putFloat(KEY_SCALE, currentScale).apply()
-                return true
+            override fun onTouch(view: View?, event: MotionEvent): Boolean {
+                val currentParams = windowParams ?: return false
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = currentParams.x
+                        initialY = currentParams.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        isDragging = false
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = (event.rawX - initialTouchX).toInt()
+                        val dy = (event.rawY - initialTouchY).toInt()
+                        if (kotlin.math.abs(dx) > 10 || kotlin.math.abs(dy) > 10) {
+                            isDragging = true
+                        }
+                        if (isDragging) {
+                            currentParams.x = initialX + dx
+                            currentParams.y = initialY + dy
+                            windowManager?.updateViewLayout(overlayView, currentParams)
+                        }
+                        return true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (isDragging) {
+                            sharedPreferences.edit()
+                                .putInt("overlay_x", currentParams.x)
+                                .putInt("overlay_y", currentParams.y)
+                                .apply()
+                        }
+                        return true
+                    }
+                }
+                return false
             }
         })
 
-        view.setOnTouchListener { _, event ->
-            scaleDetector.onTouchEvent(event)
-
-            if (event.pointerCount == 1) {
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        initialX = windowParams?.x ?: 0
-                        initialY = windowParams?.y ?: 0
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
-                        true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        windowParams?.let { p ->
-                            val rawTargetX = initialX + (event.rawX - initialTouchX).toInt()
-                            val rawTargetY = initialY - (event.rawY - initialTouchY).toInt()
-                            val (clampedX, clampedY) = clampToSafeZone(rawTargetX, rawTargetY)
-                            p.x = clampedX
-                            p.y = clampedY
-                            windowManager?.updateViewLayout(overlayView, p)
-                        }
-                        true
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        windowParams?.let { p ->
-                            saveCurrentPosition(p.x, p.y)
-                        }
-                        true
-                    }
-                    else -> false
-                }
-            } else {
-                true
-            }
-        }
-
         try {
-            windowManager?.addView(view, params)
-            android.util.Log.i("OverlayService", "Overlay successfully added to WindowManager")
+            windowManager?.addView(overlayView, params)
         } catch (e: Exception) {
-            android.util.Log.e("OverlayService", "Failed to add overlay to WindowManager: ${e.message}", e)
-            overlayView = null
+            android.util.Log.e("OverlayService", "Failed to add window: ${e.message}")
         }
     }
 
-    private fun renderOverlay() {
-        if (overlayView == null && latestDistanceKm > 0) {
-            showOverlay()
-        }
-        if (overlayView == null) return
+    private fun resetPosition() {
+        val params = windowParams ?: return
+        params.x = 40
+        params.y = 40
+        sharedPreferences.edit().putInt("overlay_x", 40).putInt("overlay_y", 40).apply()
+        windowManager?.updateViewLayout(overlayView, params)
+    }
 
-        // 1. Night Auto-Dimming & Low-Glow Synchronization
-        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        overlayView?.alpha = if (isNightMode) 0.72f else 0.95f
+    private fun applyUserFieldPreferences() {
+        val showSoc = VehicleOverlayConfig.isShowSoc(this)
+        val showKwh = VehicleOverlayConfig.isShowRemainKwh(this)
+        val showRealRange = VehicleOverlayConfig.isShowRealRange(this)
+        val showConsumption = VehicleOverlayConfig.isShowConsumption50km(this)
+        val showDashboardRange = VehicleOverlayConfig.isShowDashboardRange(this)
+        val showSoh = VehicleOverlayConfig.isShowBatterySoh(this)
+        val show12v = VehicleOverlayConfig.isShow12v(this)
+        val showGearSpeed = VehicleOverlayConfig.isShowGear(this) || VehicleOverlayConfig.isShowSpeed(this)
 
-        val currentSoc = bydBridge.currentSoc.coerceIn(0.0, 100.0)
-        // Overlay must show the live CAN/OBD consumption value. Keep the conservative
-        // rounded-up EMA exclusively for destination SoC estimation below.
-        // Keep the live CAN/OBD value for the overlay; use conservative EMA only for destination SoC.
-        val displayConsumption = bydBridge.currentConsumption
-        val calculationConsumption = if (bydBridge.smoothedConsumption > 0.0) {
-            bydBridge.smoothedConsumption
-        } else {
-            bydBridge.currentConsumption
-        }
-        val liveRemainKwh = bydBridge.remainEnergyKwh
-        val realRange = bydBridge.realRangeKm
-
-        val isUserConfiguredModel = VehicleProfileManager.getSelectedPresetId(this) != VehicleProfileManager.PRESET_AUTO
-
-        // Apply user visibility preferences
-        val showDestSoc = prefs.getBoolean(KEY_SHOW_DEST_SOC, true)
-        val showRealRange = prefs.getBoolean(KEY_SHOW_REAL_RANGE, true)
-        val showMapsDist = prefs.getBoolean(KEY_SHOW_MAPS_DIST, true)
-        val showConsumption = prefs.getBoolean(KEY_SHOW_CONSUMPTION, true)
-
-        containerDestSoc?.visibility = if (showDestSoc) View.VISIBLE else View.GONE
+        containerSoc?.visibility = if (showSoc) View.VISIBLE else View.GONE
+        containerKwh?.visibility = if (showKwh) View.VISIBLE else View.GONE
         containerRealRange?.visibility = if (showRealRange) View.VISIBLE else View.GONE
-        containerMapsDistance?.visibility = if (showMapsDist) View.VISIBLE else View.GONE
         containerConsumption?.visibility = if (showConsumption) View.VISIBLE else View.GONE
+        containerDashboardRange?.visibility = if (showDashboardRange) View.VISIBLE else View.GONE
+        containerSoh?.visibility = if (showSoh) View.VISIBLE else View.GONE
+        container12v?.visibility = if (show12v) View.VISIBLE else View.GONE
+        containerGearSpeed?.visibility = if (showGearSpeed) View.VISIBLE else View.GONE
 
-        divider1?.visibility = if (showDestSoc && (showRealRange || showMapsDist || showConsumption)) View.VISIBLE else View.GONE
-        divider2?.visibility = if (showRealRange && (showMapsDist || showConsumption)) View.VISIBLE else View.GONE
-        divider3?.visibility = if (showMapsDist && showConsumption) View.VISIBLE else View.GONE
+        // Dividers logic
+        div1?.visibility = if (showSoc && showKwh) View.VISIBLE else View.GONE
+        div2?.visibility = if (showKwh && showRealRange) View.VISIBLE else View.GONE
+        div3?.visibility = if (showRealRange && showConsumption) View.VISIBLE else View.GONE
+        div4?.visibility = if (showConsumption && showDashboardRange) View.VISIBLE else View.GONE
+        div5?.visibility = if (showDashboardRange && showSoh) View.VISIBLE else View.GONE
+        div6?.visibility = if (showSoh && show12v) View.VISIBLE else View.GONE
+        div7?.visibility = if (show12v && showGearSpeed) View.VISIBLE else View.GONE
 
-        val (rawDestSoc, _) = EnergyCalculator.calculateDestinationSoc(
-            currentSoc = currentSoc,
-            remainingDistanceKm = latestDistanceKm,
-            consumptionKwhPer100km = calculationConsumption,
-            liveRemainEnergyKwh = liveRemainKwh,
-            preferUserCapacity = isUserConfiguredModel
-        )
-
-        // 1.5% Deadband Window for Single Number Display:
-        // Keeps the display locked to `lockedSingleDestSoc` (e.g. ~69%)
-        // Only updates when rawDestSoc changes by >= 1.0% to prevent flickering while driving.
-        if (lockedSingleDestSoc < 0) {
-            lockedSingleDestSoc = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
-        } else {
-            val delta = rawDestSoc - lockedSingleDestSoc.toDouble()
-            if (kotlin.math.abs(delta) >= 1.0) {
-                lockedSingleDestSoc = kotlin.math.round(rawDestSoc).toInt().coerceIn(0, 100)
-            }
-        }
-        val destSoc = lockedSingleDestSoc
-
-        // 6-Tier Dynamic Color (Red 0-10% -> Orange 10-30% -> Yellow 30-50% -> Light Green 50-75% -> Dark Green 75-95% -> Cyan 95-100%)
-        val socColor = EnergyCalculator.getDynamicSocColor(destSoc.toDouble())
-        tvSocDisplay?.setTextColor(socColor)
-        // Match Maps Distance color to Dest SoC for harmonious, elegant cockpit aesthetics
-        tvMapsDistance?.setTextColor(socColor)
-
-        // Calculate Charging Stops Counter
-        val stopsNeeded = EnergyCalculator.calculateChargingStops(
-            currentSoc = currentSoc,
-            remainingDistanceKm = latestDistanceKm,
-            consumptionKwhPer100km = calculationConsumption,
-            realRangeKm = realRange
-        )
-
-        val isBatteryInsufficient = latestDistanceKm > realRange || destSoc <= 0
-        val isCriticalLow = destSoc <= 10 || currentSoc <= 10.0
-
-        if (isBatteryInsufficient || stopsNeeded > 0) {
-            tvSocDisplay?.text = "~$destSoc%"
-            tvWarningBadge?.visibility = View.VISIBLE
-            if (stopsNeeded > 0) {
-                tvWarningBadge?.text = "⚠️🔌 ชาร์จ ~$stopsNeeded ครั้ง"
-                tvWarningBadge?.setBackgroundColor(Color.parseColor("#D50000"))
-            } else {
-                tvWarningBadge?.text = "⚠️🔌 แบตไม่พอ"
-                tvWarningBadge?.setBackgroundColor(Color.parseColor("#D50000"))
-            }
-        } else if (isCriticalLow) {
-            tvSocDisplay?.text = "~$destSoc%"
-            tvWarningBadge?.visibility = View.VISIBLE
-            tvWarningBadge?.text = "⚠️🪫 แบตวิกฤต"
-            tvWarningBadge?.setBackgroundColor(Color.parseColor("#FF1744"))
-        } else {
-            tvSocDisplay?.text = "~$destSoc%"
-            tvWarningBadge?.visibility = View.GONE
-        }
-
-        // 2. ระยะที่รถวิ่งได้จริงคงเหลือ (🚗)
-        tvRealRange?.text = String.format("%.0f km", realRange)
-
-        // 3. ระยะทางรวมจากจุดปัจจุบันไปจุดปลายทางตาม Google Maps (📍)
-        tvMapsDistance?.text = String.format("%.1f km", latestDistanceKm)
-
-        // 4. อัตราสิ้นเปลืองปัจจุบันจาก CAN/OBD (⚡)
-        tvConsumption?.text = String.format("%.1f", displayConsumption)
-
-        BydAppWidgetProvider.lastDestText = if (stopsNeeded > 0) {
-            String.format("🏁 ปลายทาง: แบต ~$destSoc%% (แวะชาร์จ ~$stopsNeeded ครั้ง, อีก %.1f km)", latestDistanceKm)
-        } else {
-            String.format("🏁 ปลายทาง: แบตเหลือ ~$destSoc%% (อีก %.1f km)", latestDistanceKm)
-        }
-        BydAppWidgetProvider.updateAllWidgets(this)
+        val opacity = VehicleOverlayConfig.getOpacity(this) / 100f
+        overlayView?.alpha = opacity
     }
 
-    private fun hideOverlay() {
-        lockedSingleDestSoc = -1
-        lastRawDestSoc = -1.0
-        if (overlayView != null) {
-            try {
-                windowManager?.removeView(overlayView)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            overlayView = null
+    private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
+        // 1. SoC %
+        if (soc > 0.0) {
+            tvSoc?.text = "${soc.toInt()}%"
         }
-        BydAppWidgetProvider.lastDestText = "🏁 Google Maps: แตะเพื่อเริ่มนำทาง"
-        BydAppWidgetProvider.updateAllWidgets(this)
+
+        // 2. Remaining kWh
+        val kwh = bydBridge.remainEnergyKwh
+        if (kwh > 0.0) {
+            tvKwh?.text = String.format("%.1f kWh", kwh)
+        } else if (soc > 0.0 && bydBridge.estimatedCapacityKwh > 0.0) {
+            val calcKwh = (soc / 100.0) * bydBridge.estimatedCapacityKwh
+            tvKwh?.text = String.format("%.1f kWh", calcKwh)
+        }
+
+        // 3. Real Remaining Range (km)
+        val realRange = bydBridge.realRangeKm
+        if (realRange > 0) {
+            tvRealRange?.text = "$realRange km"
+        } else if (soc > 0.0 && consumption > 0.0) {
+            val effCapacity = if (bydBridge.estimatedCapacityKwh > 0.0) bydBridge.estimatedCapacityKwh else 48.7
+            val calcRange = ((soc / 100.0) * effCapacity / consumption) * 100.0
+            tvRealRange?.text = "${calcRange.toInt()} km"
+        }
+
+        // 4. Consumption (kWh/100km)
+        if (consumption > 0.0) {
+            tvConsumption?.text = String.format("%.1f", consumption)
+        }
+
+        // 5. Dashboard Instrument Range (km)
+        val dashRange = bydBridge.elecRangeKm
+        if (dashRange > 0) {
+            tvDashboardRange?.text = "$dashRange km"
+        }
+
+        // 6. Battery Health SOH
+        tvSoh?.text = "${bydBridge.sohPercent}% SOH"
+
+        // 7. 12V Battery Aux
+        tv12v?.text = "13.8V"
+
+        // 8. Gear & Speed
+        tvGear?.text = "D"
+        tvSpeed?.text = "0 km/h"
     }
 
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        when (level) {
-            TRIM_MEMORY_RUNNING_CRITICAL,
-            TRIM_MEMORY_COMPLETE -> {
-                // DiLink 3.0 Critical: Release heavy caches while preserving active navigation view
-                lockedSingleDestSoc = -1
-            }
-            TRIM_MEMORY_BACKGROUND,
-            TRIM_MEMORY_MODERATE -> {
-                // Background Trim: Reset non-essential calculation states
-                latestDistanceKm = 0.0
-            }
+    private fun createNotification(): Notification {
+        val channelId = "byd_vehicle_overlay_v2"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "BYD Vehicle Data Overlay V2",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
+
+        return NotificationCompat.Builder(this, channelId)
+            .setContentTitle("BYD Vehicle Data Overlay V2.0")
+            .setContentText("กำลังอ่านและแสดงผลข้อมูลรถแบบ Real-time")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            unregisterReceiver(testReceiver)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
         bydBridge.stopListening()
-        hideOverlay()
-        
-        // Critical Low Memory Cleanup: Release View references & GC hint
-        overlayView = null
-        windowParams = null
-        windowManager = null
+        if (overlayView != null) {
+            try {
+                windowManager?.removeView(overlayView)
+            } catch (e: Exception) {
+                android.util.Log.e("OverlayService", "Failed to remove overlay view: ${e.message}")
+            }
+            overlayView = null
+        }
+    }
+
+    companion object {
+        private const val NOTIFICATION_ID = 2026
+        const val ACTION_UPDATE_CONFIG = "com.byd.mapsoverlay.ACTION_UPDATE_CONFIG"
+        const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
+        const val ACTION_UPDATE_DISTANCE = "com.byd.mapsoverlay.ACTION_UPDATE_DISTANCE"
+        const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
+        const val EXTRA_DISTANCE_KM = "extra_distance_km"
     }
 }

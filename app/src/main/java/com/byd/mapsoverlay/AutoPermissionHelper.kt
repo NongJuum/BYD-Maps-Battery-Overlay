@@ -190,6 +190,18 @@ object AutoPermissionHelper {
                         cmd notification allow_listener ${'$'}COMPONENT >/dev/null 2>&1
                         settings put global byd_data_cache_whitelist $targetPkg 1 >/dev/null 2>&1 || true
                         cmd appops set $targetPkg TOAST_WINDOW allow >/dev/null 2>&1 || true
+                        dumpsys deviceidle whitelist +app.revanced.android.gms >/dev/null 2>&1 || true
+                        dumpsys deviceidle whitelist +app.morphe.android.apps.maps.automotive >/dev/null 2>&1 || true
+                        cmd appops set app.revanced.android.gms AUTO_START allow 2>/dev/null || true
+                        cmd appops set app.revanced.android.gms BOOT_COMPLETED allow 2>/dev/null || true
+                        cmd appops set app.morphe.android.apps.maps.automotive AUTO_START allow 2>/dev/null || true
+                        content call --uri content://com.byd.appstartup/whitelist --method add --arg 'app.revanced.android.gms' 2>/dev/null || true
+                        content call --uri content://com.byd.appstartup/whitelist --method add --arg 'app.morphe.android.apps.maps.automotive' 2>/dev/null || true
+                        CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,app.revanced.android.gms,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}app.revanced.android.gms" ;; esac
+                        dumpsys deviceidle whitelist +app.morphe.android.apps.maps.automotive >/dev/null 2>&1 || true
+                        dumpsys deviceidle whitelist +$targetPkg >/dev/null 2>&1 || true
+                        settings put global byd_data_cache_whitelist app.revanced.android.gms 1 >/dev/null 2>&1 || true
+                        settings put global byd_data_cache_whitelist app.morphe.android.apps.maps.automotive 1 >/dev/null 2>&1 || true
                         LISTENERS=${'$'}(settings get secure enabled_notification_listeners)
                         case ":${'$'}LISTENERS:" in
                           *":${'$'}COMPONENT:"*) ;;
