@@ -392,6 +392,66 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- หมวด 3: ความโปร่งใส & การประหยัดพลังงาน (Transparency & Low Resource) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="14dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E2633"
+                app:cardBackgroundColor="#141A24">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎛️ ความโปร่งใสของแถบ (Transparency / Opacity)"
+                        android:textColor="#80D8FF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <SeekBar
+                            android:id="@+id/seek_overlay_opacity"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:max="100"
+                            android:progress="85" />
+
+                        <TextView
+                            android:id="@+id/tv_opacity_value"
+                            android:layout_width="48dp"
+                            android:layout_height="wrap_content"
+                            android:gravity="end"
+                            android:text="85%"
+                            android:textColor="#69F0AE"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="⚡ โหมด Low RAM &amp; Ultra-low CPU: ปรับรอบ Polling อัตโนมัติ (หยุดประมวลผลเมื่อรถจอดนิ่ง/ไม่มีการเปลี่ยนแปลง)"
+                        android:textColor="#90A4AE"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 4. ACTION CONTROLS & RESET BUTTON -->
             <LinearLayout
                 android:layout_width="match_parent"

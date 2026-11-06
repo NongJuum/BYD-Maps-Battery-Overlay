@@ -46,6 +46,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchSpeed: SwitchCompat
     private lateinit var switchGear: SwitchCompat
 
+    private lateinit var seekOpacity: android.widget.SeekBar
+    private lateinit var tvOpacityValue: TextView
+
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
 
@@ -92,6 +95,9 @@ class MainActivity : AppCompatActivity() {
         switchSpeed = findViewById(R.id.switch_show_speed)
         switchGear = findViewById(R.id.switch_show_gear)
 
+        seekOpacity = findViewById(R.id.seek_overlay_opacity)
+        tvOpacityValue = findViewById(R.id.tv_opacity_value)
+
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
     }
@@ -107,6 +113,10 @@ class MainActivity : AppCompatActivity() {
         switchConsume50km.isChecked = VehicleOverlayConfig.isShowConsumption50km(this)
         switchSpeed.isChecked = VehicleOverlayConfig.isShowSpeed(this)
         switchGear.isChecked = VehicleOverlayConfig.isShowGear(this)
+
+        val currentOpacity = VehicleOverlayConfig.getOpacity(this)
+        seekOpacity.progress = currentOpacity.coerceIn(30, 100)
+        tvOpacityValue.text = "${currentOpacity}%"
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
         val isRunning = prefs.getBoolean("service_running", true)
@@ -140,6 +150,22 @@ class MainActivity : AppCompatActivity() {
                 stopOverlayService()
             }
         }
+
+        seekOpacity.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                val clamped = progress.coerceAtLeast(30)
+                tvOpacityValue.text = "${clamped}%"
+                if (fromUser && switchMaster.isChecked) {
+                    VehicleOverlayConfig.setOpacity(this@MainActivity, clamped)
+                    val serviceIntent = Intent(this@MainActivity, OverlayService::class.java).apply {
+                        action = OverlayService.ACTION_UPDATE_CONFIG
+                    }
+                    startService(serviceIntent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
 
         btnSaveConfig.setOnClickListener {
             saveFieldPreferences()
@@ -176,6 +202,7 @@ class MainActivity : AppCompatActivity() {
         VehicleOverlayConfig.setShowConsumption50km(this, switchConsume50km.isChecked)
         VehicleOverlayConfig.setShowSpeed(this, switchSpeed.isChecked)
         VehicleOverlayConfig.setShowGear(this, switchGear.isChecked)
+        VehicleOverlayConfig.setOpacity(this, seekOpacity.progress.coerceAtLeast(30))
     }
 
     private fun setupTelemetryPreview() {
