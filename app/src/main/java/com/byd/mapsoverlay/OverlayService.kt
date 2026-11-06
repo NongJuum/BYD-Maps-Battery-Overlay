@@ -17,6 +17,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import android.widget.LinearLayout
+import android.content.res.Configuration
 import androidx.core.app.NotificationCompat
 
 /**
@@ -88,6 +90,42 @@ class OverlayService : Service() {
             else -> applyUserFieldPreferences()
         }
         return START_STICKY
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Auto-adapt position and orientation on DiLink screen rotation
+        mainHandler.post {
+            applyUserFieldPreferences()
+            clampOverlayToScreenBounds()
+        }
+    }
+
+    private fun clampOverlayToScreenBounds() {
+        val params = windowParams ?: return
+        val view = overlayView ?: return
+        val dm = resources.displayMetrics
+        val screenW = dm.widthPixels
+        val screenH = dm.heightPixels
+
+        var changed = false
+        if (params.x > screenW - 100) {
+            params.x = (screenW - view.width).coerceAtLeast(20)
+            changed = true
+        }
+        if (params.y > screenH - 60) {
+            params.y = (screenH - view.height).coerceAtLeast(20)
+            changed = true
+        }
+        if (changed) {
+            sharedPreferences.edit()
+                .putInt("overlay_x", params.x)
+                .putInt("overlay_y", params.y)
+                .apply()
+            try {
+                windowManager?.updateViewLayout(overlayView, params)
+            } catch (_: Exception) {}
+        }
     }
 
     @SuppressLint("InflateParams", "ClickableViewAccessibility")
@@ -245,6 +283,27 @@ class OverlayService : Service() {
         div5?.visibility = if (showCabinTemp && showSoh) View.VISIBLE else View.GONE
         div6?.visibility = if (showSoh && show12v) View.VISIBLE else View.GONE
         div7?.visibility = if (show12v && showGearSpeed) View.VISIBLE else View.GONE
+
+        val isVertical = VehicleOverlayConfig.isVerticalLayout(this)
+        val rootLayout = overlayView as? LinearLayout
+        if (rootLayout != null) {
+            rootLayout.orientation = if (isVertical) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+            // Adjust dividers width/height for orientation
+            val dividers = listOf(div1, div2, div3, div4, div5, div6, div7)
+            for (div in dividers) {
+                val lp = div?.layoutParams as? LinearLayout.LayoutParams ?: continue
+                if (isVertical) {
+                    lp.width = LinearLayout.LayoutParams.MATCH_PARENT
+                    lp.height = (1 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
+                    lp.setMargins(0, (4 * resources.displayMetrics.density).toInt(), 0, (4 * resources.displayMetrics.density).toInt())
+                } else {
+                    lp.width = (1 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
+                    lp.height = (11 * resources.displayMetrics.density).toInt()
+                    lp.setMargins((6 * resources.displayMetrics.density).toInt(), 0, (6 * resources.displayMetrics.density).toInt(), 0)
+                }
+                div.layoutParams = lp
+            }
+        }
 
         val opacity = VehicleOverlayConfig.getOpacity(this) / 100f
         overlayView?.alpha = opacity

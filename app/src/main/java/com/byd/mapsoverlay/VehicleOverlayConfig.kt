@@ -37,6 +37,7 @@ object VehicleOverlayConfig {
     // การปรับแต่งหน้าต่าง Overlay
     const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 30 - 100%
     const val KEY_OVERLAY_SCALE = "pref_overlay_scale" // 70 - 150% (Default 100)
+    const val KEY_OVERLAY_ORIENTATION = "pref_overlay_orientation" // "horizontal" or "vertical"
 
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -87,4 +88,7 @@ object VehicleOverlayConfig {
 
     fun getScale(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_SCALE, 100)
     fun setScale(context: Context, value: Int) = prefs(context).edit().putInt(KEY_OVERLAY_SCALE, value).apply()
+
+    fun isVerticalLayout(context: Context): Boolean = prefs(context).getString(KEY_OVERLAY_ORIENTATION, "horizontal") == "vertical"
+    fun setVerticalLayout(context: Context, isVertical: Boolean) = prefs(context).edit().putString(KEY_OVERLAY_ORIENTATION, if (isVertical) "vertical" else "horizontal").apply()
 }

@@ -50,6 +50,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvOpacityValue: TextView
     private lateinit var seekScale: android.widget.SeekBar
     private lateinit var tvScaleValue: TextView
+    private lateinit var rgOrientation: android.widget.RadioGroup
+    private lateinit var rbHorizontal: android.widget.RadioButton
+    private lateinit var rbVertical: android.widget.RadioButton
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -102,6 +105,10 @@ class MainActivity : AppCompatActivity() {
         seekScale = findViewById(R.id.seek_overlay_scale)
         tvScaleValue = findViewById(R.id.tv_scale_value)
 
+        rgOrientation = findViewById(R.id.rg_overlay_orientation)
+        rbHorizontal = findViewById(R.id.rb_orientation_horizontal)
+        rbVertical = findViewById(R.id.rb_orientation_vertical)
+
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
     }
@@ -125,6 +132,13 @@ class MainActivity : AppCompatActivity() {
         val currentScale = VehicleOverlayConfig.getScale(this)
         seekScale.progress = currentScale.coerceIn(70, 150)
         tvScaleValue.text = "${currentScale}%"
+
+        val isVertical = VehicleOverlayConfig.isVerticalLayout(this)
+        if (isVertical) {
+            rbVertical.isChecked = true
+        } else {
+            rbHorizontal.isChecked = true
+        }
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
         val isRunning = prefs.getBoolean("service_running", true)
@@ -191,6 +205,17 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
 
+        rgOrientation.setOnCheckedChangeListener { _, checkedId ->
+            val isVert = checkedId == R.id.rb_orientation_vertical
+            VehicleOverlayConfig.setVerticalLayout(this, isVert)
+            if (switchMaster.isChecked) {
+                val serviceIntent = Intent(this, OverlayService::class.java).apply {
+                    action = OverlayService.ACTION_UPDATE_CONFIG
+                }
+                startService(serviceIntent)
+            }
+        }
+
         btnSaveConfig.setOnClickListener {
             saveFieldPreferences()
             Toast.makeText(this, "บันทึกการตั้งค่า Overlay เรียบร้อย!", Toast.LENGTH_SHORT).show()
@@ -228,6 +253,7 @@ class MainActivity : AppCompatActivity() {
         VehicleOverlayConfig.setShowGear(this, switchGear.isChecked)
         VehicleOverlayConfig.setOpacity(this, seekOpacity.progress.coerceAtLeast(30))
         VehicleOverlayConfig.setScale(this, seekScale.progress.coerceIn(70, 150))
+        VehicleOverlayConfig.setVerticalLayout(this, rbVertical.isChecked)
     }
 
     private fun setupTelemetryPreview() {
