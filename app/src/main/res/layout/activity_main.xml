@@ -200,6 +200,19 @@
                             <TextView android:id="@+id/tv_dash_consumption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
                         </LinearLayout>
 
+                        <!-- Cabin Temp -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="10dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cabin Temp" android:textColor="#90A4AE" android:textSize="11sp"/>
+                            <TextView android:id="@+id/tv_dash_cabin_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="25°C" android:textColor="#80D8FF" android:textSize="16sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
                         <!-- 12V Battery -->
                         <LinearLayout
                             android:layout_width="0dp"
@@ -211,19 +224,6 @@
                             android:orientation="vertical">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12V Aux" android:textColor="#90A4AE" android:textSize="11sp"/>
                             <TextView android:id="@+id/tv_dash_12v" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="13.8 V" android:textColor="#69F0AE" android:textSize="16sp" android:textStyle="bold"/>
-                        </LinearLayout>
-
-                        <!-- Gear & Speed -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_margin="3dp"
-                            android:background="#1B2332"
-                            android:padding="10dp"
-                            android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Gear / Speed" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_gear_speed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="D / 0 km/h" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
                         </LinearLayout>
                     </GridLayout>
                 </LinearLayout>
@@ -290,13 +290,6 @@
                         android:checked="true" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_show_dash_range"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="ระยะทางหน้าปัดเดิม (Dashboard Range)"
-                        android:textColor="#ECEFF1" />
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_show_soh"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -312,7 +305,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- หมวด 2: การขับขี่ -->
+            <!-- หมวด 2: การขับขี่ & อุณหภูมิห้องโดยสาร -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -331,10 +324,18 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🚗 หมวด การขับขี่ (Driving Dynamics)"
+                        android:text="🚗 หมวด การขับขี่ &amp; ห้องโดยสาร"
                         android:textColor="#40C4FF"
                         android:textSize="14sp"
                         android:textStyle="bold" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_show_cabin_temp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="❄️ อุณหภูมิในห้องโดยสาร (Cabin Temp °C)"
+                        android:textColor="#ECEFF1"
+                        android:checked="true" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_show_consume_50km"
@@ -356,46 +357,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="ตำแหน่งเกียร์ปัจจุบัน (Gear P/R/N/D)"
-                        android:textColor="#ECEFF1" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- หมวด 3: ยาง TPMS & อื่นๆ -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cardCornerRadius="14dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#1E2633"
-                app:cardBackgroundColor="#141A24">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🛞 หมวด แรงดันลมยางและอื่นๆ (TPMS / Temp)"
-                        android:textColor="#FFB74D"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_show_tpms_pressure"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="ความดันลมยาง 4 ล้อ (TPMS Bar / PSI)"
-                        android:textColor="#ECEFF1" />
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_show_outside_temp"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="อุณหภูมิภายนอกรถ (Ambient Temp °C)"
                         android:textColor="#ECEFF1" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

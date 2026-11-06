@@ -30,24 +30,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvKwh: TextView
     private lateinit var tvRealRange: TextView
     private lateinit var tvConsumption: TextView
+    private lateinit var tvCabinTemp: TextView
     private lateinit var tv12v: TextView
-    private lateinit var tvGearSpeed: TextView
     private lateinit var tvVehicleModelBadge: TextView
 
     // Selection Switches
     private lateinit var switchSoc: MaterialSwitch
     private lateinit var switchKwh: MaterialSwitch
     private lateinit var switchRealRange: MaterialSwitch
-    private lateinit var switchDashRange: MaterialSwitch
     private lateinit var switchSoh: MaterialSwitch
     private lateinit var switch12v: MaterialSwitch
 
+    private lateinit var switchCabinTemp: MaterialSwitch
     private lateinit var switchConsume50km: MaterialSwitch
     private lateinit var switchSpeed: MaterialSwitch
     private lateinit var switchGear: MaterialSwitch
-
-    private lateinit var switchTpms: MaterialSwitch
-    private lateinit var switchOutsideTemp: MaterialSwitch
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -74,23 +71,20 @@ class MainActivity : AppCompatActivity() {
         tvKwh = findViewById(R.id.tv_dash_kwh)
         tvRealRange = findViewById(R.id.tv_dash_real_range)
         tvConsumption = findViewById(R.id.tv_dash_consumption)
+        tvCabinTemp = findViewById(R.id.tv_dash_cabin_temp)
         tv12v = findViewById(R.id.tv_dash_12v)
-        tvGearSpeed = findViewById(R.id.tv_dash_gear_speed)
         tvVehicleModelBadge = findViewById(R.id.tv_vehicle_model_badge)
 
         switchSoc = findViewById(R.id.switch_show_soc)
         switchKwh = findViewById(R.id.switch_show_remain_kwh)
         switchRealRange = findViewById(R.id.switch_show_real_range)
-        switchDashRange = findViewById(R.id.switch_show_dash_range)
         switchSoh = findViewById(R.id.switch_show_soh)
         switch12v = findViewById(R.id.switch_show_12v)
 
+        switchCabinTemp = findViewById(R.id.switch_show_cabin_temp)
         switchConsume50km = findViewById(R.id.switch_show_consume_50km)
         switchSpeed = findViewById(R.id.switch_show_speed)
         switchGear = findViewById(R.id.switch_show_gear)
-
-        switchTpms = findViewById(R.id.switch_show_tpms_pressure)
-        switchOutsideTemp = findViewById(R.id.switch_show_outside_temp)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -100,16 +94,13 @@ class MainActivity : AppCompatActivity() {
         switchSoc.isChecked = VehicleOverlayConfig.isShowSoc(this)
         switchKwh.isChecked = VehicleOverlayConfig.isShowRemainKwh(this)
         switchRealRange.isChecked = VehicleOverlayConfig.isShowRealRange(this)
-        switchDashRange.isChecked = VehicleOverlayConfig.isShowDashboardRange(this)
         switchSoh.isChecked = VehicleOverlayConfig.isShowBatterySoh(this)
         switch12v.isChecked = VehicleOverlayConfig.isShow12v(this)
 
+        switchCabinTemp.isChecked = VehicleOverlayConfig.isShowCabinTemp(this)
         switchConsume50km.isChecked = VehicleOverlayConfig.isShowConsumption50km(this)
         switchSpeed.isChecked = VehicleOverlayConfig.isShowSpeed(this)
         switchGear.isChecked = VehicleOverlayConfig.isShowGear(this)
-
-        switchTpms.isChecked = VehicleOverlayConfig.isShowTpmsPressure(this)
-        switchOutsideTemp.isChecked = VehicleOverlayConfig.isShowOutsideTemp(this)
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
         val isRunning = prefs.getBoolean("service_running", true)
@@ -172,31 +163,22 @@ class MainActivity : AppCompatActivity() {
         VehicleOverlayConfig.setShowSoc(this, switchSoc.isChecked)
         VehicleOverlayConfig.setShowRemainKwh(this, switchKwh.isChecked)
         VehicleOverlayConfig.setShowRealRange(this, switchRealRange.isChecked)
-        VehicleOverlayConfig.setShowDashboardRange(this, switchDashRange.isChecked)
         VehicleOverlayConfig.setShowBatterySoh(this, switchSoh.isChecked)
         VehicleOverlayConfig.setShow12v(this, switch12v.isChecked)
 
+        VehicleOverlayConfig.setShowCabinTemp(this, switchCabinTemp.isChecked)
         VehicleOverlayConfig.setShowConsumption50km(this, switchConsume50km.isChecked)
         VehicleOverlayConfig.setShowSpeed(this, switchSpeed.isChecked)
         VehicleOverlayConfig.setShowGear(this, switchGear.isChecked)
-
-        VehicleOverlayConfig.setShowTpmsPressure(this, switchTpms.isChecked)
-        VehicleOverlayConfig.setShowOutsideTemp(this, switchOutsideTemp.isChecked)
     }
 
     private fun setupTelemetryPreview() {
         bydBridge = BydVehicleBridge(this) { soc, consumption ->
             mainHandler.post {
-                if (soc > 0.0) {
-                    tvSoc.text = String.format("%.0f %%", soc)
-                }
+                if (soc > 0.0) tvSoc.text = String.format("%.0f %%", soc)
                 val kwh = bydBridge.remainEnergyKwh
-                if (kwh > 0.0) {
-                    tvKwh.text = String.format("%.1f kWh", kwh)
-                }
-                if (consumption > 0.0) {
-                    tvConsumption.text = String.format("%.1f", consumption)
-                }
+                if (kwh > 0.0) tvKwh.text = String.format("%.1f kWh", kwh)
+                if (consumption > 0.0) tvConsumption.text = String.format("%.1f", consumption)
                 val realRange = bydBridge.realRangeKm
                 if (realRange > 0.0) {
                     tvRealRange.text = String.format("%.0f km", realRange)
@@ -205,8 +187,8 @@ class MainActivity : AppCompatActivity() {
                     val calcRange = ((soc / 100.0) * effCap / consumption) * 100.0
                     tvRealRange.text = String.format("%.0f km", calcRange)
                 }
+                tvCabinTemp.text = "${bydBridge.cabinTemperatureC}°C"
                 tv12v.text = "13.8 V"
-                tvGearSpeed.text = "D / 0 km/h"
                 tvVehicleModelBadge.text = bydBridge.detectedVehicleModel
             }
         }

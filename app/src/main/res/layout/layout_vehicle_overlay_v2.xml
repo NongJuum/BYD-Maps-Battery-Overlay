@@ -158,9 +158,9 @@
         android:layout_marginEnd="8dp"
         android:background="#26FFFFFF" />
 
-    <!-- 5. ระยะทางตามหน้าปัดรถ (Dashboard Range) -->
+    <!-- 5. อุณหภูมิห้องโดยสาร (Cabin Inside Temperature) -->
     <LinearLayout
-        android:id="@+id/container_v2_dashboard_range"
+        android:id="@+id/container_v2_cabin_temp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -169,16 +169,16 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📟"
+            android:text="❄️"
             android:textSize="12sp"
             android:paddingEnd="3dp" />
 
         <TextView
-            android:id="@+id/tv_v2_dashboard_range"
+            android:id="@+id/tv_v2_cabin_temp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="-- km"
-            android:textColor="#E0E0E0"
+            android:text="25°C"
+            android:textColor="#80D8FF"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -246,7 +246,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="13.8V"
-            android:textColor="#80D8FF"
+            android:textColor="#69F0AE"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>

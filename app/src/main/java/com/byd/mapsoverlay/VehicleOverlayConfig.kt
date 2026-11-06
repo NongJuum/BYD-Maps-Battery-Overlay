@@ -29,10 +29,10 @@ object VehicleOverlayConfig {
     const val KEY_SHOW_TPMS_PRESSURE = "pref_show_tpms_pressure"
     const val KEY_SHOW_TPMS_TEMP = "pref_show_tpms_temp"
 
-    // หมวด 4: การชาร์จไฟและสภาพแวดล้อม
-    const val KEY_SHOW_CHARGING_POWER = "pref_show_charging_power"
-    const val KEY_SHOW_CHARGING_TIME = "pref_show_charging_time"
+    // หมวด 4: สภาพแวดล้อม & แอร์ (Cabin & Ambient)
+    const val KEY_SHOW_CABIN_TEMP = "pref_show_cabin_temp"
     const val KEY_SHOW_OUTSIDE_TEMP = "pref_show_outside_temp"
+    const val KEY_SHOW_CHARGING_POWER = "pref_show_charging_power"
 
     // การปรับแต่งหน้าต่าง Overlay
     const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 50 - 100%
@@ -64,34 +64,21 @@ object VehicleOverlayConfig {
     fun isShowConsumption50km(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CONSUMPTION_50KM, true)
     fun setShowConsumption50km(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CONSUMPTION_50KM, value).apply()
 
-    fun isShowConsumptionTotal(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CONSUMPTION_TOTAL, false)
-    fun setShowConsumptionTotal(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CONSUMPTION_TOTAL, value).apply()
-
     fun isShowSpeed(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_SPEED, false)
     fun setShowSpeed(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_SPEED, value).apply()
 
     fun isShowGear(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_GEAR, false)
     fun setShowGear(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_GEAR, value).apply()
 
-    fun isShowOdo(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_ODO, false)
-    fun setShowOdo(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_ODO, value).apply()
-
-    // Getters & Setters - หมวด 3
-    fun isShowTpmsPressure(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_TPMS_PRESSURE, false)
-    fun setShowTpmsPressure(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_TPMS_PRESSURE, value).apply()
-
-    fun isShowTpmsTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_TPMS_TEMP, false)
-    fun setShowTpmsTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_TPMS_TEMP, value).apply()
-
-    // Getters & Setters - หมวด 4
-    fun isShowChargingPower(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CHARGING_POWER, false)
-    fun setShowChargingPower(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CHARGING_POWER, value).apply()
-
-    fun isShowChargingTime(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CHARGING_TIME, false)
-    fun setShowChargingTime(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CHARGING_TIME, value).apply()
+    // Getters & Setters - หมวด 3 & 4
+    fun isShowCabinTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CABIN_TEMP, true)
+    fun setShowCabinTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CABIN_TEMP, value).apply()
 
     fun isShowOutsideTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_OUTSIDE_TEMP, false)
     fun setShowOutsideTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_OUTSIDE_TEMP, value).apply()
+
+    fun isShowTpmsPressure(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_TPMS_PRESSURE, false)
+    fun setShowTpmsPressure(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_TPMS_PRESSURE, value).apply()
 
     // Getters & Setters - ทั่วไป
     fun getOpacity(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_OPACITY, 90)

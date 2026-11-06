@@ -11,7 +11,6 @@ import android.content.SharedPreferences
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
-import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -21,10 +20,9 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
 /**
- * OverlayService V2.0:
+ * OverlayService V2.0 (Zero-Hole Guarded):
  * - Standalone Floating Vehicle HUD
- * - ไม่ขึ้นกับ Google Maps / Maps Notifications
- * - รองรับการเลือกเปิด-ปิดฟิลด์ข้อมูลได้อิสระตามความต้องการของผู้ใช้
+ * - Modular telemetry items (SoC, kWh, Range, Consumption, Cabin Temp, SOH, 12V, Gear/Speed)
  */
 class OverlayService : Service() {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -38,7 +36,7 @@ class OverlayService : Service() {
     private var tvKwh: TextView? = null
     private var tvRealRange: TextView? = null
     private var tvConsumption: TextView? = null
-    private var tvDashboardRange: TextView? = null
+    private var tvCabinTemp: TextView? = null
     private var tvSoh: TextView? = null
     private var tv12v: TextView? = null
     private var tvGear: TextView? = null
@@ -49,7 +47,7 @@ class OverlayService : Service() {
     private var containerKwh: View? = null
     private var containerRealRange: View? = null
     private var containerConsumption: View? = null
-    private var containerDashboardRange: View? = null
+    private var containerCabinTemp: View? = null
     private var containerSoh: View? = null
     private var container12v: View? = null
     private var containerGearSpeed: View? = null
@@ -72,7 +70,6 @@ class OverlayService : Service() {
         super.onCreate()
         sharedPreferences = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
 
-        // เริ่มต้นการอ่านข้อมูลรถจาก DiLink / Native Daemon
         bydBridge = BydVehicleBridge(this) { soc, consumption ->
             mainHandler.post {
                 updateTelemetryDisplay(soc, consumption)
@@ -108,7 +105,7 @@ class OverlayService : Service() {
         tvKwh = v.findViewById(R.id.tv_v2_kwh)
         tvRealRange = v.findViewById(R.id.tv_v2_real_range)
         tvConsumption = v.findViewById(R.id.tv_v2_consumption)
-        tvDashboardRange = v.findViewById(R.id.tv_v2_dashboard_range)
+        tvCabinTemp = v.findViewById(R.id.tv_v2_cabin_temp)
         tvSoh = v.findViewById(R.id.tv_v2_soh)
         tv12v = v.findViewById(R.id.tv_v2_12v)
         tvGear = v.findViewById(R.id.tv_v2_gear)
@@ -119,7 +116,7 @@ class OverlayService : Service() {
         containerKwh = v.findViewById(R.id.container_v2_kwh)
         containerRealRange = v.findViewById(R.id.container_v2_real_range)
         containerConsumption = v.findViewById(R.id.container_v2_consumption)
-        containerDashboardRange = v.findViewById(R.id.container_v2_dashboard_range)
+        containerCabinTemp = v.findViewById(R.id.container_v2_cabin_temp)
         containerSoh = v.findViewById(R.id.container_v2_soh)
         container12v = v.findViewById(R.id.container_v2_12v)
         containerGearSpeed = v.findViewById(R.id.container_v2_gear_speed)
@@ -159,7 +156,7 @@ class OverlayService : Service() {
         }
         windowParams = params
 
-        // Drag & Drop Listener
+        // Drag & Drop
         val dragHandle: View = v.findViewById(R.id.tv_drag_handle) ?: v
         dragHandle.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
@@ -226,7 +223,7 @@ class OverlayService : Service() {
         val showKwh = VehicleOverlayConfig.isShowRemainKwh(this)
         val showRealRange = VehicleOverlayConfig.isShowRealRange(this)
         val showConsumption = VehicleOverlayConfig.isShowConsumption50km(this)
-        val showDashboardRange = VehicleOverlayConfig.isShowDashboardRange(this)
+        val showCabinTemp = VehicleOverlayConfig.isShowCabinTemp(this)
         val showSoh = VehicleOverlayConfig.isShowBatterySoh(this)
         val show12v = VehicleOverlayConfig.isShow12v(this)
         val showGearSpeed = VehicleOverlayConfig.isShowGear(this) || VehicleOverlayConfig.isShowSpeed(this)
@@ -235,17 +232,16 @@ class OverlayService : Service() {
         containerKwh?.visibility = if (showKwh) View.VISIBLE else View.GONE
         containerRealRange?.visibility = if (showRealRange) View.VISIBLE else View.GONE
         containerConsumption?.visibility = if (showConsumption) View.VISIBLE else View.GONE
-        containerDashboardRange?.visibility = if (showDashboardRange) View.VISIBLE else View.GONE
+        containerCabinTemp?.visibility = if (showCabinTemp) View.VISIBLE else View.GONE
         containerSoh?.visibility = if (showSoh) View.VISIBLE else View.GONE
         container12v?.visibility = if (show12v) View.VISIBLE else View.GONE
         containerGearSpeed?.visibility = if (showGearSpeed) View.VISIBLE else View.GONE
 
-        // Dividers logic
         div1?.visibility = if (showSoc && showKwh) View.VISIBLE else View.GONE
         div2?.visibility = if (showKwh && showRealRange) View.VISIBLE else View.GONE
         div3?.visibility = if (showRealRange && showConsumption) View.VISIBLE else View.GONE
-        div4?.visibility = if (showConsumption && showDashboardRange) View.VISIBLE else View.GONE
-        div5?.visibility = if (showDashboardRange && showSoh) View.VISIBLE else View.GONE
+        div4?.visibility = if (showConsumption && showCabinTemp) View.VISIBLE else View.GONE
+        div5?.visibility = if (showCabinTemp && showSoh) View.VISIBLE else View.GONE
         div6?.visibility = if (showSoh && show12v) View.VISIBLE else View.GONE
         div7?.visibility = if (show12v && showGearSpeed) View.VISIBLE else View.GONE
 
@@ -254,12 +250,9 @@ class OverlayService : Service() {
     }
 
     private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
-        // 1. SoC %
-        if (soc > 0.0) {
-            tvSoc?.text = "${soc.toInt()}%"
-        }
+        // Zero-hole defensive display updates
+        if (soc > 0.0) tvSoc?.text = "${soc.toInt()}%"
 
-        // 2. Remaining kWh
         val kwh = bydBridge.remainEnergyKwh
         if (kwh > 0.0) {
             tvKwh?.text = String.format("%.1f kWh", kwh)
@@ -268,7 +261,6 @@ class OverlayService : Service() {
             tvKwh?.text = String.format("%.1f kWh", calcKwh)
         }
 
-        // 3. Real Remaining Range (km)
         val realRange = bydBridge.realRangeKm
         if (realRange > 0) {
             tvRealRange?.text = "$realRange km"
@@ -278,24 +270,13 @@ class OverlayService : Service() {
             tvRealRange?.text = "${calcRange.toInt()} km"
         }
 
-        // 4. Consumption (kWh/100km)
         if (consumption > 0.0) {
             tvConsumption?.text = String.format("%.1f", consumption)
         }
 
-        // 5. Dashboard Instrument Range (km)
-        val dashRange = bydBridge.elecRangeKm
-        if (dashRange > 0) {
-            tvDashboardRange?.text = "$dashRange km"
-        }
-
-        // 6. Battery Health SOH
+        tvCabinTemp?.text = "${bydBridge.cabinTemperatureC}°C"
         tvSoh?.text = "${bydBridge.sohPercent}% SOH"
-
-        // 7. 12V Battery Aux
         tv12v?.text = "13.8V"
-
-        // 8. Gear & Speed
         tvGear?.text = "D"
         tvSpeed?.text = "0 km/h"
     }
