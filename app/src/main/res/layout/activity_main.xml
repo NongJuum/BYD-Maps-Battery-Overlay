@@ -86,10 +86,14 @@
                             android:textSize="12sp" />
                     </LinearLayout>
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_overlay_master"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text=""
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:checked="true" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -265,7 +269,10 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_soc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -273,7 +280,10 @@
                         android:textColor="#ECEFF1"
                         android:checked="true" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_remain_kwh"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -281,7 +291,10 @@
                         android:textColor="#ECEFF1"
                         android:checked="true" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_real_range"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -289,14 +302,20 @@
                         android:textColor="#ECEFF1"
                         android:checked="true" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_soh"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="สุขภาพแบตเตอรี่ (SOH %)"
                         android:textColor="#ECEFF1" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_12v"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -329,7 +348,10 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_cabin_temp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -337,7 +359,10 @@
                         android:textColor="#ECEFF1"
                         android:checked="true" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_consume_50km"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -345,14 +370,20 @@
                         android:textColor="#ECEFF1"
                         android:checked="true" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_speed"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="ความเร็วรถดิจิทัล (Digital Speed)"
                         android:textColor="#ECEFF1" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:textOn=""
+                        android:textOff=""
+                        android:showText="false"
                         android:id="@+id/switch_show_gear"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

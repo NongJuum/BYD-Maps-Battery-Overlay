@@ -14,14 +14,14 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.materialswitch.MaterialSwitch
+import androidx.appcompat.widget.SwitchCompat
 
 /**
  * MainActivity: Settings & Configuration for Vehicle Data Overlay V2.0
  */
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var switchMaster: MaterialSwitch
+    private lateinit var switchMaster: SwitchCompat
     private lateinit var ivStatusDot: ImageView
     private lateinit var tvStatusDesc: TextView
 
@@ -35,16 +35,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvVehicleModelBadge: TextView
 
     // Selection Switches
-    private lateinit var switchSoc: MaterialSwitch
-    private lateinit var switchKwh: MaterialSwitch
-    private lateinit var switchRealRange: MaterialSwitch
-    private lateinit var switchSoh: MaterialSwitch
-    private lateinit var switch12v: MaterialSwitch
+    private lateinit var switchSoc: SwitchCompat
+    private lateinit var switchKwh: SwitchCompat
+    private lateinit var switchRealRange: SwitchCompat
+    private lateinit var switchSoh: SwitchCompat
+    private lateinit var switch12v: SwitchCompat
 
-    private lateinit var switchCabinTemp: MaterialSwitch
-    private lateinit var switchConsume50km: MaterialSwitch
-    private lateinit var switchSpeed: MaterialSwitch
-    private lateinit var switchGear: MaterialSwitch
+    private lateinit var switchCabinTemp: SwitchCompat
+    private lateinit var switchConsume50km: SwitchCompat
+    private lateinit var switchSpeed: SwitchCompat
+    private lateinit var switchGear: SwitchCompat
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -60,6 +60,12 @@ class MainActivity : AppCompatActivity() {
         loadPreferences()
         setupListeners()
         setupTelemetryPreview()
+
+        // Auto-start OverlayService if enabled
+        val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("service_running", true) && checkOverlayPermission()) {
+            startOverlayService()
+        }
     }
 
     private fun initViews() {
