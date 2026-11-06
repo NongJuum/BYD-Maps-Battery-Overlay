@@ -3,24 +3,24 @@
     android:id="@+id/v2_pill_root"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_pill_modern"
+    android:background="@drawable/bg_kinex_dock_bar"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingStart="14dp"
-    android:paddingTop="7dp"
-    android:paddingEnd="14dp"
-    android:paddingBottom="7dp"
-    android:elevation="12dp">
+    android:paddingStart="10dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="4dp"
+    android:elevation="8dp">
 
     <!-- จุดจับลาก (Drag Handle) -->
     <TextView
         android:id="@+id/tv_drag_handle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="⠿"
-        android:textColor="#80FFFFFF"
-        android:textSize="15sp"
-        android:paddingEnd="8dp" />
+        android:text="⋮⋮"
+        android:textColor="#546E7A"
+        android:textSize="12sp"
+        android:paddingEnd="6dp" />
 
     <!-- 1. ระดับแบตเตอรี่ปัจจุบัน (Current SoC) -->
     <LinearLayout
@@ -34,8 +34,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="⚡"
-            android:textSize="13sp"
-            android:paddingEnd="3dp" />
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_soc"
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:text="--%"
             android:textColor="#69F0AE"
-            android:textSize="15sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -51,12 +51,12 @@
     <View
         android:id="@+id/divider_v2_1"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
-    <!-- 2. พลังงานแบตเตอรี่คงเหลือจริง (Remaining kWh) -->
+    <!-- 2. พลังงานแบตเตอรี่คงเหลือจริง (Remaining kWh จาก BMS) -->
     <LinearLayout
         android:id="@+id/container_v2_kwh"
         android:layout_width="wrap_content"
@@ -68,8 +68,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🔋"
-            android:textSize="12sp"
-            android:paddingEnd="3dp" />
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_kwh"
@@ -77,7 +77,7 @@
             android:layout_height="wrap_content"
             android:text="-- kWh"
             android:textColor="#00E676"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -85,12 +85,12 @@
     <View
         android:id="@+id/divider_v2_2"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
-    <!-- 3. ระยะทางวิ่งได้จริงตามอัตราสิ้นเปลือง (Real Remaining Range) -->
+    <!-- 3. ระยะทางวิ่งได้จริง (Real Range) -->
     <LinearLayout
         android:id="@+id/container_v2_real_range"
         android:layout_width="wrap_content"
@@ -102,8 +102,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🚗"
-            android:textSize="12sp"
-            android:paddingEnd="3dp" />
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_real_range"
@@ -111,7 +111,7 @@
             android:layout_height="wrap_content"
             android:text="-- km"
             android:textColor="#40C4FF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -119,9 +119,9 @@
     <View
         android:id="@+id/divider_v2_3"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
     <!-- 4. อัตราสิ้นเปลืองสด 50km (Consumption) -->
@@ -135,17 +135,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📉"
-            android:textSize="12sp"
-            android:paddingEnd="3dp" />
+            android:text="📊"
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_consumption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="-- kWh/100"
+            android:text="--.-"
             android:textColor="#FFD54F"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -153,12 +153,12 @@
     <View
         android:id="@+id/divider_v2_4"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
-    <!-- 5. อุณหภูมิห้องโดยสาร (Cabin Inside Temperature) -->
+    <!-- 5. อุณหภูมิห้องโดยสาร (Cabin Temp) -->
     <LinearLayout
         android:id="@+id/container_v2_cabin_temp"
         android:layout_width="wrap_content"
@@ -170,16 +170,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="❄️"
-            android:textSize="12sp"
-            android:paddingEnd="3dp" />
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_cabin_temp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="25°C"
+            android:text="24°C"
             android:textColor="#80D8FF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -187,9 +187,9 @@
     <View
         android:id="@+id/divider_v2_5"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
     <!-- 6. สุขภาพแบตเตอรี่ (SOH) -->
@@ -204,16 +204,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🛡️"
-            android:textSize="12sp"
-            android:paddingEnd="3dp" />
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_soh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="100% SOH"
+            android:text="100%"
             android:textColor="#B388FF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -221,9 +221,9 @@
     <View
         android:id="@+id/divider_v2_6"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
     <!-- 7. แบตเตอรี่ลูกเล็ก 12V Aux -->
@@ -238,8 +238,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🔋"
-            android:textSize="12sp"
-            android:paddingEnd="3dp" />
+            android:textSize="11sp"
+            android:paddingEnd="2dp" />
 
         <TextView
             android:id="@+id/tv_v2_12v"
@@ -247,7 +247,7 @@
             android:layout_height="wrap_content"
             android:text="13.8V"
             android:textColor="#69F0AE"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -255,9 +255,9 @@
     <View
         android:id="@+id/divider_v2_7"
         android:layout_width="1dp"
-        android:layout_height="14dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
         android:background="#26FFFFFF" />
 
     <!-- 8. เกียร์และความเร็ว (Gear / Speed) -->
@@ -274,9 +274,9 @@
             android:layout_height="wrap_content"
             android:text="D"
             android:textColor="#FFAB40"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold"
-            android:paddingEnd="4dp" />
+            android:paddingEnd="3dp" />
 
         <TextView
             android:id="@+id/tv_v2_speed"
@@ -284,7 +284,7 @@
             android:layout_height="wrap_content"
             android:text="0 km/h"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 

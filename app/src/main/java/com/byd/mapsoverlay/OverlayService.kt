@@ -139,8 +139,9 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        val savedX = sharedPreferences.getInt("overlay_x", 40)
-        val savedY = sharedPreferences.getInt("overlay_y", 40)
+        // Default coordinates: Snap right after Kinex battery indicator (x=245, y=108)
+        val savedX = sharedPreferences.getInt("overlay_x", 245)
+        val savedY = sharedPreferences.getInt("overlay_y", 32)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
