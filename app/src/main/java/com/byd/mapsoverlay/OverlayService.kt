@@ -186,6 +186,8 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -251,9 +253,9 @@ class OverlayService : Service() {
 
     private fun resetPosition() {
         val params = windowParams ?: return
-        params.x = 40
-        params.y = 40
-        sharedPreferences.edit().putInt("overlay_x", 40).putInt("overlay_y", 40).apply()
+        params.x = 245
+        params.y = 0 // Topmost status bar area
+        sharedPreferences.edit().putInt("overlay_x", 245).putInt("overlay_y", 0).apply()
         windowManager?.updateViewLayout(overlayView, params)
     }
 
