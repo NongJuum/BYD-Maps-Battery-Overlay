@@ -48,6 +48,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var seekOpacity: android.widget.SeekBar
     private lateinit var tvOpacityValue: TextView
+    private lateinit var seekScale: android.widget.SeekBar
+    private lateinit var tvScaleValue: TextView
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -97,6 +99,8 @@ class MainActivity : AppCompatActivity() {
 
         seekOpacity = findViewById(R.id.seek_overlay_opacity)
         tvOpacityValue = findViewById(R.id.tv_opacity_value)
+        seekScale = findViewById(R.id.seek_overlay_scale)
+        tvScaleValue = findViewById(R.id.tv_scale_value)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -117,6 +121,10 @@ class MainActivity : AppCompatActivity() {
         val currentOpacity = VehicleOverlayConfig.getOpacity(this)
         seekOpacity.progress = currentOpacity.coerceIn(30, 100)
         tvOpacityValue.text = "${currentOpacity}%"
+
+        val currentScale = VehicleOverlayConfig.getScale(this)
+        seekScale.progress = currentScale.coerceIn(70, 150)
+        tvScaleValue.text = "${currentScale}%"
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
         val isRunning = prefs.getBoolean("service_running", true)
@@ -167,6 +175,22 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
 
+        seekScale.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                val clamped = progress.coerceIn(70, 150)
+                tvScaleValue.text = "${clamped}%"
+                if (fromUser && switchMaster.isChecked) {
+                    VehicleOverlayConfig.setScale(this@MainActivity, clamped)
+                    val serviceIntent = Intent(this@MainActivity, OverlayService::class.java).apply {
+                        action = OverlayService.ACTION_UPDATE_CONFIG
+                    }
+                    startService(serviceIntent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
+
         btnSaveConfig.setOnClickListener {
             saveFieldPreferences()
             Toast.makeText(this, "บันทึกการตั้งค่า Overlay เรียบร้อย!", Toast.LENGTH_SHORT).show()
@@ -203,6 +227,7 @@ class MainActivity : AppCompatActivity() {
         VehicleOverlayConfig.setShowSpeed(this, switchSpeed.isChecked)
         VehicleOverlayConfig.setShowGear(this, switchGear.isChecked)
         VehicleOverlayConfig.setOpacity(this, seekOpacity.progress.coerceAtLeast(30))
+        VehicleOverlayConfig.setScale(this, seekScale.progress.coerceIn(70, 150))
     }
 
     private fun setupTelemetryPreview() {

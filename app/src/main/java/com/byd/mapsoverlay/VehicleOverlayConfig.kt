@@ -35,7 +35,8 @@ object VehicleOverlayConfig {
     const val KEY_SHOW_CHARGING_POWER = "pref_show_charging_power"
 
     // การปรับแต่งหน้าต่าง Overlay
-    const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 50 - 100%
+    const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 30 - 100%
+    const val KEY_OVERLAY_SCALE = "pref_overlay_scale" // 70 - 150% (Default 100)
 
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -83,4 +84,7 @@ object VehicleOverlayConfig {
     // Getters & Setters - ทั่วไป
     fun getOpacity(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_OPACITY, 90)
     fun setOpacity(context: Context, value: Int) = prefs(context).edit().putInt(KEY_OVERLAY_OPACITY, value).apply()
+
+    fun getScale(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_SCALE, 100)
+    fun setScale(context: Context, value: Int) = prefs(context).edit().putInt(KEY_OVERLAY_SCALE, value).apply()
 }

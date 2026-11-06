@@ -248,6 +248,12 @@ class OverlayService : Service() {
 
         val opacity = VehicleOverlayConfig.getOpacity(this) / 100f
         overlayView?.alpha = opacity
+
+        val scale = VehicleOverlayConfig.getScale(this) / 100f
+        overlayView?.scaleX = scale
+        overlayView?.scaleY = scale
+        overlayView?.pivotX = 0f
+        overlayView?.pivotY = 0f
     }
 
     private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
