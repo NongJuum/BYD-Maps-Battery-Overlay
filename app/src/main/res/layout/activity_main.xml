@@ -592,12 +592,12 @@
                         android:layout_marginTop="4dp"
                         android:orientation="vertical">
 
-                        <!-- โทนต่ำ -->
+                        <!-- โทนต่ำธรรมชาติ / พรีเมียม -->
                         <RadioButton
                             android:id="@+id/rb_tone_1"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟢 1. Sub Bass Heartbeat (180Hz ทุ้มลึก หัวใจเต้น นุ่มลึกมาก)"
+                            android:text="🟢 1. Kalimba Warm Wood (380Hz เคาะไม้คาลิมบา อบอุ่น นุ่มนวล)"
                             android:textColor="#81C784"
                             android:textSize="12sp" />
 
@@ -605,7 +605,7 @@
                             android:id="@+id/rb_tone_2"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟢 2. Deep Bass Thud (320Hz ทุ้มแน่นสไตล์รถยุโรป)"
+                            android:text="🟢 2. Luxury Deep Thud (240Hz ทุ้มลึก หนักแน่น สไตล์รถยุโรปหรู)"
                             android:textColor="#81C784"
                             android:textSize="12sp" />
 
@@ -613,33 +613,34 @@
                             android:id="@+id/rb_tone_3"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟢 3. Soft Wooden Block (450Hz เคาะไม้ออร์แกนิก ฟังสบาย)"
+                            android:text="🟢 3. Soft Marimba (520Hz มาริมบากลมมน ไม่แสบแก้วหู)"
                             android:textColor="#81C784"
                             android:textSize="12sp" />
 
+                        <!-- โทน High-Tech ยอดฮิต -->
                         <RadioButton
                             android:id="@+id/rb_tone_4"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="✨ 4. High-Tech Glass Bell (Tesla ระฆังแก้วไซไฟ นุ่มนวล พรีเมียม)"
+                            android:text="✨ 4. High-Tech Glass Bell (Tesla ระฆังแก้วไซไฟ กังวานหรูหรา)"
                             android:textColor="#38BDF8"
-                            android:textSize="12sp" />
-
-                        <!-- โทนกลาง -->
-                        <RadioButton
-                            android:id="@+id/rb_tone_5"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟡 5. Mercedes Warm Chord (780Hz คอร์ดอบอุ่น หรูหรา กลมกล่อม)"
-                            android:textColor="#FFD54F"
                             android:textSize="12sp"
                             android:checked="true" />
 
                         <RadioButton
+                            android:id="@+id/rb_tone_5"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="✨ 5. Cyber Pulse Ping (880Hz ยานอวกาศล้ำยุค คมชัด)"
+                            android:textColor="#38BDF8"
+                            android:textSize="12sp" />
+
+                        <!-- โทนกลางคลาสสิก / สปอร์ต -->
+                        <RadioButton
                             android:id="@+id/rb_tone_6"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟡 6. Porsche Sport Ding (850Hz ระฆังสปอร์ต กังวานแน่น)"
+                            android:text="🟡 6. Mercedes Harmony Chord (คอร์ดเมเจอร์หรูหรา 3 โน้ต)"
                             android:textColor="#FFD54F"
                             android:textSize="12sp" />
 
@@ -647,32 +648,32 @@
                             android:id="@+id/rb_tone_7"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟡 7. Submarine Sonar Ping (1,200Hz พัลส์เรดาร์ไล่ความถี่)"
+                            android:text="🟡 7. Porsche Sport Chime (850Hz ระฆังสปอร์ต ฉับไว ปลุกสมาธิ)"
                             android:textColor="#FFD54F"
                             android:textSize="12sp" />
 
+                        <!-- โทน EV / เรดาร์ / Cockpit -->
                         <RadioButton
                             android:id="@+id/rb_tone_8"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟡 8. Audi Harmonized Chime (1,400Hz ฮาร์โมนิก คมชัดแต่ไม่บาดหู)"
-                            android:textColor="#FFD54F"
+                            android:text="💎 8. EV Future Sweep (Sci-Fi กวาดความถี่ล้ำยุค ชวนมองกระจก)"
+                            android:textColor="#38BDF8"
                             android:textSize="12sp" />
 
-                        <!-- โทนสูง -->
                         <RadioButton
                             android:id="@+id/rb_tone_9"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🔴 9. Japanese Clean Beep (1,850Hz ปี๊บสะอาด นุ่มกว่าบัซเซอร์เดิม)"
-                            android:textColor="#FF8A80"
+                            android:text="🟡 9. Crystal Sonar Radar (1.3kHz โซนาร์แก้วใส คมชัด)"
+                            android:textColor="#FFD54F"
                             android:textSize="12sp" />
 
                         <RadioButton
                             android:id="@+id/rb_tone_10"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🔴 10. Cockpit High Alert (2,200Hz คมกริบ สำหรับคนเปิดเพลงดัง)"
+                            android:text="🔴 10. Euro ADAS Cockpit (1.6k+2.1k ฮาร์โมนิกคู่ ชัดแม้เปิดเพลงดัง)"
                             android:textColor="#FF8A80"
                             android:textSize="12sp" />
                     </RadioGroup>
