@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rgOrientation: android.widget.RadioGroup
     private lateinit var rbHorizontal: android.widget.RadioButton
     private lateinit var rbVertical: android.widget.RadioButton
+    private lateinit var switchBsdSound: com.google.android.material.switchmaterial.SwitchMaterial
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -108,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         rgOrientation = findViewById(R.id.rg_overlay_orientation)
         rbHorizontal = findViewById(R.id.rb_orientation_horizontal)
         rbVertical = findViewById(R.id.rb_orientation_vertical)
+        switchBsdSound = findViewById(R.id.switch_bsd_sound)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -139,6 +141,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             rbHorizontal.isChecked = true
         }
+
+        switchBsdSound.isChecked = VehicleOverlayConfig.isBsdSoundEnabled(this)
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
         val isRunning = prefs.getBoolean("service_running", true)
@@ -214,6 +218,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 startService(serviceIntent)
             }
+        }
+
+        switchBsdSound.setOnCheckedChangeListener { _, isChecked ->
+            VehicleOverlayConfig.setBsdSoundEnabled(this, isChecked)
+            val msg = if (isChecked) "เปิดเสียงเตือนจุดอับสายตาแล้ว (เตือนเมื่อเปิดไฟเลี้ยว)" else "ปิดเสียงเตือนจุดอับสายตาแล้ว"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
 
         btnSaveConfig.setOnClickListener {

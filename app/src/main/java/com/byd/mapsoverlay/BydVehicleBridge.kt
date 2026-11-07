@@ -64,8 +64,14 @@ class BydVehicleBridge(
     private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Any, Long>>()
     private val cacheTtlMs = 60_000L
 
+    // ADAS & Light Device Listeners (Zero-CPU event callback)
+    private var registeredAdasListener: Any? = null
+    private var registeredLightListener: Any? = null
+
     fun startListening() {
         applyUserVehicleProfile()
+        BlindspotAudioChime.init(context)
+        registerSafetyListeners()
 
         executor = Executors.newSingleThreadScheduledExecutor()
         executor?.scheduleWithFixedDelay({
@@ -84,6 +90,8 @@ class BydVehicleBridge(
     }
 
     fun stopListening() {
+        unregisterSafetyListeners()
+        BlindspotAudioChime.release()
         executor?.shutdownNow()
         executor = null
         deviceCache.clear()
@@ -295,6 +303,95 @@ class BydVehicleBridge(
     private fun notifyUpdate() {
         mainHandler.post {
             onTelemetryUpdate(currentSoc, currentConsumption)
+        }
+    }
+
+    /**
+     * ลงทะเบียน Event Listener สำหรับ ADAS (BSD) และ Light (Turn signal flash)
+     * ทำงานแบบ Passive Callback ไม่รันลูป ไม่กิน CPU
+     */
+    private fun registerSafetyListeners() {
+        try {
+            // 1. ลงทะเบียน ADAS Listener
+            val adasClass = try { Class.forName("android.hardware.bydauto.adas.BYDAutoADASDevice") } catch (_: Throwable) { null }
+            if (adasClass != null) {
+                val adasDevice = obtainDeviceInstance(adasClass)
+                if (adasDevice != null) {
+                    val adasListener = object : android.hardware.bydauto.adas.AbsBYDAutoADASListener() {
+                        override fun onBSDStateChanged(state: Int) {
+                            Log.d(tag, "BYD Event onBSDStateChanged: $state")
+                            // state != 0 แสดงว่าระบบตรวจพบวัตถุหรือกำลังเตือน
+                            BlindspotAudioChime.isBsdActive = (state > 0)
+                            checkAndTriggerChime()
+                        }
+                    }
+                    val regMethod = adasClass.methods.firstOrNull { 
+                        it.name == "registerListener" && it.parameterTypes.size == 1 && 
+                        it.parameterTypes[0].isAssignableFrom(adasListener.javaClass)
+                    }
+                    regMethod?.invoke(adasDevice, adasListener)
+                    registeredAdasListener = Pair(adasDevice, adasListener)
+                    Log.d(tag, "Successfully registered ADAS BSD listener")
+                }
+            }
+
+            // 2. ลงทะเบียน Light Listener (ตรวจจับไฟเลี้ยวและไฟกระพริบฉุกเฉิน/เตือน)
+            val lightClass = try { Class.forName("android.hardware.bydauto.light.BYDAutoLightDevice") } catch (_: Throwable) { null }
+            if (lightClass != null) {
+                val lightDevice = obtainDeviceInstance(lightClass)
+                if (lightDevice != null) {
+                    val lightListener = object : android.hardware.bydauto.light.AbsBYDAutoLightListener() {
+                        override fun onTurnLightFlashStateChanged(state: Int) {
+                            Log.d(tag, "BYD Event onTurnLightFlashStateChanged: $state")
+                            // 2: Left Flash, 3: Left Fast, 4: Right Flash, 5: Right Fast, 6: Danger Flash
+                            val isFlashing = state in listOf(2, 3, 4, 5, 6, 9)
+                            BlindspotAudioChime.isTurnSignalActive = isFlashing
+                            checkAndTriggerChime()
+                        }
+
+                        override fun onTurnLightStateChanged(state: Int) {
+                            // 2: Short, 3: Long
+                            val isOn = state in 2..5
+                            BlindspotAudioChime.isTurnSignalActive = isOn
+                            checkAndTriggerChime()
+                        }
+                    }
+                    val regMethod = lightClass.methods.firstOrNull { 
+                        it.name == "registerListener" && it.parameterTypes.size == 1 && 
+                        it.parameterTypes[0].isAssignableFrom(lightListener.javaClass)
+                    }
+                    regMethod?.invoke(lightDevice, lightListener)
+                    registeredLightListener = Pair(lightDevice, lightListener)
+                    Log.d(tag, "Successfully registered Light Turn Signal listener")
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(tag, "Failed to register safety listeners: ${t.message}")
+        }
+    }
+
+    private fun checkAndTriggerChime() {
+        // เงื่อนไข: ดักเฉพาะตอน "มีรถในจุดอับ (BSD Active)" + "ไฟกระพริบเลี้ยว (Turn Signal Flash)"
+        if (BlindspotAudioChime.isBsdActive && BlindspotAudioChime.isTurnSignalActive) {
+            BlindspotAudioChime.onBlindspotFlashingDetected(context)
+        }
+    }
+
+    private fun unregisterSafetyListeners() {
+        try {
+            (registeredAdasListener as? Pair<*, *>)?.let { (dev, listener) ->
+                val unreg = dev?.javaClass?.methods?.firstOrNull { it.name == "unregisterListener" && it.parameterCount == 1 }
+                unreg?.invoke(dev, listener)
+            }
+            registeredAdasListener = null
+
+            (registeredLightListener as? Pair<*, *>)?.let { (dev, listener) ->
+                val unreg = dev?.javaClass?.methods?.firstOrNull { it.name == "unregisterListener" && it.parameterCount == 1 }
+                unreg?.invoke(dev, listener)
+            }
+            registeredLightListener = null
+        } catch (t: Throwable) {
+            Log.w(tag, "Failed to unregister safety listeners: ${t.message}")
         }
     }
 }

@@ -39,6 +39,9 @@ object VehicleOverlayConfig {
     const val KEY_OVERLAY_SCALE = "pref_overlay_scale" // 70 - 150% (Default 100)
     const val KEY_OVERLAY_ORIENTATION = "pref_overlay_orientation" // "horizontal" or "vertical"
 
+    // หมวด 5: ระบบเตือนความปลอดภัย (Safety Chime)
+    const val KEY_BSD_SOUND_ENABLED = "pref_bsd_sound_enabled"
+
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -91,4 +94,7 @@ object VehicleOverlayConfig {
 
     fun isVerticalLayout(context: Context): Boolean = prefs(context).getString(KEY_OVERLAY_ORIENTATION, "horizontal") == "vertical"
     fun setVerticalLayout(context: Context, isVertical: Boolean) = prefs(context).edit().putString(KEY_OVERLAY_ORIENTATION, if (isVertical) "vertical" else "horizontal").apply()
+
+    fun isBsdSoundEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_BSD_SOUND_ENABLED, true)
+    fun setBsdSoundEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_BSD_SOUND_ENABLED, enabled).apply()
 }

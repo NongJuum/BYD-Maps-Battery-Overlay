@@ -526,6 +526,43 @@
                         android:text="⚡ โหมด Low RAM &amp; Ultra-low CPU: ปรับรอบ Polling อัตโนมัติ (หยุดประมวลผลเมื่อรถจอดนิ่ง/ไม่มีการเปลี่ยนแปลง)"
                         android:textColor="#90A4AE"
                         android:textSize="11sp" />
+
+                    <!-- BSD Safety Chime Switch -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔊 เสียงเตือนจุดอับสายตา (BSD Safety Chime)"
+                                android:textColor="#ECEFF1"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ส่งเสียงเตือนเฉพาะจังหวะมีรถในจุดอับและเปิดไฟเลี้ยว (ไฟกระจกกระพริบ)"
+                                android:textColor="#78909C"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switch_bsd_sound"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
