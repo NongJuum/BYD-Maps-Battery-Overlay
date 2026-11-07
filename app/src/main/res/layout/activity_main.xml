@@ -621,8 +621,8 @@
                             android:id="@+id/rb_tone_4"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟢 4. Volvo Soft Double (520Hz ดับเบิ้ลจังหวะนุ่มสไตล์วอลโว่)"
-                            android:textColor="#81C784"
+                            android:text="✨ 4. High-Tech Glass Bell (Tesla ระฆังแก้วไซไฟ นุ่มนวล พรีเมียม)"
+                            android:textColor="#38BDF8"
                             android:textSize="12sp" />
 
                         <!-- โทนกลาง -->
