@@ -580,7 +580,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="🎵 เลือกสเปกตรัมเสียงเตือน (ต่ำ / กลาง / สูง):"
+                        android:text="🎵 เลือกสไตล์เสียงเตือน 10 แบบ (ต่ำ / กลาง / สูง):"
                         android:textColor="#B0BEC5"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -594,53 +594,85 @@
 
                         <!-- โทนต่ำ -->
                         <RadioButton
-                            android:id="@+id/rb_tone_low_bass"
+                            android:id="@+id/rb_tone_1"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟢 [โทนต่ำ] 1. Deep Bass (380Hz ทุ้ม นุ่ม หนักแน่น สไตล์รถหรู)"
+                            android:text="🟢 1. Sub Bass Heartbeat (180Hz ทุ้มลึก หัวใจเต้น นุ่มลึกมาก)"
                             android:textColor="#81C784"
                             android:textSize="12sp" />
 
                         <RadioButton
-                            android:id="@+id/rb_tone_low_double"
+                            android:id="@+id/rb_tone_2"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟢 [โทนต่ำ] 2. Low Double Thump (ตุ้บ-ตุ้บ ทุ้ม 2 จังหวะ ไม่แสบหู)"
+                            android:text="🟢 2. Deep Bass Thud (320Hz ทุ้มแน่นสไตล์รถยุโรป)"
+                            android:textColor="#81C784"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_3"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟢 3. Soft Wooden Block (450Hz เคาะไม้ออร์แกนิก ฟังสบาย)"
+                            android:textColor="#81C784"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_4"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟢 4. Volvo Soft Double (520Hz ดับเบิ้ลจังหวะนุ่มสไตล์วอลโว่)"
                             android:textColor="#81C784"
                             android:textSize="12sp" />
 
                         <!-- โทนกลาง -->
                         <RadioButton
-                            android:id="@+id/rb_tone_mid_mercedes"
+                            android:id="@+id/rb_tone_5"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟡 [โทนกลาง] 3. Mercedes Warm Chord (780Hz อบอุ่น ฟังสบาย กลมกล่อม)"
+                            android:text="🟡 5. Mercedes Warm Chord (780Hz คอร์ดอบอุ่น หรูหรา กลมกล่อม)"
                             android:textColor="#FFD54F"
                             android:textSize="12sp"
                             android:checked="true" />
 
                         <RadioButton
-                            android:id="@+id/rb_tone_mid_marimba"
+                            android:id="@+id/rb_tone_6"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🟡 [โทนกลาง] 4. Acoustic Marimba (880Hz เสียงไม้ระนาดอุ่นๆ)"
+                            android:text="🟡 6. Porsche Sport Ding (850Hz ระฆังสปอร์ต กังวานแน่น)"
+                            android:textColor="#FFD54F"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_7"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟡 7. Submarine Sonar Ping (1,200Hz พัลส์เรดาร์ไล่ความถี่)"
+                            android:textColor="#FFD54F"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_8"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟡 8. Audi Harmonized Chime (1,400Hz ฮาร์โมนิก คมชัดแต่ไม่บาดหู)"
                             android:textColor="#FFD54F"
                             android:textSize="12sp" />
 
                         <!-- โทนสูง -->
                         <RadioButton
-                            android:id="@+id/rb_tone_high_crisp"
+                            android:id="@+id/rb_tone_9"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🔴 [โทนสูง] 5. High Crisp Beep (2,100Hz คม ชัด พุ่งตรงเข้าหู)"
+                            android:text="🔴 9. Japanese Clean Beep (1,850Hz ปี๊บสะอาด นุ่มกว่าบัซเซอร์เดิม)"
                             android:textColor="#FF8A80"
                             android:textSize="12sp" />
 
                         <RadioButton
-                            android:id="@+id/rb_tone_high_laser"
+                            android:id="@+id/rb_tone_10"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🔴 [โทนสูง] 6. Dual Laser Chirp (2,400Hz เบิ้ลเร็ว ฉุกเฉินเด็ดขาด)"
+                            android:text="🔴 10. Cockpit High Alert (2,200Hz คมกริบ สำหรับคนเปิดเพลงดัง)"
                             android:textColor="#FF8A80"
                             android:textSize="12sp" />
                     </RadioGroup>

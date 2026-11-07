@@ -56,12 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchBsdSound: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var btnTestBsdSound: MaterialButton
     private lateinit var rgBsdTone: android.widget.RadioGroup
-    private lateinit var rbToneLowBass: android.widget.RadioButton
-    private lateinit var rbToneLowDouble: android.widget.RadioButton
-    private lateinit var rbToneMidMercedes: android.widget.RadioButton
-    private lateinit var rbToneMidMarimba: android.widget.RadioButton
-    private lateinit var rbToneHighCrisp: android.widget.RadioButton
-    private lateinit var rbToneHighLaser: android.widget.RadioButton
+    private val rbTones = arrayOfNulls<android.widget.RadioButton>(10)
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -120,12 +115,13 @@ class MainActivity : AppCompatActivity() {
         switchBsdSound = findViewById(R.id.switch_bsd_sound)
         btnTestBsdSound = findViewById(R.id.btn_test_bsd_sound)
         rgBsdTone = findViewById(R.id.rg_bsd_tone)
-        rbToneLowBass = findViewById(R.id.rb_tone_low_bass)
-        rbToneLowDouble = findViewById(R.id.rb_tone_low_double)
-        rbToneMidMercedes = findViewById(R.id.rb_tone_mid_mercedes)
-        rbToneMidMarimba = findViewById(R.id.rb_tone_mid_marimba)
-        rbToneHighCrisp = findViewById(R.id.rb_tone_high_crisp)
-        rbToneHighLaser = findViewById(R.id.rb_tone_high_laser)
+        val toneResIds = intArrayOf(
+            R.id.rb_tone_1, R.id.rb_tone_2, R.id.rb_tone_3, R.id.rb_tone_4, R.id.rb_tone_5,
+            R.id.rb_tone_6, R.id.rb_tone_7, R.id.rb_tone_8, R.id.rb_tone_9, R.id.rb_tone_10
+        )
+        for (i in 0 until 10) {
+            rbTones[i] = findViewById(toneResIds[i])
+        }
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -160,13 +156,10 @@ class MainActivity : AppCompatActivity() {
 
         switchBsdSound.isChecked = VehicleOverlayConfig.isBsdSoundEnabled(this)
 
-        when (VehicleOverlayConfig.getBsdSoundType(this)) {
-            "low_bass" -> rbToneLowBass.isChecked = true
-            "low_double" -> rbToneLowDouble.isChecked = true
-            "mid_marimba" -> rbToneMidMarimba.isChecked = true
-            "high_crisp" -> rbToneHighCrisp.isChecked = true
-            "high_laser" -> rbToneHighLaser.isChecked = true
-            else -> rbToneMidMercedes.isChecked = true
+        val savedTone = VehicleOverlayConfig.getBsdSoundType(this)
+        val toneIndex = savedTone.removePrefix("tone_").toIntOrNull()?.minus(1) ?: 4
+        if (toneIndex in 0 until 10) {
+            rbTones[toneIndex]?.isChecked = true
         }
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
@@ -253,12 +246,17 @@ class MainActivity : AppCompatActivity() {
 
         rgBsdTone.setOnCheckedChangeListener { _, checkedId ->
             val toneKey = when (checkedId) {
-                R.id.rb_tone_low_bass -> "low_bass"
-                R.id.rb_tone_low_double -> "low_double"
-                R.id.rb_tone_mid_marimba -> "mid_marimba"
-                R.id.rb_tone_high_crisp -> "high_crisp"
-                R.id.rb_tone_high_laser -> "high_laser"
-                else -> "mid_mercedes"
+                R.id.rb_tone_1 -> "tone_1"
+                R.id.rb_tone_2 -> "tone_2"
+                R.id.rb_tone_3 -> "tone_3"
+                R.id.rb_tone_4 -> "tone_4"
+                R.id.rb_tone_5 -> "tone_5"
+                R.id.rb_tone_6 -> "tone_6"
+                R.id.rb_tone_7 -> "tone_7"
+                R.id.rb_tone_8 -> "tone_8"
+                R.id.rb_tone_9 -> "tone_9"
+                R.id.rb_tone_10 -> "tone_10"
+                else -> "tone_5"
             }
             VehicleOverlayConfig.setBsdSoundType(this, toneKey)
             BlindspotAudioChime.playToneDirect(toneKey)

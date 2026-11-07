@@ -7,8 +7,7 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * BlindspotAudioChime (Zero-Resource / Instant Trigger with Full Spectrum Tone Selection)
- * รองรับโทนเสียง ต่ำ - กลาง - สูง (Low, Mid, High Pitch)
+ * BlindspotAudioChime (Zero-Resource / Instant Trigger with 10 Tone Styles)
  */
 object BlindspotAudioChime {
     private const val TAG = "BlindspotAudioChime"
@@ -35,12 +34,8 @@ object BlindspotAudioChime {
                 .setAudioAttributes(audioAttributes)
                 .build()
 
-            val toneKeys = listOf(
-                "low_bass", "low_double", 
-                "mid_marimba", "mid_mercedes", 
-                "high_crisp", "high_laser"
-            )
-            for (key in toneKeys) {
+            for (i in 1..10) {
+                val key = "tone_$i"
                 val resId = context.resources.getIdentifier("bsd_$key", "raw", context.packageName)
                 if (resId != 0) {
                     val id = soundPool?.load(context, resId, 1) ?: 0
@@ -49,7 +44,7 @@ object BlindspotAudioChime {
                     }
                 }
             }
-            Log.d(TAG, "Initialized SoundPool with ${soundMap.size} Low/Mid/High tones.")
+            Log.d(TAG, "Initialized SoundPool with ${soundMap.size} of 10 tone styles.")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to initialize SoundPool: ${t.message}")
         }
@@ -68,7 +63,7 @@ object BlindspotAudioChime {
 
     fun playToneDirect(type: String) {
         try {
-            val soundId = soundMap[type] ?: soundMap["mid_mercedes"] ?: soundMap.values.firstOrNull() ?: return
+            val soundId = soundMap[type] ?: soundMap["tone_5"] ?: soundMap.values.firstOrNull() ?: return
             soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
             Log.d(TAG, "Played Blindspot Warning Chime: $type")
         } catch (t: Throwable) {
