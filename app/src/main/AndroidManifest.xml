@@ -42,6 +42,10 @@
     <uses-permission android:name="android.permission.BYDAUTO_OTA_GET" />
     <uses-permission android:name="android.permission.BYDAUTO_SETTING_COMMON" />
     <uses-permission android:name="android.permission.BYDAUTO_SETTING_GET" />
+    <uses-permission android:name="android.permission.BYDAUTO_ADAS_COMMON" />
+    <uses-permission android:name="android.permission.BYDAUTO_ADAS_GET" />
+    <uses-permission android:name="android.permission.BYDAUTO_LIGHT_COMMON" />
+    <uses-permission android:name="android.permission.BYDAUTO_LIGHT_GET" />
     <uses-permission android:name="android.permission.BYD" />
     <uses-permission android:name="android.permission.DEVICE_ACC" />
     <uses-permission android:name="android.permission.DEVICE_POWER" />

@@ -87,6 +87,15 @@ class OverlayService : Service() {
         when (intent?.action) {
             ACTION_RESET_POSITION -> resetPosition()
             ACTION_UPDATE_CONFIG -> applyUserFieldPreferences()
+            ACTION_SIMULATE_BSD -> {
+                // จำลองเหตุการณ์ไฟเลี้ยวกระพริบพร้อมรถในจุดอับ 3 ครั้ง
+                Thread {
+                    for (i in 1..3) {
+                        BlindspotAudioChime.onBlindspotFlashingDetected(this)
+                        Thread.sleep(650)
+                    }
+                }.start()
+            }
             else -> applyUserFieldPreferences()
         }
         return START_STICKY
@@ -419,6 +428,7 @@ class OverlayService : Service() {
         private const val NOTIFICATION_ID = 2026
         const val ACTION_UPDATE_CONFIG = "com.byd.mapsoverlay.ACTION_UPDATE_CONFIG"
         const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
+        const val ACTION_SIMULATE_BSD = "com.byd.mapsoverlay.ACTION_SIMULATE_BSD"
         const val ACTION_UPDATE_DISTANCE = "com.byd.mapsoverlay.ACTION_UPDATE_DISTANCE"
         const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
         const val EXTRA_DISTANCE_KM = "extra_distance_km"

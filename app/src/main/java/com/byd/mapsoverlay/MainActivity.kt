@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbHorizontal: android.widget.RadioButton
     private lateinit var rbVertical: android.widget.RadioButton
     private lateinit var switchBsdSound: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var btnTestBsdSound: MaterialButton
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -110,6 +111,7 @@ class MainActivity : AppCompatActivity() {
         rbHorizontal = findViewById(R.id.rb_orientation_horizontal)
         rbVertical = findViewById(R.id.rb_orientation_vertical)
         switchBsdSound = findViewById(R.id.switch_bsd_sound)
+        btnTestBsdSound = findViewById(R.id.btn_test_bsd_sound)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -224,6 +226,14 @@ class MainActivity : AppCompatActivity() {
             VehicleOverlayConfig.setBsdSoundEnabled(this, isChecked)
             val msg = if (isChecked) "เปิดเสียงเตือนจุดอับสายตาแล้ว (เตือนเมื่อเปิดไฟเลี้ยว)" else "ปิดเสียงเตือนจุดอับสายตาแล้ว"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+
+        btnTestBsdSound.setOnClickListener {
+            val serviceIntent = Intent(this, OverlayService::class.java).apply {
+                action = OverlayService.ACTION_SIMULATE_BSD
+            }
+            startService(serviceIntent)
+            Toast.makeText(this, "🔔 กำลังจำลองเสียงเตือน 3 ครั้งทางลำโพงรถ...", Toast.LENGTH_SHORT).show()
         }
 
         btnSaveConfig.setOnClickListener {
