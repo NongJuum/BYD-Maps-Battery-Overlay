@@ -18,9 +18,9 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="🚗 BYD Vehicle Data Overlay 2.0"
+            app:title="🚗 BYD Vehicle Data Overlay 2.1"
             app:titleTextColor="#FFFFFF"
-            app:subtitle="BYD Telemetry &amp; Independent HUD"
+            app:subtitle="BYD Full Telemetry + HV Battery Temp + BSD Chime"
             app:subtitleTextColor="#80D8FF" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -98,11 +98,92 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 2. TELEMETRY PREVIEW CARD (CAN BUS LIVE FEED) -->
+            <!-- 1B. PERMISSION & DAEMON CONTROL CARD (REAL PERMISSION GRANT) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#263B54"
+                app:cardBackgroundColor="#131D2B">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="🛡️ สิทธิ์การเข้าถึงระบบรถ &amp; BYD Daemon"
+                            android:textColor="#69F0AE"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_permission_status"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="กำลังตรวจสอบ..."
+                            android:textColor="#FFD54F"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="กดปุ่มด้านล่างเพื่อขอสิทธิ์ Overlay, Whitelist ไม่ให้ระบบฆ่าแอป และรัน BYD Telemetry Daemon (UID 2000) อัตโนมัติ"
+                        android:textColor="#90A4AE"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_grant_all_permissions"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1.3"
+                            android:text="🔓 ขอสิทธิ์ระบบรถอัตโนมัติ (ADB)"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp"
+                            app:backgroundTint="#00897B" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_open_overlay_settings"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="🪟 ตั้งค่าสิทธิ์ทับจอ"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp"
+                            app:backgroundTint="#37474F" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. TELEMETRY PREVIEW CARD (CAN BUS + BMS LIVE FEED) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
                 app:cardCornerRadius="18dp"
                 app:cardElevation="2dp"
                 app:strokeWidth="1dp"
@@ -125,7 +206,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="⚡ Live Vehicle Telemetry"
+                            android:text="⚡ Live Vehicle &amp; HV Battery Telemetry"
                             android:textColor="#40C4FF"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -144,90 +225,129 @@
                             android:textSize="11sp" />
                     </LinearLayout>
 
-                    <!-- Telemetry Metrics Grid -->
+                    <!-- Telemetry Metrics Grid (3x3 = 9 boxes) -->
                     <GridLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="12dp"
                         android:columnCount="3"
-                        android:rowCount="2">
+                        android:rowCount="3">
 
-                        <!-- SoC % -->
+                        <!-- 1. SoC % -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:layout_margin="3dp"
                             android:background="#1B2332"
-                            android:padding="10dp"
+                            android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Battery SoC" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_soc" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- %" android:textColor="#00E676" android:textSize="18sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Battery SoC" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_soc" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- %" android:textColor="#00E676" android:textSize="16sp" android:textStyle="bold"/>
                         </LinearLayout>
 
-                        <!-- Remain kWh -->
+                        <!-- 2. Remain kWh -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:layout_margin="3dp"
                             android:background="#1B2332"
-                            android:padding="10dp"
+                            android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Remain kWh" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_kwh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#00E5FF" android:textSize="18sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Remain kWh" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_kwh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#00E5FF" android:textSize="16sp" android:textStyle="bold"/>
                         </LinearLayout>
 
-                        <!-- Real Range -->
+                        <!-- 3. Real Range -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:layout_margin="3dp"
                             android:background="#1B2332"
-                            android:padding="10dp"
+                            android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Real Range" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_real_range" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- km" android:textColor="#FFD54F" android:textSize="18sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Real Range" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_real_range" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- km" android:textColor="#FFD54F" android:textSize="16sp" android:textStyle="bold"/>
                         </LinearLayout>
 
-                        <!-- Consumption 50km -->
+                        <!-- 4. HV Battery Temp (Max/Min) -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:layout_margin="3dp"
-                            android:background="#1B2332"
-                            android:padding="10dp"
+                            android:background="#261F29"
+                            android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg 50km" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_consumption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌡️ อุณหภูมิแบตใหญ่" android:textColor="#FFAB40" android:textSize="10sp" android:textStyle="bold"/>
+                            <TextView android:id="@+id/tv_dash_hv_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="30/29°C" android:textColor="#FFAB40" android:textSize="15sp" android:textStyle="bold"/>
                         </LinearLayout>
 
-                        <!-- Cabin Temp -->
+                        <!-- 5. HV Cell Voltage (Max/Min) -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:layout_margin="3dp"
-                            android:background="#1B2332"
-                            android:padding="10dp"
+                            android:background="#231D2E"
+                            android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cabin Temp" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_cabin_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="25°C" android:textColor="#80D8FF" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔬 แรงดันเซลล์แบต" android:textColor="#EA80FC" android:textSize="10sp" android:textStyle="bold"/>
+                            <TextView android:id="@+id/tv_dash_cell_volt" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3.327V" android:textColor="#EA80FC" android:textSize="15sp" android:textStyle="bold"/>
                         </LinearLayout>
 
-                        <!-- 12V Battery -->
+                        <!-- 6. Dashboard Range -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:layout_margin="3dp"
                             android:background="#1B2332"
-                            android:padding="10dp"
+                            android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12V Aux" android:textColor="#90A4AE" android:textSize="11sp"/>
-                            <TextView android:id="@+id/tv_dash_12v" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="13.8 V" android:textColor="#69F0AE" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ระยะหน้าปัดรถ" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_std_range" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- km" android:textColor="#80D8FF" android:textSize="15sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- 7. Consumption 50km -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="9dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg 50km" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_consumption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- 8. Cabin Temp -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="9dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="แอร์ในรถ / นอกรถ" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_cabin_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="25°C" android:textColor="#80D8FF" android:textSize="15sp" android:textStyle="bold"/>
+                        </LinearLayout>
+
+                        <!-- 9. 12V Battery -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="3dp"
+                            android:background="#1B2332"
+                            android:padding="9dp"
+                            android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12V Aux" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_12v" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="13.8 V" android:textColor="#69F0AE" android:textSize="15sp" android:textStyle="bold"/>
                         </LinearLayout>
                     </GridLayout>
                 </LinearLayout>
@@ -237,19 +357,19 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                android:layout_marginBottom="8dp"
-                android:text="เลือกข้อมูลที่จะแสดงบน FLOATING PILL"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="6dp"
+                android:text="เลือกข้อมูลรถที่จะแสดงบนแถบ OVERLAY (เปิด/ปิดได้ทุกค่า)"
                 android:textColor="#78909C"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.08" />
+                android:letterSpacing="0.06" />
 
-            <!-- หมวด 1: แบตเตอรี่และระยะทาง -->
+            <!-- หมวด 1: แบตเตอรี่ใหญ่ (HV Battery) & ระยะทาง -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 app:cardCornerRadius="14dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="#1E2633"
@@ -264,67 +384,83 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔋 หมวด แบตเตอรี่และระยะทาง"
+                        android:text="🔋 หมวด แบตเตอรี่ลูกใหญ่ (HV BMS) และระยะทาง"
                         android:textColor="#00E676"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
                         android:id="@+id/switch_show_soc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ระดับแบตเตอรี่ (SoC %)"
+                        android:text="⚡ ระดับแบตเตอรี่หลัก (SoC %)"
                         android:textColor="#ECEFF1"
+                        android:showText="false"
                         android:checked="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
                         android:id="@+id/switch_show_remain_kwh"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ความจุคงเหลือจริงจาก BMS (Remain kWh)"
+                        android:text="🔋 พลังงานคงเหลือจริงจาก BMS (Remain kWh)"
                         android:textColor="#ECEFF1"
+                        android:showText="false"
                         android:checked="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
                         android:id="@+id/switch_show_real_range"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ระยะทางประเมินจริง (Real Range km)"
+                        android:text="🚗 ระยะทางวิ่งจริงคำนวณตามการขับ (Real Range km)"
                         android:textColor="#ECEFF1"
+                        android:showText="false"
                         android:checked="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
+                        android:id="@+id/switch_show_dash_range"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📟 ระยะทางตามหน้าปัดรถ (Dashboard Range km)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_hv_batt_temp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🌡️ อุณหภูมิแบตเตอรี่ลูกใหญ่ (HV Battery Temp Max/Min °C)"
+                        android:textColor="#FFAB40"
+                        android:textStyle="bold"
                         android:showText="false"
+                        android:checked="true" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_cell_volt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🔬 แรงดันเซลล์แบตใหญ่ (HV Cell Voltage Max/Min V)"
+                        android:textColor="#EA80FC"
+                        android:showText="false" />
+
+                    <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_soh"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="สุขภาพแบตเตอรี่ (SOH %)"
-                        android:textColor="#ECEFF1" />
+                        android:text="🛡️ สุขภาพแบตเตอรี่ (SOH %)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
                         android:id="@+id/switch_show_12v"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="แรงดันไฟแบตเตอรี่ลูกเล็ก (12V Aux)"
-                        android:textColor="#ECEFF1" />
+                        android:text="🔌 แรงดันไฟแบตเตอรี่ลูกเล็ก (12V Aux Voltage)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- หมวด 2: การขับขี่ & อุณหภูมิห้องโดยสาร -->
+            <!-- หมวด 2: การขับขี่, อุณหภูมิ & ยาง TPMS -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -343,56 +479,80 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🚗 หมวด การขับขี่ &amp; ห้องโดยสาร"
+                        android:text="🚗 หมวด การขับขี่, อุณหภูมิแอร์ &amp; ลมยาง TPMS"
                         android:textColor="#40C4FF"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
-                        android:id="@+id/switch_show_cabin_temp"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="❄️ อุณหภูมิในห้องโดยสาร (Cabin Temp °C)"
-                        android:textColor="#ECEFF1"
-                        android:checked="true" />
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
                         android:id="@+id/switch_show_consume_50km"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="อัตรากินไฟ 50 km ล่าสุด (kWh/100km)"
+                        android:text="📊 อัตรากินไฟเฉลี่ย 50 km ล่าสุด (kWh/100km)"
                         android:textColor="#ECEFF1"
+                        android:showText="false"
                         android:checked="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
+                        android:id="@+id/switch_show_inst_power"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="⚡ กำลังไฟขณะเหยียบคันเร่งสด (Instant Power kW)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_cabin_temp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="❄️ อุณหภูมิแอร์ห้องโดยสาร (Cabin Temp °C)"
+                        android:textColor="#ECEFF1"
                         android:showText="false"
+                        android:checked="true" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_out_temp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🌤️ อุณหภูมิภายนอกรถ (Outside Temp °C)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_tpms"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🛞 แรงดันลมยาง 4 ล้อ (TPMS Pressure kPa)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_odo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🛣️ เลขไมล์สะสมรวม (Odometer km)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
+
+                    <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_speed"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ความเร็วรถดิจิทัล (Digital Speed)"
-                        android:textColor="#ECEFF1" />
+                        android:text="🏎️ ความเร็วรถดิจิทัล (Digital Speed km/h)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:textOn=""
-                        android:textOff=""
-                        android:showText="false"
                         android:id="@+id/switch_show_gear"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ตำแหน่งเกียร์ปัจจุบัน (Gear P/R/N/D)"
-                        android:textColor="#ECEFF1" />
+                        android:text="🕹️ ตำแหน่งเกียร์ปัจจุบัน (Gear P/R/N/D)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- หมวด 3: ความโปร่งใส & การประหยัดพลังงาน (Transparency & Low Resource) -->
+            <!-- หมวด 3: ความโปร่งใส & เสียงเตือน BSD (Transparency & Safety Chime) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -527,14 +687,6 @@
                         </RadioGroup>
                     </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="⚡ โหมด Low RAM &amp; Ultra-low CPU: ปรับรอบ Polling อัตโนมัติ (หยุดประมวลผลเมื่อรถจอดนิ่ง/ไม่มีการเปลี่ยนแปลง)"
-                        android:textColor="#90A4AE"
-                        android:textSize="11sp" />
-
                     <!-- BSD Safety Chime Switch -->
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -552,7 +704,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="🔊 เสียงเตือนจุดอับสายตา (BSD Safety Chime)"
+                                android:text="🔊 เสียงเตือนจุดอับสายตา + สัญญาณหน้าปัด Cluster (BSD Chime)"
                                 android:textColor="#ECEFF1"
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
@@ -560,7 +712,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="ส่งเสียงเตือนเฉพาะจังหวะมีรถในจุดอับและเปิดไฟเลี้ยว (ไฟกระจกกระพริบ)"
+                                android:text="ออกลำโพงคู่ (Media + Navi) พร้อมส่ง Broadcast เมื่อมีรถในจุดอับ + เปิดไฟเลี้ยว/Cluster เตือน"
                                 android:textColor="#78909C"
                                 android:textSize="11sp" />
                         </LinearLayout>
@@ -578,7 +730,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:layout_marginTop="10dp"
-                        android:text="🔔 กดจำลองเสียงเตือน BSD (Test Chime บนลำโพงรถ)"
+                        android:text="🔔 กดจำลองเสียงเตือน BSD 3 ครั้ง (Test Chime บนลำโพงรถ)"
                         android:textSize="12sp"
                         app:cornerRadius="10dp"
                         app:backgroundTint="#37474F" />
@@ -588,7 +740,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="🎵 เลือกสไตล์เสียงเตือน 10 แบบ (ต่ำ / กลาง / สูง):"
+                        android:text="🎵 เลือกสไตล์เสียงเตือน 10 แบบ (กดเลือกเพื่อฟังเสียงทันที):"
                         android:textColor="#B0BEC5"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -600,7 +752,6 @@
                         android:layout_marginTop="4dp"
                         android:orientation="vertical">
 
-                        <!-- โทนต่ำธรรมชาติ / พรีเมียม -->
                         <RadioButton
                             android:id="@+id/rb_tone_1"
                             android:layout_width="wrap_content"
@@ -625,7 +776,6 @@
                             android:textColor="#81C784"
                             android:textSize="12sp" />
 
-                        <!-- โทน High-Tech ยอดฮิต -->
                         <RadioButton
                             android:id="@+id/rb_tone_4"
                             android:layout_width="wrap_content"
@@ -643,7 +793,6 @@
                             android:textColor="#38BDF8"
                             android:textSize="12sp" />
 
-                        <!-- โทนกลางคลาสสิก / สปอร์ต -->
                         <RadioButton
                             android:id="@+id/rb_tone_6"
                             android:layout_width="wrap_content"
@@ -660,7 +809,6 @@
                             android:textColor="#FFD54F"
                             android:textSize="12sp" />
 
-                        <!-- โทน EV / เรดาร์ / Cockpit -->
                         <RadioButton
                             android:id="@+id/rb_tone_8"
                             android:layout_width="wrap_content"

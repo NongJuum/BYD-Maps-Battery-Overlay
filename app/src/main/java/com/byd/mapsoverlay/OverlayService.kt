@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -16,15 +17,15 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
 import android.widget.LinearLayout
-import android.content.res.Configuration
+import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
 /**
- * OverlayService V2.0 (Zero-Hole Guarded):
+ * OverlayService V2.1:
  * - Standalone Floating Vehicle HUD
- * - Modular telemetry items (SoC, kWh, Range, Consumption, Cabin Temp, SOH, 12V, Gear/Speed)
+ * - Displays all selectable BYD Telemetry metrics (including HV Battery Temp & Cell Voltage)
+ * - Preserves background-only opacity while keeping text 100% crisp
  */
 class OverlayService : Service() {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -37,10 +38,17 @@ class OverlayService : Service() {
     private var tvSoc: TextView? = null
     private var tvKwh: TextView? = null
     private var tvRealRange: TextView? = null
+    private var tvDashRange: TextView? = null
+    private var tvHvTemp: TextView? = null
+    private var tvCellVolt: TextView? = null
     private var tvConsumption: TextView? = null
+    private var tvInstPower: TextView? = null
     private var tvCabinTemp: TextView? = null
+    private var tvOutTemp: TextView? = null
     private var tvSoh: TextView? = null
     private var tv12v: TextView? = null
+    private var tvTpms: TextView? = null
+    private var tvOdo: TextView? = null
     private var tvGear: TextView? = null
     private var tvSpeed: TextView? = null
 
@@ -48,20 +56,21 @@ class OverlayService : Service() {
     private var containerSoc: View? = null
     private var containerKwh: View? = null
     private var containerRealRange: View? = null
+    private var containerDashRange: View? = null
+    private var containerHvTemp: View? = null
+    private var containerCellVolt: View? = null
     private var containerConsumption: View? = null
+    private var containerInstPower: View? = null
     private var containerCabinTemp: View? = null
+    private var containerOutTemp: View? = null
     private var containerSoh: View? = null
     private var container12v: View? = null
+    private var containerTpms: View? = null
+    private var containerOdo: View? = null
     private var containerGearSpeed: View? = null
 
     // Dividers
-    private var div1: View? = null
-    private var div2: View? = null
-    private var div3: View? = null
-    private var div4: View? = null
-    private var div5: View? = null
-    private var div6: View? = null
-    private var div7: View? = null
+    private var allDividers: List<View?> = emptyList()
 
     private lateinit var bydBridge: BydVehicleBridge
     private lateinit var sharedPreferences: SharedPreferences
@@ -70,6 +79,10 @@ class OverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        HiddenApiBypass.exemptAll()
+        AutoPermissionHelper.ensureTelemetryDaemon(this)
+        BlindspotAudioChime.init(this)
+
         sharedPreferences = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
 
         bydBridge = BydVehicleBridge(this) { soc, consumption ->
@@ -86,24 +99,29 @@ class OverlayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_RESET_POSITION -> resetPosition()
-            ACTION_UPDATE_CONFIG -> applyUserFieldPreferences()
+            ACTION_UPDATE_CONFIG -> {
+                applyUserFieldPreferences()
+                updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
+            }
             ACTION_SIMULATE_BSD -> {
-                // จำลองเหตุการณ์ไฟเลี้ยวกระพริบพร้อมรถในจุดอับ 3 ครั้ง
                 Thread {
+                    val selectedTone = VehicleOverlayConfig.getBsdSoundType(this)
                     for (i in 1..3) {
-                        BlindspotAudioChime.onBlindspotFlashingDetected(this)
-                        Thread.sleep(650)
+                        BlindspotAudioChime.playToneDirect(selectedTone, this)
+                        Thread.sleep(620)
                     }
                 }.start()
             }
-            else -> applyUserFieldPreferences()
+            else -> {
+                applyUserFieldPreferences()
+                updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
+            }
         }
         return START_STICKY
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // Auto-adapt position and orientation on DiLink screen rotation
         mainHandler.post {
             applyUserFieldPreferences()
             clampOverlayToScreenBounds()
@@ -151,10 +169,17 @@ class OverlayService : Service() {
         tvSoc = v.findViewById(R.id.tv_v2_soc)
         tvKwh = v.findViewById(R.id.tv_v2_kwh)
         tvRealRange = v.findViewById(R.id.tv_v2_real_range)
+        tvDashRange = v.findViewById(R.id.tv_v2_dash_range)
+        tvHvTemp = v.findViewById(R.id.tv_v2_hv_temp)
+        tvCellVolt = v.findViewById(R.id.tv_v2_cell_volt)
         tvConsumption = v.findViewById(R.id.tv_v2_consumption)
+        tvInstPower = v.findViewById(R.id.tv_v2_inst_power)
         tvCabinTemp = v.findViewById(R.id.tv_v2_cabin_temp)
+        tvOutTemp = v.findViewById(R.id.tv_v2_out_temp)
         tvSoh = v.findViewById(R.id.tv_v2_soh)
         tv12v = v.findViewById(R.id.tv_v2_12v)
+        tvTpms = v.findViewById(R.id.tv_v2_tpms)
+        tvOdo = v.findViewById(R.id.tv_v2_odo)
         tvGear = v.findViewById(R.id.tv_v2_gear)
         tvSpeed = v.findViewById(R.id.tv_v2_speed)
 
@@ -162,26 +187,39 @@ class OverlayService : Service() {
         containerSoc = v.findViewById(R.id.container_v2_soc)
         containerKwh = v.findViewById(R.id.container_v2_kwh)
         containerRealRange = v.findViewById(R.id.container_v2_real_range)
+        containerDashRange = v.findViewById(R.id.container_v2_dash_range)
+        containerHvTemp = v.findViewById(R.id.container_v2_hv_temp)
+        containerCellVolt = v.findViewById(R.id.container_v2_cell_volt)
         containerConsumption = v.findViewById(R.id.container_v2_consumption)
+        containerInstPower = v.findViewById(R.id.container_v2_inst_power)
         containerCabinTemp = v.findViewById(R.id.container_v2_cabin_temp)
+        containerOutTemp = v.findViewById(R.id.container_v2_out_temp)
         containerSoh = v.findViewById(R.id.container_v2_soh)
         container12v = v.findViewById(R.id.container_v2_12v)
+        containerTpms = v.findViewById(R.id.container_v2_tpms)
+        containerOdo = v.findViewById(R.id.container_v2_odo)
         containerGearSpeed = v.findViewById(R.id.container_v2_gear_speed)
 
         // Bind Dividers
-        div1 = v.findViewById(R.id.divider_v2_1)
-        div2 = v.findViewById(R.id.divider_v2_2)
-        div3 = v.findViewById(R.id.divider_v2_3)
-        div4 = v.findViewById(R.id.divider_v2_4)
-        div5 = v.findViewById(R.id.divider_v2_5)
-        div6 = v.findViewById(R.id.divider_v2_6)
-        div7 = v.findViewById(R.id.divider_v2_7)
+        allDividers = listOf(
+            v.findViewById(R.id.divider_v2_1),
+            v.findViewById(R.id.divider_v2_2),
+            v.findViewById(R.id.divider_v2_dash_range),
+            v.findViewById(R.id.divider_v2_hv_temp),
+            v.findViewById(R.id.divider_v2_cell_volt),
+            v.findViewById(R.id.divider_v2_3),
+            v.findViewById(R.id.divider_v2_inst_power),
+            v.findViewById(R.id.divider_v2_4),
+            v.findViewById(R.id.divider_v2_out_temp),
+            v.findViewById(R.id.divider_v2_5),
+            v.findViewById(R.id.divider_v2_6),
+            v.findViewById(R.id.divider_v2_tpms),
+            v.findViewById(R.id.divider_v2_odo),
+            v.findViewById(R.id.divider_v2_7)
+        )
 
         applyUserFieldPreferences()
 
-        // Highest Z-order determination for DiLink automotive display:
-        // Try TYPE_SYSTEM_ERROR (2010 - layer 261,000, higher than StatusBar 171,000)
-        // Fallback to TYPE_APPLICATION_OVERLAY (2038) if security rejects
         val candidateTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             listOf(
                 @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR,
@@ -195,11 +233,9 @@ class OverlayService : Service() {
             )
         }
 
-        // Default coordinates: Snap right after Kinex battery indicator (x=245, y=32)
         val savedX = sharedPreferences.getInt("overlay_x", 245)
         val savedY = sharedPreferences.getInt("overlay_y", 32)
 
-        var addedSuccessfully = false
         for (layoutType in candidateTypes) {
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -219,17 +255,14 @@ class OverlayService : Service() {
             try {
                 windowManager?.addView(overlayView, params)
                 windowParams = params
-                addedSuccessfully = true
-                android.util.Log.i("OverlayService", "Overlay window added with type: $layoutType")
                 break
             } catch (e: Exception) {
                 android.util.Log.w("OverlayService", "Layout type $layoutType rejected: ${e.message}")
             }
         }
 
-        // Drag & Drop
-        val dragHandle: View = v.findViewById(R.id.tv_drag_handle) ?: v
-        dragHandle.setOnTouchListener(object : View.OnTouchListener {
+        // Allow dragging from anywhere on the floating pill
+        v.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
@@ -250,16 +283,12 @@ class OverlayService : Service() {
                     MotionEvent.ACTION_MOVE -> {
                         val dx = (event.rawX - initialTouchX).toInt()
                         val dy = (event.rawY - initialTouchY).toInt()
-                        if (kotlin.math.abs(dx) > 10 || kotlin.math.abs(dy) > 10) {
+                        if (kotlin.math.abs(dx) > 8 || kotlin.math.abs(dy) > 8) {
                             isDragging = true
                         }
                         if (isDragging) {
                             currentParams.x = initialX + dx
-                            // Enforce safe inset: status bar is 84px high.
-                            // If user drags near the status bar, clamp to safe area (y >= 84)
-                            // so overlay never gets trapped behind system status bar icons
-                            val targetY = initialY + dy
-                            currentParams.y = if (targetY < 84) 84 else targetY
+                            currentParams.y = (initialY + dy).coerceAtLeast(8)
                             windowManager?.updateViewLayout(overlayView, currentParams)
                         }
                         return true
@@ -286,7 +315,6 @@ class OverlayService : Service() {
         val screenW = dm.widthPixels
         val screenH = dm.heightPixels
 
-        // Center overlay on screen
         val viewW = if (view.width > 0) view.width else (400 * dm.density).toInt()
         val viewH = if (view.height > 0) view.height else (40 * dm.density).toInt()
 
@@ -305,37 +333,48 @@ class OverlayService : Service() {
         val showSoc = VehicleOverlayConfig.isShowSoc(this)
         val showKwh = VehicleOverlayConfig.isShowRemainKwh(this)
         val showRealRange = VehicleOverlayConfig.isShowRealRange(this)
+        val showDashRange = VehicleOverlayConfig.isShowDashboardRange(this)
+        val showHvTemp = VehicleOverlayConfig.isShowHvBattTemp(this)
+        val showCellVolt = VehicleOverlayConfig.isShowCellVoltage(this)
         val showConsumption = VehicleOverlayConfig.isShowConsumption50km(this)
+        val showInstPower = VehicleOverlayConfig.isShowInstantPower(this)
         val showCabinTemp = VehicleOverlayConfig.isShowCabinTemp(this)
+        val showOutTemp = VehicleOverlayConfig.isShowOutsideTemp(this)
         val showSoh = VehicleOverlayConfig.isShowBatterySoh(this)
         val show12v = VehicleOverlayConfig.isShow12v(this)
-        val showGearSpeed = VehicleOverlayConfig.isShowGear(this) || VehicleOverlayConfig.isShowSpeed(this)
+        val showTpms = VehicleOverlayConfig.isShowTpmsPressure(this)
+        val showOdo = VehicleOverlayConfig.isShowOdo(this)
+        val showGear = VehicleOverlayConfig.isShowGear(this)
+        val showSpeed = VehicleOverlayConfig.isShowSpeed(this)
+        val showGearSpeed = showGear || showSpeed
 
         containerSoc?.visibility = if (showSoc) View.VISIBLE else View.GONE
         containerKwh?.visibility = if (showKwh) View.VISIBLE else View.GONE
         containerRealRange?.visibility = if (showRealRange) View.VISIBLE else View.GONE
+        containerDashRange?.visibility = if (showDashRange) View.VISIBLE else View.GONE
+        containerHvTemp?.visibility = if (showHvTemp) View.VISIBLE else View.GONE
+        containerCellVolt?.visibility = if (showCellVolt) View.VISIBLE else View.GONE
         containerConsumption?.visibility = if (showConsumption) View.VISIBLE else View.GONE
+        containerInstPower?.visibility = if (showInstPower) View.VISIBLE else View.GONE
         containerCabinTemp?.visibility = if (showCabinTemp) View.VISIBLE else View.GONE
+        containerOutTemp?.visibility = if (showOutTemp) View.VISIBLE else View.GONE
         containerSoh?.visibility = if (showSoh) View.VISIBLE else View.GONE
         container12v?.visibility = if (show12v) View.VISIBLE else View.GONE
+        containerTpms?.visibility = if (showTpms) View.VISIBLE else View.GONE
+        containerOdo?.visibility = if (showOdo) View.VISIBLE else View.GONE
         containerGearSpeed?.visibility = if (showGearSpeed) View.VISIBLE else View.GONE
+        tvGear?.visibility = if (showGear) View.VISIBLE else View.GONE
+        tvSpeed?.visibility = if (showSpeed) View.VISIBLE else View.GONE
 
-        div1?.visibility = if (showSoc && showKwh) View.VISIBLE else View.GONE
-        div2?.visibility = if (showKwh && showRealRange) View.VISIBLE else View.GONE
-        div3?.visibility = if (showRealRange && showConsumption) View.VISIBLE else View.GONE
-        div4?.visibility = if (showConsumption && showCabinTemp) View.VISIBLE else View.GONE
-        div5?.visibility = if (showCabinTemp && showSoh) View.VISIBLE else View.GONE
-        div6?.visibility = if (showSoh && show12v) View.VISIBLE else View.GONE
-        div7?.visibility = if (show12v && showGearSpeed) View.VISIBLE else View.GONE
-
-        val isVertical = VehicleOverlayConfig.isVerticalLayout(this)
+        // Smart Divider Visibility: show divider only if the container before it is visible AND at least one container after it is visible
         val rootLayout = overlayView as? LinearLayout
         if (rootLayout != null) {
+            val isVertical = VehicleOverlayConfig.isVerticalLayout(this)
             rootLayout.orientation = if (isVertical) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-            // Adjust dividers width/height for orientation
-            val dividers = listOf(div1, div2, div3, div4, div5, div6, div7)
-            for (div in dividers) {
-                val lp = div?.layoutParams as? LinearLayout.LayoutParams ?: continue
+
+            for (div in allDividers) {
+                if (div == null) continue
+                val lp = div.layoutParams as? LinearLayout.LayoutParams ?: continue
                 if (isVertical) {
                     lp.width = LinearLayout.LayoutParams.MATCH_PARENT
                     lp.height = (1 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
@@ -346,6 +385,31 @@ class OverlayService : Service() {
                     lp.setMargins((6 * resources.displayMetrics.density).toInt(), 0, (6 * resources.displayMetrics.density).toInt(), 0)
                 }
                 div.layoutParams = lp
+            }
+
+            // Compute clean divider visibility dynamically
+            val orderedPairs = listOf(
+                Pair(containerSoc, allDividers.getOrNull(0)),
+                Pair(containerKwh, allDividers.getOrNull(1)),
+                Pair(containerRealRange, allDividers.getOrNull(2)),
+                Pair(containerDashRange, allDividers.getOrNull(3)),
+                Pair(containerHvTemp, allDividers.getOrNull(4)),
+                Pair(containerCellVolt, allDividers.getOrNull(5)),
+                Pair(containerConsumption, allDividers.getOrNull(6)),
+                Pair(containerInstPower, allDividers.getOrNull(7)),
+                Pair(containerCabinTemp, allDividers.getOrNull(8)),
+                Pair(containerOutTemp, allDividers.getOrNull(9)),
+                Pair(containerSoh, allDividers.getOrNull(10)),
+                Pair(container12v, allDividers.getOrNull(11)),
+                Pair(containerTpms, allDividers.getOrNull(12)),
+                Pair(containerOdo, allDividers.getOrNull(13))
+            )
+            val allContainersAfter = orderedPairs.map { it.first } + listOf(containerGearSpeed)
+            for (idx in orderedPairs.indices) {
+                val (cont, div) = orderedPairs[idx]
+                val contVis = cont?.visibility == View.VISIBLE
+                val anyLaterVis = allContainersAfter.drop(idx + 1).any { it?.visibility == View.VISIBLE }
+                div?.visibility = if (contVis && anyLaterVis) View.VISIBLE else View.GONE
             }
         }
 
@@ -363,7 +427,6 @@ class OverlayService : Service() {
     }
 
     private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
-        // Zero-hole defensive display updates
         if (soc > 0.0) tvSoc?.text = "${soc.toInt()}%"
 
         val kwh = bydBridge.remainEnergyKwh
@@ -376,22 +439,41 @@ class OverlayService : Service() {
 
         val realRange = bydBridge.realRangeKm
         if (realRange > 0) {
-            tvRealRange?.text = "$realRange km"
+            tvRealRange?.text = "${realRange.toInt()} km"
         } else if (soc > 0.0 && consumption > 0.0) {
             val effCapacity = if (bydBridge.estimatedCapacityKwh > 0.0) bydBridge.estimatedCapacityKwh else 48.7
             val calcRange = ((soc / 100.0) * effCapacity / consumption) * 100.0
             tvRealRange?.text = "${calcRange.toInt()} km"
         }
 
+        if (bydBridge.elecRangeKm > 0) {
+            tvDashRange?.text = "${bydBridge.elecRangeKm} km"
+        }
+
+        // HV Main Battery Temperature & Cell Voltage
+        if (bydBridge.hvBattTempMaxC != bydBridge.hvBattTempMinC) {
+            tvHvTemp?.text = String.format("%.0f/%.0f°C", bydBridge.hvBattTempMaxC, bydBridge.hvBattTempMinC)
+        } else {
+            tvHvTemp?.text = String.format("%.0f°C", bydBridge.hvBattTempAvgC)
+        }
+
+        tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
+
         if (consumption > 0.0) {
             tvConsumption?.text = String.format("%.1f", consumption)
         }
 
+        tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
         tvCabinTemp?.text = "${bydBridge.cabinTemperatureC}°C"
+        tvOutTemp?.text = "${bydBridge.outsideTemperatureC}°C"
         tvSoh?.text = "${bydBridge.sohPercent}% SOH"
-        tv12v?.text = "13.8V"
-        tvGear?.text = "D"
-        tvSpeed?.text = "0 km/h"
+        tv12v?.text = String.format("%.1fV", bydBridge.aux12vVoltage)
+        tvTpms?.text = bydBridge.tpmsSummary
+        if (bydBridge.totalMileageKm > 0) {
+            tvOdo?.text = String.format("%.0f km", bydBridge.totalMileageKm)
+        }
+        tvGear?.text = bydBridge.currentGear
+        tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
     }
 
     private fun createNotification(): Notification {
@@ -407,8 +489,8 @@ class OverlayService : Service() {
         }
 
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("BYD Vehicle Data Overlay V2.0")
-            .setContentText("กำลังอ่านและแสดงผลข้อมูลรถแบบ Real-time")
+            .setContentTitle("BYD Vehicle Data Overlay V2.1")
+            .setContentText("กำลังอ่านและแสดงผลข้อมูลรถ + อุณหภูมิแบตใหญ่แบบ Real-time")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()

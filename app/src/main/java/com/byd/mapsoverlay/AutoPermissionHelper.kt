@@ -233,6 +233,11 @@ object AutoPermissionHelper {
                         pm grant $targetPkg com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
                         VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
                         OVERLAY=${'$'}(appops get $targetPkg SYSTEM_ALERT_WINDOW)
+                        APK_PATH=${'$'}(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
+                        if [ -n "${'$'}APK_PATH" ]; then
+                          killall -9 $DAEMON_NAME >/dev/null 2>&1 || true
+                          ( CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS $targetPkg ) </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
+                        fi
                         echo "LISTENER=${'$'}VERIFIED"
                         echo "OVERLAY=${'$'}OVERLAY"
                     """.trimIndent()

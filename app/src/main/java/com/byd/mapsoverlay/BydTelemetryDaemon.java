@@ -8,57 +8,71 @@ import android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Runs through app_process as ADB shell (UID 2000) for native DiLink 3 telemetry.
- * Publishes read-only BYD telemetry over loopback HTTP for the overlay process.
+ * Publishes read-only BYD telemetry and fast ADAS/Light/Cluster BSD events over loopback HTTP.
  */
 public final class BydTelemetryDaemon {
     private static final String TAG = "BydTelemetryDaemon";
     private static final int PORT = 19890;
     private static volatile JSONObject snapshot = unavailable("Starting");
+
     private static volatile double callbackSoc = -1.0;
     private static volatile int callbackRangeKm = -1;
     private static volatile float callbackRemainKwh = -1.0f;
+
+    // Fast ADAS / Turn Light / Cluster Buzzle states
+    private static volatile int fastBsdState = 0;
+    private static volatile int fastTurnFlashState = 0;
+    private static volatile int fastTurnLightState = 0;
+    private static volatile int fastClusterBuzzleState = 0;
+    private static volatile int fastClusterDashboardAlarm = 0;
+    private static volatile int fastClusterSoundFreq = 0;
+    private static volatile int fastClusterSoundType = 0;
+    private static volatile boolean fastBsdAlertActive = false;
+
     private static volatile Object registeredStatisticDevice;
 
-    // A concrete subclass is required: BYD does not reliably dispatch SoC
-    // events through a generic java.lang.reflect.Proxy.
+    private static final Pattern BMS_LOG_PATTERN = Pattern.compile(
+            "SOC=([0-9.]+)%\\s+12V=([0-9.]+)V\\s+Temp=([0-9.]+)/([0-9.]+)/([0-9.]+).*?CellV=([0-9.]+)/([0-9.]+)V"
+    );
+
     private static final AbsBYDAutoStatisticListener STATISTIC_LISTENER =
             new AbsBYDAutoStatisticListener() {
         @Override public void onElecPercentageChanged(double percentage) {
             if (percentage >= 0.0 && percentage <= 100.0) {
                 callbackSoc = percentage;
-                log("BYD callback onElecPercentageChanged=" + percentage);
-            } else {
-                log("Ignoring out-of-range SoC callback=" + percentage);
             }
         }
         @Override public void onElecDrivingRangeChanged(int rangeKm) {
             if (rangeKm >= 0 && rangeKm <= 1500) {
                 callbackRangeKm = rangeKm;
-                log("BYD callback onElecDrivingRangeChanged=" + rangeKm);
             }
         }
         @Override public void onEVRemainingBatteryPowerChanged(float remainingKwh) {
-            acceptRemainingEnergy("onEVRemainingBatteryPowerChanged", remainingKwh);
+            acceptRemainingEnergy(remainingKwh);
         }
         public void onRemainingBatteryPowerChanged(float remainingKwh) {
-            acceptRemainingEnergy("onRemainingBatteryPowerChanged(float)", remainingKwh);
+            acceptRemainingEnergy(remainingKwh);
         }
         public void onRemainingBatteryPowerChanged(double remainingKwh) {
-            acceptRemainingEnergy("onRemainingBatteryPowerChanged(double)", (float) remainingKwh);
+            acceptRemainingEnergy((float) remainingKwh);
         }
-        private void acceptRemainingEnergy(String source, float remainingKwh) {
+        private void acceptRemainingEnergy(float remainingKwh) {
             if (remainingKwh >= 0.0f && remainingKwh <= 200.0f) {
                 callbackRemainKwh = remainingKwh;
-                log("BYD callback " + source + "=" + remainingKwh);
             }
         }
     };
@@ -72,9 +86,15 @@ public final class BydTelemetryDaemon {
                     ? args[0] : "com.byd.mapsoverlay.beta";
             Context context = createBydContext(targetPkg);
             if (context == null) throw new IllegalStateException("Could not create BYD package context");
+
             Thread poller = new Thread(() -> pollLoop(context), "BydTelemetryPoller");
             poller.setDaemon(true);
             poller.start();
+
+            Thread fastSafetyPoller = new Thread(() -> safetyPollLoop(context), "BydSafetyWatcher");
+            fastSafetyPoller.setDaemon(true);
+            fastSafetyPoller.start();
+
             serveLoop();
         } catch (Throwable t) {
             log("FATAL: " + t);
@@ -86,9 +106,6 @@ public final class BydTelemetryDaemon {
         Class<?> at = Class.forName("android.app.ActivityThread");
         Object thread = null;
 
-        // app_process does not always have an ActivityThread attached to the
-        // current thread. Uses a bounded systemMain bootstrap to
-        // avoid hanging the telemetry daemon during ActivityThread creation.
         try {
             thread = at.getMethod("currentActivityThread").invoke(null);
         } catch (Throwable ignored) {}
@@ -113,8 +130,6 @@ public final class BydTelemetryDaemon {
             }
         }
 
-        // Last-resort fallback for vendor builds where systemMain cannot be
-        // invoked from app_process. Keep the fallback bounded and diagnostic.
         if (thread == null) {
             try {
                 try { android.os.Looper.prepareMainLooper(); } catch (Throwable ignored) {}
@@ -141,13 +156,11 @@ public final class BydTelemetryDaemon {
                     pkgName,
                     Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
         } catch (Throwable t) {
-            log("createPackageContext for " + pkgName + " failed, falling back to com.byd.mapsoverlay.beta");
             try {
                 app = system.createPackageContext(
                         "com.byd.mapsoverlay.beta",
                         Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
             } catch (Throwable t2) {
-                log("fallback to com.byd.mapsoverlay.beta failed, trying com.byd.mapsoverlay");
                 app = system.createPackageContext(
                         "com.byd.mapsoverlay",
                         Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
@@ -170,44 +183,182 @@ public final class BydTelemetryDaemon {
         }
     }
 
+    /**
+     * Fast 350ms watcher for ADAS BSD, Turn Signal Flash, and Cluster (Instrument) Alarm Buzzle.
+     * Runs as UID 2000 so BYD hardware permissions are never blocked.
+     */
+    private static void safetyPollLoop(Context context) {
+        Object adas = null;
+        Object light = null;
+        Object instrument = null;
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                if (adas == null) adas = getDevice("android.hardware.bydauto.adas.BYDAutoADASDevice", context);
+                if (light == null) light = getDevice("android.hardware.bydauto.light.BYDAutoLightDevice", context);
+                if (instrument == null) instrument = getDevice("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", context);
+
+                Integer bsd = integer(adas, "getBSDState");
+                if (bsd != null) fastBsdState = bsd;
+
+                Integer turnFlash = integer(light, "getTurnLightFlashState");
+                if (turnFlash != null) fastTurnFlashState = turnFlash;
+
+                Integer turnLight = integer(light, "getTurnLightState");
+                if (turnLight != null) fastTurnLightState = turnLight;
+
+                Integer buzzle = integer(instrument, "getAlarmBuzzleState");
+                if (buzzle != null) fastClusterBuzzleState = buzzle;
+
+                Integer dashAlarm = integer(instrument, "getDashboardAlarmState");
+                if (dashAlarm != null) fastClusterDashboardAlarm = dashAlarm;
+
+                Integer soundFreq = integer(instrument, "getSoundFreq");
+                if (soundFreq != null) fastClusterSoundFreq = soundFreq;
+
+                Integer soundType = integer(instrument, "getSoundType");
+                if (soundType != null) fastClusterSoundType = soundType;
+
+                boolean turnOn = (fastTurnFlashState >= 2 && fastTurnFlashState <= 6)
+                        || fastTurnFlashState == 9
+                        || (fastTurnLightState >= 2 && fastTurnLightState <= 5);
+                boolean bsdWarning = (fastBsdState > 0 && turnOn)
+                        || (turnOn && (fastClusterBuzzleState == 1 || fastClusterSoundFreq > 0));
+                fastBsdAlertActive = bsdWarning;
+
+                // Also patch live snapshot with latest fast safety states
+                JSONObject cur = snapshot;
+                if (cur != null) {
+                    synchronized (BydTelemetryDaemon.class) {
+                        cur.put("bsdState", fastBsdState);
+                        cur.put("turnFlashState", fastTurnFlashState);
+                        cur.put("turnLightState", fastTurnLightState);
+                        cur.put("clusterBuzzleState", fastClusterBuzzleState);
+                        cur.put("clusterDashboardAlarm", fastClusterDashboardAlarm);
+                        cur.put("clusterSoundFreq", fastClusterSoundFreq);
+                        cur.put("clusterSoundType", fastClusterSoundType);
+                        cur.put("bsdAlertActive", fastBsdAlertActive);
+                    }
+                }
+            } catch (Throwable ignored) {}
+            try {
+                Thread.sleep(350);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     private static void pollLoop(Context context) {
         Object statistic = null;
         Object power = null;
         Object instrument = null;
+        Object ac = null;
+        Object speedDev = null;
+        Object gearbox = null;
+        Object tyre = null;
+        Object ota = null;
         long lastLog = 0;
+
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 if (statistic == null) {
                     statistic = getDevice("android.hardware.bydauto.statistic.BYDAutoStatisticDevice", context);
-                    log("Statistic device " + (statistic == null ? "unavailable" : "initialized"));
                     if (statistic != null) registerStatisticListener(statistic);
                 }
-                if (power == null) {
-                    power = getDevice("android.hardware.bydauto.power.BYDAutoPowerDevice", context);
-                    log("Power device " + (power == null ? "unavailable" : "initialized"));
-                }
-                if (instrument == null) {
-                    instrument = getDevice("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", context);
-                    log("Instrument device " + (instrument == null ? "unavailable" : "initialized"));
-                }
+                if (power == null) power = getDevice("android.hardware.bydauto.power.BYDAutoPowerDevice", context);
+                if (instrument == null) instrument = getDevice("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", context);
+                if (ac == null) ac = getDevice("android.hardware.bydauto.ac.BYDAutoAcDevice", context);
+                if (speedDev == null) speedDev = getDevice("android.hardware.bydauto.speed.BYDAutoSpeedDevice", context);
+                if (gearbox == null) gearbox = getDevice("android.hardware.bydauto.gearbox.BYDAutoGearboxDevice", context);
+                if (tyre == null) tyre = getDevice("android.hardware.bydauto.tyre.BYDAutoTyreDevice", context);
+                if (ota == null) ota = getDevice("android.hardware.bydauto.ota.BYDAutoOtaDevice", context);
 
                 JSONObject data = new JSONObject();
                 data.put("uid", android.os.Process.myUid());
-                data.put("source", "BYD SDK via app_process");
+                data.put("source", "BYD SDK + BMS Collector via app_process");
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
 
                 Double polledSoc = number(statistic, "getElecPercentageValue");
                 if (polledSoc != null && polledSoc > 100.0 && polledSoc <= 1000.0) polledSoc /= 10.0;
                 Double soc = callbackSoc >= 0.0 ? callbackSoc : polledSoc;
+
                 Double statisticRemaining = number(statistic, "getStatisticRemainingBatteryPower");
                 Double lastConsumption = number(statistic, "getLastElecConPHMValue");
+                Double totalElecCon = number(statistic, "getTotalElecConValue");
+                Double instantElecCon = number(statistic, "getInstantElecConValue");
+                Double totalMileage = number(statistic, "getTotalMileageValue");
+                Double waterTemp = number(statistic, "getWaterTemperature");
+
                 Integer polledRange = integer(statistic, "getElecDrivingRangeValue");
                 Integer range = callbackRangeKm >= 0 ? callbackRangeKm : polledRange;
-                // Support getter names observed across BYD SDK builds.
+
                 Double polledRemain = numberAny(power, "getBatteryRemainPowerEV", "getRemainingBatteryPower", "getEVRemainingBatteryPower");
                 Double remain = callbackRemainKwh >= 0.0f ? (double) callbackRemainKwh : polledRemain;
+
                 Double consumption = number(instrument, "getLast50KmPowerConsume");
                 if (consumption == null || consumption <= 0.0) consumption = lastConsumption;
+
+                // Parse BMS log (/data/local/tmp/byddatacollector.log) for HV Battery Temp, Cell Voltage, and 12V
+                double hvTempMax = -100.0;
+                double hvTempMin = -100.0;
+                double hvTempAvg = -100.0;
+                double cellVoltMax = -1.0;
+                double cellVoltMin = -1.0;
+                double aux12v = -1.0;
+
+                String tailLog = readTail("/data/local/tmp/byddatacollector.log", 4096);
+                if (tailLog != null && !tailLog.isEmpty()) {
+                    Matcher m = BMS_LOG_PATTERN.matcher(tailLog);
+                    while (m.find()) {
+                        try {
+                            double logSoc = Double.parseDouble(m.group(1));
+                            if ((soc == null || soc <= 0.0) && logSoc >= 0.0 && logSoc <= 100.0) {
+                                soc = logSoc;
+                            }
+                            aux12v = Double.parseDouble(m.group(2));
+                            hvTempMax = Double.parseDouble(m.group(3));
+                            hvTempMin = Double.parseDouble(m.group(4));
+                            hvTempAvg = Double.parseDouble(m.group(5));
+                            cellVoltMax = Double.parseDouble(m.group(6));
+                            cellVoltMin = Double.parseDouble(m.group(7));
+                        } catch (Throwable ignored) {}
+                    }
+                }
+
+                // Fallback 12V from OTA device if not in log
+                if (aux12v <= 0.0) {
+                    Double ota12v = number(ota, "getBatteryVoltage");
+                    if (ota12v != null && ota12v > 5.0 && ota12v < 20.0) aux12v = ota12v;
+                }
+
+                // Fallback HV temp from AC sub battery temp or water temp
+                if (hvTempAvg <= -50.0) {
+                    Double subTemp = number(ac, "getAcSubBatteryTemperature");
+                    if (subTemp != null && subTemp > -40.0 && subTemp < 100.0) {
+                        hvTempAvg = subTemp;
+                        hvTempMax = subTemp;
+                        hvTempMin = subTemp;
+                    } else if (waterTemp != null && waterTemp > -40.0 && waterTemp < 100.0) {
+                        hvTempAvg = waterTemp;
+                    }
+                }
+
+                // Cabin & Outside Temperature
+                Integer cabinTemp = integerWithIntArg(ac, "getTemprature", 1);
+                Integer outsideTemp = integer(instrument, "getOutCarTemperature");
+
+                // Speed & Gear
+                Double currentSpeed = number(speedDev, "getCurrentSpeed");
+                Integer gearCode = integer(gearbox, "getGearboxAutoModeType");
+                if (gearCode == null) gearCode = integer(gearbox, "getCurrentGear");
+
+                // TPMS Tire Pressure (1=FL, 2=FR, 3=RL, 4=RR on BYD SDK)
+                Integer tpmsFl = integerWithIntArg(tyre, "getTyrePressureValue", 1);
+                if (tpmsFl == null || tpmsFl < 0 || tpmsFl > 600) tpmsFl = integerWithIntArg(tyre, "getTyrePressureValue", 0);
+                Integer tpmsFr = integerWithIntArg(tyre, "getTyrePressureValue", 2);
+                Integer tpmsRl = integerWithIntArg(tyre, "getTyrePressureValue", 3);
+                Integer tpmsRr = integerWithIntArg(tyre, "getTyrePressureValue", 4);
+
                 if (soc != null && soc >= 0 && soc <= 100) {
                     JSONObject socObject = new JSONObject();
                     socObject.put("percent", soc);
@@ -226,28 +377,82 @@ public final class BydTelemetryDaemon {
                     consumptionObject.put("kwhPer100km", consumption);
                     data.put("consumption", consumptionObject);
                 }
+                if (totalElecCon != null && totalElecCon >= 0) data.put("totalElecConKwh", totalElecCon);
+                if (instantElecCon != null) data.put("instantElecConKw", instantElecCon);
+                if (totalMileage != null && totalMileage >= 0) data.put("totalMileageKm", totalMileage);
+
+                if (hvTempAvg > -50.0) {
+                    data.put("hvBattTempAvgC", hvTempAvg);
+                    data.put("hvBattTempMaxC", hvTempMax);
+                    data.put("hvBattTempMinC", hvTempMin);
+                }
+                if (cellVoltMax > 0.0) {
+                    data.put("cellVoltMaxV", cellVoltMax);
+                    data.put("cellVoltMinV", cellVoltMin);
+                }
+                if (aux12v > 0.0) data.put("aux12v", aux12v);
+                if (cabinTemp != null && cabinTemp >= 10 && cabinTemp <= 50) data.put("cabinTempC", cabinTemp);
+                if (outsideTemp != null && outsideTemp >= -40 && outsideTemp <= 70) data.put("outsideTempC", outsideTemp);
+                if (currentSpeed != null && currentSpeed >= 0 && currentSpeed <= 300) data.put("speedKmh", currentSpeed.intValue());
+                if (gearCode != null) data.put("gearCode", gearCode);
+
+                if (tpmsFl != null || tpmsFr != null || tpmsRl != null || tpmsRr != null) {
+                    JSONObject tpmsObj = new JSONObject();
+                    if (tpmsFl != null && tpmsFl > 0 && tpmsFl < 600) tpmsObj.put("fl", tpmsFl);
+                    if (tpmsFr != null && tpmsFr > 0 && tpmsFr < 600) tpmsObj.put("fr", tpmsFr);
+                    if (tpmsRl != null && tpmsRl > 0 && tpmsRl < 600) tpmsObj.put("rl", tpmsRl);
+                    if (tpmsRr != null && tpmsRr > 0 && tpmsRr < 600) tpmsObj.put("rr", tpmsRr);
+                    data.put("tpms", tpmsObj);
+                }
+
+                // Include fast safety states
+                data.put("bsdState", fastBsdState);
+                data.put("turnFlashState", fastTurnFlashState);
+                data.put("turnLightState", fastTurnLightState);
+                data.put("clusterBuzzleState", fastClusterBuzzleState);
+                data.put("clusterDashboardAlarm", fastClusterDashboardAlarm);
+                data.put("clusterSoundFreq", fastClusterSoundFreq);
+                data.put("clusterSoundType", fastClusterSoundType);
+                data.put("bsdAlertActive", fastBsdAlertActive);
+
                 boolean validSoc = soc != null && soc >= 0.0 && soc <= 100.0;
                 data.put("status", validSoc ? "OK" : "WAITING_FOR_SOC");
-                snapshot = data;
+
+                synchronized (BydTelemetryDaemon.class) {
+                    snapshot = data;
+                }
 
                 long now = SystemClock.elapsedRealtime();
                 if (now - lastLog > 30000) {
                     log("Telemetry status=" + data.optString("status")
-                            + ", soc=" + (soc == null ? "null" : soc)
-                            + ", range=" + (range == null ? "null" : range)
-                            + ", remainKwh=" + (remain == null ? "null" : remain)
-                            + ", consumption=" + (consumption == null ? "null" : consumption)
-                            + ", statisticRemainingRaw=" + (statisticRemaining == null ? "null" : statisticRemaining)
-                            + ", lastElecConPHMRaw=" + (lastConsumption == null ? "null" : lastConsumption));
+                            + ", soc=" + soc + ", remainKwh=" + remain
+                            + ", hvTemp=" + hvTempMax + "/" + hvTempMin
+                            + ", cellV=" + cellVoltMax + "/" + cellVoltMin);
                     lastLog = now;
                 }
             } catch (Throwable t) {
                 snapshot = unavailable(t.getClass().getSimpleName() + ": " + t.getMessage());
                 log("Poll failed: " + t);
             }
-            try { Thread.sleep(2000); } catch (InterruptedException e) {
+            try { Thread.sleep(1500); } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+        }
+    }
+
+    private static String readTail(String path, int maxBytes) {
+        File f = new File(path);
+        if (!f.exists() || !f.canRead()) return null;
+        try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
+            long len = raf.length();
+            if (len <= 0) return null;
+            long start = Math.max(0, len - maxBytes);
+            raf.seek(start);
+            byte[] buf = new byte[(int) (len - start)];
+            raf.readFully(buf);
+            return new String(buf, StandardCharsets.UTF_8);
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 
@@ -261,7 +466,6 @@ public final class BydTelemetryDaemon {
             Method register = device.getClass().getMethod("registerListener", listenerType);
             register.invoke(device, STATISTIC_LISTENER);
             registeredStatisticDevice = device;
-            log("Registered concrete BYD AbsBYDAutoStatisticListener successfully");
         } catch (NoSuchMethodException missingSingleArg) {
             try {
                 Class<?> listenerType = Class.forName(
@@ -272,57 +476,34 @@ public final class BydTelemetryDaemon {
                         "registerListener", listenerType, int[].class);
                 register.invoke(device, STATISTIC_LISTENER, new int[0]);
                 registeredStatisticDevice = device;
-                log("Registered concrete BYD listener using subscribe-all overload");
-            } catch (Throwable t) {
-                log("BYD listener registration failed: " + t);
-            }
-        } catch (Throwable t) {
-            log("BYD listener registration failed: " + t);
-        }
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
     }
 
     private static Object getDevice(String className, Context context) {
         try {
             Class<?> cls = Class.forName(className);
-            // DiLink 3 wrapper supports both self() and getInstance(Context). Try both
-            // without allowing one failed factory to suppress the other.
             try {
                 Method self = cls.getMethod("self");
                 if (java.lang.reflect.Modifier.isStatic(self.getModifiers())) {
                     Object value = self.invoke(null);
-                    if (value != null) {
-                        log("Using " + className + ".self()");
-                        return value;
-                    }
+                    if (value != null) return value;
                 }
-            } catch (Throwable t) {
-                log(className + ".self() unavailable: " + t.getClass().getSimpleName());
-            }
+            } catch (Throwable ignored) {}
 
             try {
                 Method factory = cls.getMethod("getInstance", Context.class);
                 Object value = factory.invoke(null, context);
-                if (value != null) {
-                    log("Using " + className + ".getInstance(Context)");
-                    return value;
-                }
-            } catch (Throwable t) {
-                log(className + ".getInstance(Context) unavailable: " + t);
-            }
+                if (value != null) return value;
+            } catch (Throwable ignored) {}
 
             try {
                 Method factory = cls.getMethod("getInstance");
                 Object value = factory.invoke(null);
-                if (value != null) {
-                    log("Using " + className + ".getInstance()");
-                    return value;
-                }
-            } catch (Throwable t) {
-                log(className + ".getInstance() unavailable: " + t);
-            }
+                if (value != null) return value;
+            } catch (Throwable ignored) {}
             return null;
         } catch (Throwable t) {
-            log("BYD device factory failed for " + className + ": " + t);
             return null;
         }
     }
@@ -333,7 +514,6 @@ public final class BydTelemetryDaemon {
             Object value = target.getClass().getMethod(methodName).invoke(target);
             return value instanceof Number ? ((Number) value).doubleValue() : null;
         } catch (Throwable t) {
-            log(methodName + " failed: " + t);
             return null;
         }
     }
@@ -349,6 +529,16 @@ public final class BydTelemetryDaemon {
     private static Integer integer(Object target, String methodName) {
         Double value = number(target, methodName);
         return value == null ? null : value.intValue();
+    }
+
+    private static Integer integerWithIntArg(Object target, String methodName, int arg) {
+        if (target == null) return null;
+        try {
+            Object value = target.getClass().getMethod(methodName, int.class).invoke(target, arg);
+            return value instanceof Number ? ((Number) value).intValue() : null;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     private static JSONObject unavailable(String reason) {
@@ -372,7 +562,11 @@ public final class BydTelemetryDaemon {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 String line;
                 while ((line = reader.readLine()) != null && !line.isEmpty()) {}
-                byte[] body = snapshot.toString().getBytes("UTF-8");
+                String jsonStr;
+                synchronized (BydTelemetryDaemon.class) {
+                    jsonStr = snapshot.toString();
+                }
+                byte[] body = jsonStr.getBytes("UTF-8");
                 OutputStream out = client.getOutputStream();
                 String headers = "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n"
                         + "Cache-Control: no-store\r\nContent-Length: " + body.length

@@ -4,9 +4,6 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import java.lang.reflect.Constructor
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -16,10 +13,12 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 /**
- * BydVehicleBridge V2.0 (Zero-Hole Architecture)
- * - Decoupled from Google Maps
- * - Safe sensor polling with Null-safety & Exception containment
- * - Cabin Temperature reading via BYDAutoAcDevice (with DiLink permission wrapper)
+ * BydVehicleBridge V2.1 (Full Vehicle Telemetry + Fast BSD/Cluster Watcher)
+ * - Auto-starts BydTelemetryDaemon (UID 2000) via AutoPermissionHelper
+ * - Reads HV Battery Temp (Max/Min/Avg °C), Cell Voltage (Max/Min V), 12V Aux,
+ *   SoC %, Remain kWh, Dashboard Range, Real Range, 50km Avg Consumption, Instant Power,
+ *   Cabin Temp, Outside Temp, Speed, Gear, Odometer, and TPMS 4-wheel pressures.
+ * - Watches ADAS BSD + Turn Signal + Cluster Buzzle/Alarm state every 450ms for instant chime.
  */
 class BydVehicleBridge(
     private val context: Context,
@@ -36,7 +35,7 @@ class BydVehicleBridge(
         private set
     var remainEnergyKwh: Double = 0.0 // พลังงานแบตเตอรี่คงเหลือจริง (kWh)
         private set
-    var elecRangeKm: Int = 0
+    var elecRangeKm: Int = 0 // ระยะทางบนหน้าปัดรถ (km)
         private set
     var sohPercent: Int = 100
         private set
@@ -46,52 +45,80 @@ class BydVehicleBridge(
         private set
     var realRangeKm: Double = 0.0
         private set
-    var cabinTemperatureC: Int = 25 // อุณหภูมิในห้องโดยสาร (°C)
+
+    // HV Main Battery Temperature & Cell Voltage
+    var hvBattTempAvgC: Double = 29.0
         private set
-    var aux12vVoltage: Double = 13.8 // แรงดันแบตเตอรี่ลูกเล็ก 12V
+    var hvBattTempMaxC: Double = 30.0
         private set
-    var currentGear: String = "D"
+    var hvBattTempMinC: Double = 29.0
+        private set
+    var cellVoltMaxV: Double = 3.326
+        private set
+    var cellVoltMinV: Double = 3.320
+        private set
+
+    // Temperatures, 12V, Driving, TPMS
+    var cabinTemperatureC: Int = 25
+        private set
+    var outsideTemperatureC: Int = 31
+        private set
+    var aux12vVoltage: Double = 13.8
+        private set
+    var currentGear: String = "P"
         private set
     var vehicleSpeedKmH: Int = 0
         private set
-
-    var detectedVehicleModel: String = "BYD EV (Live Connected)"
+    var instantPowerKw: Double = 0.0
         private set
-    @Volatile var diagnosticStatus: String = "พร้อมเชื่อมต่อ BYD API"
+    var totalMileageKm: Double = 0.0
+        private set
+    var tpmsSummary: String = "-- kPa"
+        private set
+
+    var detectedVehicleModel: String = "BYD Dolphin (Live Connected)"
+        private set
+    @Volatile var diagnosticStatus: String = "กำลังเชื่อมต่อ BYD Daemon..."
+        private set
+    @Volatile var isDaemonConnected: Boolean = false
         private set
 
     private var executor: ScheduledExecutorService? = null
     private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Any, Long>>()
     private val cacheTtlMs = 60_000L
 
-    // ADAS & Light Device Listeners (Zero-CPU event callback)
     private var registeredAdasListener: Any? = null
     private var registeredLightListener: Any? = null
 
     fun startListening() {
+        HiddenApiBypass.exemptAll()
+        AutoPermissionHelper.ensureTelemetryDaemon(context)
         applyUserVehicleProfile()
         BlindspotAudioChime.init(context)
         registerSafetyListeners()
 
+        executor?.shutdownNow()
         executor = Executors.newSingleThreadScheduledExecutor()
+        var tickCount = 0
         executor?.scheduleWithFixedDelay({
             try {
-                applyUserVehicleProfile()
-                // 1. Direct native BYD hardware API reading with BydPermissionContext (Zero-Hole Guard)
-                pollDirectBydHardwareApi()
-                // 2. Poll Cabin Temperature
-                pollCabinTemperature()
-                // 3. Read shell daemon on port 19890
+                tickCount++
+                if (tickCount % 4 == 1) {
+                    applyUserVehicleProfile()
+                    AutoPermissionHelper.ensureTelemetryDaemon(context)
+                    pollDirectBydHardwareApi()
+                    pollCabinTemperature()
+                }
+                // Fast poll (every 450ms) to localhost daemon for instant BSD + live telemetry
                 fetchTelemetryDaemonStatus()
             } catch (t: Throwable) {
                 Log.w(tag, "Zero-hole cycle catch: ${t.message}")
             }
-        }, 0, 2, TimeUnit.SECONDS)
+        }, 0, 450, TimeUnit.MILLISECONDS)
     }
 
     fun stopListening() {
         unregisterSafetyListeners()
-        BlindspotAudioChime.release()
         executor?.shutdownNow()
         executor = null
         deviceCache.clear()
@@ -130,18 +157,15 @@ class BydVehicleBridge(
     private fun pollDirectBydHardwareApi() {
         var updated = false
         val candidates = listOf(
-            ApiCandidate("android.hardware.bydauto.statistic.BYDAutoStatisticDevice", listOf("getElecPercentageValue", "getLastElecConPHMValue", "getElecDrivingRangeValue")),
-            ApiCandidate("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", listOf("getLast50KmPowerConsume")),
-            ApiCandidate("android.hardware.bydauto.power.BYDAutoPowerDevice", listOf("getBatteryRemainPowerEV", "getRemainingBatteryPower"))
+            ApiCandidate("android.hardware.bydauto.statistic.BYDAutoStatisticDevice", listOf("getElecPercentageValue", "getLastElecConPHMValue", "getElecDrivingRangeValue", "getTotalMileageValue", "getInstantElecConValue")),
+            ApiCandidate("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", listOf("getLast50KmPowerConsume", "getOutCarTemperature")),
+            ApiCandidate("android.hardware.bydauto.power.BYDAutoPowerDevice", listOf("getBatteryRemainPowerEV", "getRemainingBatteryPower")),
+            ApiCandidate("android.hardware.bydauto.speed.BYDAutoSpeedDevice", listOf("getCurrentSpeed")),
+            ApiCandidate("android.hardware.bydauto.gearbox.BYDAutoGearboxDevice", listOf("getGearboxAutoModeType"))
         )
 
         for (candidate in candidates) {
-            val clazz = try {
-                Class.forName(candidate.className)
-            } catch (e: Throwable) {
-                continue
-            }
-
+            val clazz = try { Class.forName(candidate.className) } catch (_: Throwable) { continue }
             val device = obtainDeviceInstance(clazz) ?: continue
             for (methodName in candidate.getters) {
                 try {
@@ -174,10 +198,28 @@ class BydVehicleBridge(
                                 updated = true
                             }
                         }
+                        "getOutCarTemperature" -> if (raw in -30.0..65.0) {
+                            outsideTemperatureC = raw.toInt()
+                            updated = true
+                        }
+                        "getCurrentSpeed" -> if (raw in 0.0..250.0) {
+                            vehicleSpeedKmH = raw.toInt()
+                            updated = true
+                        }
+                        "getGearboxAutoModeType" -> {
+                            currentGear = mapGearCode(raw.toInt())
+                            updated = true
+                        }
+                        "getTotalMileageValue" -> if (raw > 0.0) {
+                            totalMileageKm = raw
+                            updated = true
+                        }
+                        "getInstantElecConValue" -> if (raw in -100.0..250.0) {
+                            instantPowerKw = raw
+                            updated = true
+                        }
                     }
-                } catch (_: Throwable) {
-                    // Zero Hole: Suppress and maintain stability
-                }
+                } catch (_: Throwable) {}
             }
         }
 
@@ -195,7 +237,7 @@ class BydVehicleBridge(
             if (dev == null) {
                 try {
                     val ctor = acCls.getDeclaredConstructor(Context::class.java)
-                    ctor.setAccessible(true)
+                    ctor.isAccessible = true
                     dev = ctor.newInstance(wrappedCtx)
                 } catch (_: Throwable) {}
             }
@@ -203,13 +245,11 @@ class BydVehicleBridge(
                 val method = acCls.getMethod("getTemprature", Int::class.javaPrimitiveType)
                 method.isAccessible = true
                 val t = (method.invoke(dev, 1) as? Number)?.toInt() ?: 25
-                if (t in 15..40) {
+                if (t in 15..45) {
                     cabinTemperatureC = t
                 }
             }
-        } catch (_: Throwable) {
-            // Zero-Hole Guard: keep last known safe temperature
-        }
+        } catch (_: Throwable) {}
     }
 
     private data class ApiCandidate(val className: String, val getters: List<String>)
@@ -220,7 +260,6 @@ class BydVehicleBridge(
         if (cached != null && (now - cached.second) < cacheTtlMs) return cached.first
 
         val wrappedContext = BydPermissionContext.wrap(context)
-        // 1. getInstance(Context)
         try {
             val m = clazz.getMethod("getInstance", Context::class.java)
             val inst = m.invoke(null, wrappedContext)
@@ -230,7 +269,6 @@ class BydVehicleBridge(
             }
         } catch (_: Throwable) {}
 
-        // 2. self()
         try {
             val m = clazz.getMethod("self")
             val inst = m.invoke(null)
@@ -247,13 +285,19 @@ class BydVehicleBridge(
         try {
             val url = URL("http://127.0.0.1:19890/telemetry")
             val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 800
-            conn.readTimeout = 800
+            conn.connectTimeout = 500
+            conn.readTimeout = 500
             conn.requestMethod = "GET"
             conn.setRequestProperty("Cache-Control", "no-cache")
             try {
-                if (conn.responseCode != 200) return
+                if (conn.responseCode != 200) {
+                    isDaemonConnected = false
+                    return
+                }
                 val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                isDaemonConnected = true
+                diagnosticStatus = "เชื่อมต่อสำเร็จ (UID ${json.optInt("uid", 2000)})"
+
                 val socObj = json.optJSONObject("soc")
                 val soc = socObj?.optDouble("percent", -1.0) ?: -1.0
                 val rangeObj = json.optJSONObject("range")
@@ -262,31 +306,126 @@ class BydVehicleBridge(
                 val consumptionObj = json.optJSONObject("consumption")
                 val consumption = consumptionObj?.optDouble("kwhPer100km", -1.0) ?: -1.0
 
-                var supplemented = false
-                if (currentSoc <= 0.0 && soc in 0.0..100.0) {
+                // HV Battery Temp & Cell Voltage & 12V from BMS/Daemon
+                val hvAvg = json.optDouble("hvBattTempAvgC", -100.0)
+                val hvMax = json.optDouble("hvBattTempMaxC", -100.0)
+                val hvMin = json.optDouble("hvBattTempMinC", -100.0)
+                val cMax = json.optDouble("cellVoltMaxV", -1.0)
+                val cMin = json.optDouble("cellVoltMinV", -1.0)
+                val aux12 = json.optDouble("aux12v", -1.0)
+
+                val cabinT = json.optInt("cabinTempC", -100)
+                val outT = json.optInt("outsideTempC", -100)
+                val spd = json.optInt("speedKmh", -1)
+                val gearC = json.optInt("gearCode", -1)
+                val odo = json.optDouble("totalMileageKm", -1.0)
+                val instKw = json.optDouble("instantElecConKw", -999.0)
+
+                var changed = false
+                if (soc in 0.0..100.0 && soc != currentSoc) {
                     currentSoc = soc
-                    supplemented = true
+                    changed = true
                 }
-                if (elecRangeKm <= 0 && range > 0) {
+                if (range in 1..1500 && range != elecRangeKm) {
                     elecRangeKm = range
-                    supplemented = true
+                    changed = true
                 }
-                if (remainEnergyKwh <= 0.5 && remain in 0.1..150.0) {
+                if (remain in 0.1..150.0 && remain != remainEnergyKwh) {
                     remainEnergyKwh = remain
-                    supplemented = true
+                    changed = true
                 }
-                if (currentConsumption <= 0.0 && consumption in 1.0..60.0) {
-                    supplemented = applyConsumptionUpdate(consumption) || supplemented
+                if (consumption in 1.0..60.0) {
+                    if (applyConsumptionUpdate(consumption)) changed = true
+                }
+                if (hvAvg > -40.0) {
+                    hvBattTempAvgC = hvAvg
+                    if (hvMax > -40.0) hvBattTempMaxC = hvMax
+                    if (hvMin > -40.0) hvBattTempMinC = hvMin
+                    changed = true
+                }
+                if (cMax in 2.0..4.5) {
+                    cellVoltMaxV = cMax
+                    if (cMin in 2.0..4.5) cellVoltMinV = cMin
+                    changed = true
+                }
+                if (aux12 in 8.0..18.0) {
+                    aux12vVoltage = (aux12 * 10.0).roundToInt() / 10.0
+                    changed = true
+                }
+                if (cabinT in 10..50) {
+                    cabinTemperatureC = cabinT
+                    changed = true
+                }
+                if (outT in -30..65) {
+                    outsideTemperatureC = outT
+                    changed = true
+                }
+                if (spd in 0..260) {
+                    vehicleSpeedKmH = spd
+                    changed = true
+                }
+                if (gearC >= 0) {
+                    currentGear = mapGearCode(gearC)
+                    changed = true
+                }
+                if (odo > 0.0) {
+                    totalMileageKm = odo
+                    changed = true
+                }
+                if (instKw > -200.0) {
+                    instantPowerKw = instKw
+                    changed = true
                 }
 
-                if (supplemented) {
+                val tpmsObj = json.optJSONObject("tpms")
+                if (tpmsObj != null) {
+                    val fl = tpmsObj.optInt("fl", 0)
+                    val fr = tpmsObj.optInt("fr", 0)
+                    val rl = tpmsObj.optInt("rl", 0)
+                    val rr = tpmsObj.optInt("rr", 0)
+                    if (fl > 0 || fr > 0 || rl > 0 || rr > 0) {
+                        tpmsSummary = "$fl/$fr/$rl/$rr kPa"
+                        changed = true
+                    }
+                }
+
+                // Check fast BSD + Turn Signal + Cluster Alarm state from UID 2000 daemon
+                val bsdState = json.optInt("bsdState", 0)
+                val turnFlash = json.optInt("turnFlashState", 0)
+                val turnLight = json.optInt("turnLightState", 0)
+                val clusterBuzzle = json.optInt("clusterBuzzleState", 0)
+                val clusterSoundFreq = json.optInt("clusterSoundFreq", 0)
+                val bsdAlertActive = json.optBoolean("bsdAlertActive", false)
+
+                if (bsdState > 0) BlindspotAudioChime.isBsdActive = true
+                val turnOn = (turnFlash in 2..6 || turnFlash == 9 || turnLight in 2..5)
+                if (turnOn) BlindspotAudioChime.isTurnSignalActive = true
+                BlindspotAudioChime.isClusterAlarmActive = (clusterBuzzle == 1 || clusterSoundFreq > 0)
+
+                if (bsdAlertActive || (bsdState > 0 && turnOn)) {
+                    BlindspotAudioChime.onBlindspotFlashingDetected(context)
+                }
+
+                if (changed) {
                     recalculateRealTelemetry()
                     notifyUpdate()
                 }
             } finally {
                 conn.disconnect()
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            isDaemonConnected = false
+        }
+    }
+
+    private fun mapGearCode(code: Int): String {
+        return when (code) {
+            1 -> "P"
+            2 -> "R"
+            3 -> "N"
+            4 -> "D"
+            else -> "P"
+        }
     }
 
     private fun recalculateRealTelemetry() {
@@ -306,63 +445,50 @@ class BydVehicleBridge(
         }
     }
 
-    /**
-     * ลงทะเบียน Event Listener สำหรับ ADAS (BSD) และ Light (Turn signal flash)
-     * ทำงานแบบ Passive Callback ไม่รันลูป ไม่กิน CPU
-     */
     private fun registerSafetyListeners() {
         try {
-            // 1. ลงทะเบียน ADAS Listener
             val adasClass = try { Class.forName("android.hardware.bydauto.adas.BYDAutoADASDevice") } catch (_: Throwable) { null }
             if (adasClass != null) {
                 val adasDevice = obtainDeviceInstance(adasClass)
                 if (adasDevice != null) {
                     val adasListener = object : android.hardware.bydauto.adas.AbsBYDAutoADASListener() {
                         override fun onBSDStateChanged(state: Int) {
-                            Log.d(tag, "BYD Event onBSDStateChanged: $state")
-                            // state != 0 แสดงว่าระบบตรวจพบวัตถุหรือกำลังเตือน
                             BlindspotAudioChime.isBsdActive = (state > 0)
                             checkAndTriggerChime()
                         }
                     }
-                    val regMethod = adasClass.methods.firstOrNull { 
-                        it.name == "registerListener" && it.parameterTypes.size == 1 && 
-                        it.parameterTypes[0].isAssignableFrom(adasListener.javaClass)
+                    val regMethod = adasClass.methods.firstOrNull {
+                        it.name == "registerListener" && it.parameterTypes.size == 1 &&
+                            it.parameterTypes[0].isAssignableFrom(adasListener.javaClass)
                     }
                     regMethod?.invoke(adasDevice, adasListener)
                     registeredAdasListener = Pair(adasDevice, adasListener)
-                    Log.d(tag, "Successfully registered ADAS BSD listener")
                 }
             }
 
-            // 2. ลงทะเบียน Light Listener (ตรวจจับไฟเลี้ยวและไฟกระพริบฉุกเฉิน/เตือน)
             val lightClass = try { Class.forName("android.hardware.bydauto.light.BYDAutoLightDevice") } catch (_: Throwable) { null }
             if (lightClass != null) {
                 val lightDevice = obtainDeviceInstance(lightClass)
                 if (lightDevice != null) {
                     val lightListener = object : android.hardware.bydauto.light.AbsBYDAutoLightListener() {
                         override fun onTurnLightFlashStateChanged(state: Int) {
-                            Log.d(tag, "BYD Event onTurnLightFlashStateChanged: $state")
-                            // 2: Left Flash, 3: Left Fast, 4: Right Flash, 5: Right Fast, 6: Danger Flash
                             val isFlashing = state in listOf(2, 3, 4, 5, 6, 9)
                             BlindspotAudioChime.isTurnSignalActive = isFlashing
                             checkAndTriggerChime()
                         }
 
                         override fun onTurnLightStateChanged(state: Int) {
-                            // 2: Short, 3: Long
                             val isOn = state in 2..5
                             BlindspotAudioChime.isTurnSignalActive = isOn
                             checkAndTriggerChime()
                         }
                     }
-                    val regMethod = lightClass.methods.firstOrNull { 
-                        it.name == "registerListener" && it.parameterTypes.size == 1 && 
-                        it.parameterTypes[0].isAssignableFrom(lightListener.javaClass)
+                    val regMethod = lightClass.methods.firstOrNull {
+                        it.name == "registerListener" && it.parameterTypes.size == 1 &&
+                            it.parameterTypes[0].isAssignableFrom(lightListener.javaClass)
                     }
                     regMethod?.invoke(lightDevice, lightListener)
                     registeredLightListener = Pair(lightDevice, lightListener)
-                    Log.d(tag, "Successfully registered Light Turn Signal listener")
                 }
             }
         } catch (t: Throwable) {
@@ -371,7 +497,6 @@ class BydVehicleBridge(
     }
 
     private fun checkAndTriggerChime() {
-        // เงื่อนไข: ดักเฉพาะตอน "มีรถในจุดอับ (BSD Active)" + "ไฟกระพริบเลี้ยว (Turn Signal Flash)"
         if (BlindspotAudioChime.isBsdActive && BlindspotAudioChime.isTurnSignalActive) {
             BlindspotAudioChime.onBlindspotFlashingDetected(context)
         }
@@ -390,8 +515,6 @@ class BydVehicleBridge(
                 unreg?.invoke(dev, listener)
             }
             registeredLightListener = null
-        } catch (t: Throwable) {
-            Log.w(tag, "Failed to unregister safety listeners: ${t.message}")
-        }
+        } catch (_: Throwable) {}
     }
 }
