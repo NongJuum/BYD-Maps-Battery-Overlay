@@ -411,10 +411,18 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎛️ ความโปร่งใสของแถบ (Transparency / Opacity)"
+                        android:text="🎛️ ความโปร่งใสของพื้นหลัง (Background Opacity)"
                         android:textColor="#80D8FF"
                         android:textSize="14sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="ปรับเฉพาะความเข้มของกรอบพื้นหลัง ตัวหนังสือและไอคอนยังคงคมชัด 100%"
+                        android:textColor="#90A4AE"
+                        android:textSize="11sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"

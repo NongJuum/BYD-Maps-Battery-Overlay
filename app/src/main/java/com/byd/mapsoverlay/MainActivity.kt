@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         switchGear.isChecked = VehicleOverlayConfig.isShowGear(this)
 
         val currentOpacity = VehicleOverlayConfig.getOpacity(this)
-        seekOpacity.progress = currentOpacity.coerceIn(30, 100)
+        seekOpacity.progress = currentOpacity.coerceIn(0, 100)
         tvOpacityValue.text = "${currentOpacity}%"
 
         val currentScale = VehicleOverlayConfig.getScale(this)
@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
 
         seekOpacity.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                val clamped = progress.coerceAtLeast(30)
+                val clamped = progress.coerceIn(0, 100)
                 tvOpacityValue.text = "${clamped}%"
                 if (fromUser && switchMaster.isChecked) {
                     VehicleOverlayConfig.setOpacity(this@MainActivity, clamped)

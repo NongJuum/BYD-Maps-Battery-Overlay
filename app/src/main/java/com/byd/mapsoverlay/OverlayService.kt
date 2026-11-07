@@ -349,8 +349,11 @@ class OverlayService : Service() {
             }
         }
 
-        val opacity = VehicleOverlayConfig.getOpacity(this) / 100f
-        overlayView?.alpha = opacity
+        // แยกปรับความโปร่งใสเฉพาะพื้นหลัง (Background Only) ตัวหนังสือและไอคอนคงความชัด 100% ไม่ดรอป
+        val opacityPercent = VehicleOverlayConfig.getOpacity(this).coerceIn(0, 100)
+        val bgAlpha255 = (opacityPercent * 255 / 100).coerceIn(0, 255)
+        overlayView?.background?.mutate()?.alpha = bgAlpha255
+        overlayView?.alpha = 1.0f
 
         val scale = VehicleOverlayConfig.getScale(this) / 100f
         overlayView?.scaleX = scale
