@@ -170,32 +170,53 @@ class OverlayService : Service() {
 
         applyUserFieldPreferences()
 
-        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        // Highest Z-order determination for DiLink automotive display:
+        // Try TYPE_SYSTEM_ERROR (2010 - layer 261,000, higher than StatusBar 171,000)
+        // Fallback to TYPE_APPLICATION_OVERLAY (2038) if security rejects
+        val candidateTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            listOf(
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            )
         } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
+            listOf(
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR,
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
+            )
         }
 
-        // Default coordinates: Snap right after Kinex battery indicator (x=245, y=108)
+        // Default coordinates: Snap right after Kinex battery indicator (x=245, y=32)
         val savedX = sharedPreferences.getInt("overlay_x", 245)
         val savedY = sharedPreferences.getInt("overlay_y", 32)
 
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = savedX
-            y = savedY
+        var addedSuccessfully = false
+        for (layoutType in candidateTypes) {
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                layoutType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = savedX
+                y = savedY
+            }
+
+            try {
+                windowManager?.addView(overlayView, params)
+                windowParams = params
+                addedSuccessfully = true
+                android.util.Log.i("OverlayService", "Overlay window added with type: $layoutType")
+                break
+            } catch (e: Exception) {
+                android.util.Log.w("OverlayService", "Layout type $layoutType rejected: ${e.message}")
+            }
         }
-        windowParams = params
 
         // Drag & Drop
         val dragHandle: View = v.findViewById(R.id.tv_drag_handle) ?: v
@@ -225,7 +246,11 @@ class OverlayService : Service() {
                         }
                         if (isDragging) {
                             currentParams.x = initialX + dx
-                            currentParams.y = initialY + dy
+                            // Enforce safe inset: status bar is 84px high.
+                            // If user drags near the status bar, clamp to safe area (y >= 84)
+                            // so overlay never gets trapped behind system status bar icons
+                            val targetY = initialY + dy
+                            currentParams.y = if (targetY < 84) 84 else targetY
                             windowManager?.updateViewLayout(overlayView, currentParams)
                         }
                         return true
@@ -243,20 +268,28 @@ class OverlayService : Service() {
                 return false
             }
         })
-
-        try {
-            windowManager?.addView(overlayView, params)
-        } catch (e: Exception) {
-            android.util.Log.e("OverlayService", "Failed to add window: ${e.message}")
-        }
     }
 
     private fun resetPosition() {
         val params = windowParams ?: return
-        params.x = 245
-        params.y = 0 // Topmost status bar area
-        sharedPreferences.edit().putInt("overlay_x", 245).putInt("overlay_y", 0).apply()
-        windowManager?.updateViewLayout(overlayView, params)
+        val view = overlayView ?: return
+        val dm = resources.displayMetrics
+        val screenW = dm.widthPixels
+        val screenH = dm.heightPixels
+
+        // Center overlay on screen
+        val viewW = if (view.width > 0) view.width else (400 * dm.density).toInt()
+        val viewH = if (view.height > 0) view.height else (40 * dm.density).toInt()
+
+        val centerX = ((screenW - viewW) / 2).coerceAtLeast(20)
+        val centerY = ((screenH - viewH) / 2).coerceAtLeast(20)
+
+        params.x = centerX
+        params.y = centerY
+        sharedPreferences.edit().putInt("overlay_x", centerX).putInt("overlay_y", centerY).apply()
+        try {
+            windowManager?.updateViewLayout(overlayView, params)
+        } catch (_: Exception) {}
     }
 
     private fun applyUserFieldPreferences() {

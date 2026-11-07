@@ -228,9 +228,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnResetPos.setOnClickListener {
+            val dm = resources.displayMetrics
+            val centerX = (dm.widthPixels / 2) - 200
+            val centerY = (dm.heightPixels / 2) - 30
             val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
-            prefs.edit().putInt("overlay_x", 40).putInt("overlay_y", 40).apply()
-            Toast.makeText(this, "รีเซ็ตตำแหน่ง Overlay ไปที่มุมบนซ้ายแล้ว", Toast.LENGTH_SHORT).show()
+            prefs.edit().putInt("overlay_x", centerX).putInt("overlay_y", centerY).apply()
+            Toast.makeText(this, "🎯 รีเซ็ตตำแหน่ง Overlay มาไว้ตรงกลางจอแล้ว", Toast.LENGTH_SHORT).show()
             if (switchMaster.isChecked) {
                 val serviceIntent = Intent(this, OverlayService::class.java).apply {
                     action = OverlayService.ACTION_RESET_POSITION
