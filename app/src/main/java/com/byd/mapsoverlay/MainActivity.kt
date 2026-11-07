@@ -56,12 +56,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchBsdSound: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var btnTestBsdSound: MaterialButton
     private lateinit var rgBsdTone: android.widget.RadioGroup
-    private lateinit var rbToneGerman: android.widget.RadioButton
-    private lateinit var rbToneVolvo: android.widget.RadioButton
-    private lateinit var rbToneCockpit: android.widget.RadioButton
-    private lateinit var rbToneTesla: android.widget.RadioButton
-    private lateinit var rbToneLexus: android.widget.RadioButton
-    private lateinit var rbToneSonar: android.widget.RadioButton
+    private lateinit var rbToneLowBass: android.widget.RadioButton
+    private lateinit var rbToneLowDouble: android.widget.RadioButton
+    private lateinit var rbToneMidMercedes: android.widget.RadioButton
+    private lateinit var rbToneMidMarimba: android.widget.RadioButton
+    private lateinit var rbToneHighCrisp: android.widget.RadioButton
+    private lateinit var rbToneHighLaser: android.widget.RadioButton
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -120,12 +120,12 @@ class MainActivity : AppCompatActivity() {
         switchBsdSound = findViewById(R.id.switch_bsd_sound)
         btnTestBsdSound = findViewById(R.id.btn_test_bsd_sound)
         rgBsdTone = findViewById(R.id.rg_bsd_tone)
-        rbToneGerman = findViewById(R.id.rb_tone_german)
-        rbToneVolvo = findViewById(R.id.rb_tone_volvo)
-        rbToneCockpit = findViewById(R.id.rb_tone_cockpit)
-        rbToneTesla = findViewById(R.id.rb_tone_tesla)
-        rbToneLexus = findViewById(R.id.rb_tone_lexus)
-        rbToneSonar = findViewById(R.id.rb_tone_sonar)
+        rbToneLowBass = findViewById(R.id.rb_tone_low_bass)
+        rbToneLowDouble = findViewById(R.id.rb_tone_low_double)
+        rbToneMidMercedes = findViewById(R.id.rb_tone_mid_mercedes)
+        rbToneMidMarimba = findViewById(R.id.rb_tone_mid_marimba)
+        rbToneHighCrisp = findViewById(R.id.rb_tone_high_crisp)
+        rbToneHighLaser = findViewById(R.id.rb_tone_high_laser)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -161,12 +161,12 @@ class MainActivity : AppCompatActivity() {
         switchBsdSound.isChecked = VehicleOverlayConfig.isBsdSoundEnabled(this)
 
         when (VehicleOverlayConfig.getBsdSoundType(this)) {
-            "volvo" -> rbToneVolvo.isChecked = true
-            "cockpit" -> rbToneCockpit.isChecked = true
-            "tesla" -> rbToneTesla.isChecked = true
-            "lexus" -> rbToneLexus.isChecked = true
-            "sonar" -> rbToneSonar.isChecked = true
-            else -> rbToneGerman.isChecked = true
+            "low_bass" -> rbToneLowBass.isChecked = true
+            "low_double" -> rbToneLowDouble.isChecked = true
+            "mid_marimba" -> rbToneMidMarimba.isChecked = true
+            "high_crisp" -> rbToneHighCrisp.isChecked = true
+            "high_laser" -> rbToneHighLaser.isChecked = true
+            else -> rbToneMidMercedes.isChecked = true
         }
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
@@ -253,12 +253,12 @@ class MainActivity : AppCompatActivity() {
 
         rgBsdTone.setOnCheckedChangeListener { _, checkedId ->
             val toneKey = when (checkedId) {
-                R.id.rb_tone_volvo -> "volvo"
-                R.id.rb_tone_cockpit -> "cockpit"
-                R.id.rb_tone_tesla -> "tesla"
-                R.id.rb_tone_lexus -> "lexus"
-                R.id.rb_tone_sonar -> "sonar"
-                else -> "german"
+                R.id.rb_tone_low_bass -> "low_bass"
+                R.id.rb_tone_low_double -> "low_double"
+                R.id.rb_tone_mid_marimba -> "mid_marimba"
+                R.id.rb_tone_high_crisp -> "high_crisp"
+                R.id.rb_tone_high_laser -> "high_laser"
+                else -> "mid_mercedes"
             }
             VehicleOverlayConfig.setBsdSoundType(this, toneKey)
             BlindspotAudioChime.playToneDirect(toneKey)

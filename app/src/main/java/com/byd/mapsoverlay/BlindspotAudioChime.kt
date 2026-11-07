@@ -7,7 +7,8 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * BlindspotAudioChime (Zero-Resource / Instant Trigger with Multi-Tone Selection)
+ * BlindspotAudioChime (Zero-Resource / Instant Trigger with Full Spectrum Tone Selection)
+ * รองรับโทนเสียง ต่ำ - กลาง - สูง (Low, Mid, High Pitch)
  */
 object BlindspotAudioChime {
     private const val TAG = "BlindspotAudioChime"
@@ -34,7 +35,11 @@ object BlindspotAudioChime {
                 .setAudioAttributes(audioAttributes)
                 .build()
 
-            val toneKeys = listOf("german", "volvo", "cockpit", "tesla", "lexus", "sonar")
+            val toneKeys = listOf(
+                "low_bass", "low_double", 
+                "mid_marimba", "mid_mercedes", 
+                "high_crisp", "high_laser"
+            )
             for (key in toneKeys) {
                 val resId = context.resources.getIdentifier("bsd_$key", "raw", context.packageName)
                 if (resId != 0) {
@@ -44,15 +49,12 @@ object BlindspotAudioChime {
                     }
                 }
             }
-            Log.d(TAG, "Initialized SoundPool with ${soundMap.size} tone styles.")
+            Log.d(TAG, "Initialized SoundPool with ${soundMap.size} Low/Mid/High tones.")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to initialize SoundPool: ${t.message}")
         }
     }
 
-    /**
-     * สั่งเล่นเสียงตามประเภทที่ผู้ใช้เลือกไว้
-     */
     fun onBlindspotFlashingDetected(context: Context) {
         if (!VehicleOverlayConfig.isBsdSoundEnabled(context)) return
 
@@ -66,7 +68,7 @@ object BlindspotAudioChime {
 
     fun playToneDirect(type: String) {
         try {
-            val soundId = soundMap[type] ?: soundMap["german"] ?: return
+            val soundId = soundMap[type] ?: soundMap["mid_mercedes"] ?: soundMap.values.firstOrNull() ?: return
             soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
             Log.d(TAG, "Played Blindspot Warning Chime: $type")
         } catch (t: Throwable) {

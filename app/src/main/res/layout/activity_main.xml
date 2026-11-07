@@ -580,7 +580,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="🎵 เลือกสไตล์เสียงเตือน (Tone Style):"
+                        android:text="🎵 เลือกสเปกตรัมเสียงเตือน (ต่ำ / กลาง / สูง):"
                         android:textColor="#B0BEC5"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -592,53 +592,56 @@
                         android:layout_marginTop="4dp"
                         android:orientation="vertical">
 
+                        <!-- โทนต่ำ -->
                         <RadioButton
-                            android:id="@+id/rb_tone_german"
+                            android:id="@+id/rb_tone_low_bass"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1. German Solid (BMW / Audi ฮาร์โมนิกคู่ แน่นๆ)"
-                            android:textColor="#ECEFF1"
+                            android:text="🟢 [โทนต่ำ] 1. Deep Bass (380Hz ทุ้ม นุ่ม หนักแน่น สไตล์รถหรู)"
+                            android:textColor="#81C784"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_low_double"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟢 [โทนต่ำ] 2. Low Double Thump (ตุ้บ-ตุ้บ ทุ้ม 2 จังหวะ ไม่แสบหู)"
+                            android:textColor="#81C784"
+                            android:textSize="12sp" />
+
+                        <!-- โทนกลาง -->
+                        <RadioButton
+                            android:id="@+id/rb_tone_mid_mercedes"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🟡 [โทนกลาง] 3. Mercedes Warm Chord (780Hz อบอุ่น ฟังสบาย กลมกล่อม)"
+                            android:textColor="#FFD54F"
                             android:textSize="12sp"
                             android:checked="true" />
 
                         <RadioButton
-                            android:id="@+id/rb_tone_volvo"
+                            android:id="@+id/rb_tone_mid_marimba"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="2. European Dual-Chirp (Volvo ติ๊ด-ติ๊ด เร็ว 2 จังหวะ)"
-                            android:textColor="#ECEFF1"
+                            android:text="🟡 [โทนกลาง] 4. Acoustic Marimba (880Hz เสียงไม้ระนาดอุ่นๆ)"
+                            android:textColor="#FFD54F"
+                            android:textSize="12sp" />
+
+                        <!-- โทนสูง -->
+                        <RadioButton
+                            android:id="@+id/rb_tone_high_crisp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔴 [โทนสูง] 5. High Crisp Beep (2,100Hz คม ชัด พุ่งตรงเข้าหู)"
+                            android:textColor="#FF8A80"
                             android:textSize="12sp" />
 
                         <RadioButton
-                            android:id="@+id/rb_tone_cockpit"
+                            android:id="@+id/rb_tone_high_laser"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="3. Cockpit Master Caution (เสียงเครื่องบินรบ คมกริบ)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_tesla"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="4. High-Tech Bell (Tesla ระฆังแก้วไซไฟ นุ่มหู)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_lexus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="5. Japanese Buzzer (Toyota / Lexus บัซเซอร์คมชัด)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_sonar"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="6. Submarine Radar Sonar (คลื่นโซนาร์ไล่ความถี่)"
-                            android:textColor="#ECEFF1"
+                            android:text="🔴 [โทนสูง] 6. Dual Laser Chirp (2,400Hz เบิ้ลเร็ว ฉุกเฉินเด็ดขาด)"
+                            android:textColor="#FF8A80"
                             android:textSize="12sp" />
                     </RadioGroup>
                 </LinearLayout>
