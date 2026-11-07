@@ -7,22 +7,16 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * BlindspotAudioChime (Zero-Resource / Instant Trigger)
- * 
- * ดักเฉพาะจังหวะไฟเลี้ยวกระพริบเตือน (Mirror flashing with turn signal)
- * โดยใช้ SoundPool โหลดไฟล์ PCM สั้น (120ms) ไว้ล่วงหน้า
- * ไม่ใช้ Background polling loop และไม่ใช้ CPU เกิน 0.01%
+ * BlindspotAudioChime (Zero-Resource / Instant Trigger with Multi-Tone Selection)
  */
 object BlindspotAudioChime {
     private const val TAG = "BlindspotAudioChime"
 
     private var soundPool: SoundPool? = null
-    private var chimeSoundId: Int = 0
-    private var isLoaded: Boolean = false
+    private val soundMap = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private var lastPlayTimeMs: Long = 0L
-    private const val MIN_COOLDOWN_MS = 600L // ป้องกันเสียงซ้อนรัวเกินไป
+    private const val MIN_COOLDOWN_MS = 600L
 
-    // สถานะสังเกตการณ์
     @Volatile var isBsdActive: Boolean = false
     @Volatile var isTurnSignalActive: Boolean = false
 
@@ -36,50 +30,47 @@ object BlindspotAudioChime {
                 .build()
 
             soundPool = SoundPool.Builder()
-                .setMaxStreams(1)
+                .setMaxStreams(2)
                 .setAudioAttributes(audioAttributes)
                 .build()
 
-            soundPool?.setOnLoadCompleteListener { _, sampleId, status ->
-                if (status == 0) {
-                    isLoaded = true
-                    Log.d(TAG, "SoundPool loaded chime sample: $sampleId")
+            val toneKeys = listOf("german", "volvo", "cockpit", "tesla", "lexus", "sonar")
+            for (key in toneKeys) {
+                val resId = context.resources.getIdentifier("bsd_$key", "raw", context.packageName)
+                if (resId != 0) {
+                    val id = soundPool?.load(context, resId, 1) ?: 0
+                    if (id != 0) {
+                        soundMap[key] = id
+                    }
                 }
             }
-
-            val resId = context.resources.getIdentifier("bsd_chime", "raw", context.packageName)
-            if (resId != 0) {
-                chimeSoundId = soundPool?.load(context, resId, 1) ?: 0
-            } else {
-                Log.w(TAG, "bsd_chime.wav resource not found")
-            }
+            Log.d(TAG, "Initialized SoundPool with ${soundMap.size} tone styles.")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to initialize SoundPool: ${t.message}")
         }
     }
 
     /**
-     * เรียกเมื่อมีสัญญาณไฟกระพริบเตือนจุดอับสายตา
+     * สั่งเล่นเสียงตามประเภทที่ผู้ใช้เลือกไว้
      */
     fun onBlindspotFlashingDetected(context: Context) {
-        if (!VehicleOverlayConfig.isBsdSoundEnabled(context)) {
-            return
-        }
+        if (!VehicleOverlayConfig.isBsdSoundEnabled(context)) return
 
         val now = SystemClock.uptimeMillis()
-        if (now - lastPlayTimeMs < MIN_COOLDOWN_MS) {
-            return // ยังอยู่ใน Cooldown
-        }
-
+        if (now - lastPlayTimeMs < MIN_COOLDOWN_MS) return
         lastPlayTimeMs = now
 
+        val selectedType = VehicleOverlayConfig.getBsdSoundType(context)
+        playToneDirect(selectedType)
+    }
+
+    fun playToneDirect(type: String) {
         try {
-            if (isLoaded && chimeSoundId != 0) {
-                soundPool?.play(chimeSoundId, 1.0f, 1.0f, 1, 0, 1.0f)
-                Log.d(TAG, "Played Blindspot Warning Chime")
-            }
+            val soundId = soundMap[type] ?: soundMap["german"] ?: return
+            soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
+            Log.d(TAG, "Played Blindspot Warning Chime: $type")
         } catch (t: Throwable) {
-            Log.e(TAG, "Error playing sound chime: ${t.message}")
+            Log.e(TAG, "Error playing sound: ${t.message}")
         }
     }
 
@@ -87,8 +78,7 @@ object BlindspotAudioChime {
         try {
             soundPool?.release()
             soundPool = null
-            isLoaded = false
-            chimeSoundId = 0
+            soundMap.clear()
         } catch (t: Throwable) {
             Log.w(TAG, "Error releasing SoundPool: ${t.message}")
         }

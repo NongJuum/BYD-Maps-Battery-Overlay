@@ -41,6 +41,7 @@ object VehicleOverlayConfig {
 
     // หมวด 5: ระบบเตือนความปลอดภัย (Safety Chime)
     const val KEY_BSD_SOUND_ENABLED = "pref_bsd_sound_enabled"
+    const val KEY_BSD_SOUND_TYPE = "pref_bsd_sound_type" // "german", "volvo", "cockpit", "tesla", "lexus", "sonar"
 
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -97,4 +98,7 @@ object VehicleOverlayConfig {
 
     fun isBsdSoundEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_BSD_SOUND_ENABLED, true)
     fun setBsdSoundEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_BSD_SOUND_ENABLED, enabled).apply()
+
+    fun getBsdSoundType(context: Context): String = prefs(context).getString(KEY_BSD_SOUND_TYPE, "german") ?: "german"
+    fun setBsdSoundType(context: Context, type: String) = prefs(context).edit().putString(KEY_BSD_SOUND_TYPE, type).apply()
 }

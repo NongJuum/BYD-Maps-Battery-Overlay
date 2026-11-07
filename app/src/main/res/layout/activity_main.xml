@@ -574,6 +574,73 @@
                         android:textSize="12sp"
                         app:cornerRadius="10dp"
                         app:backgroundTint="#37474F" />
+
+                    <!-- Sound Tone Selector RadioGroup -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="🎵 เลือกสไตล์เสียงเตือน (Tone Style):"
+                        android:textColor="#B0BEC5"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/rg_bsd_tone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="vertical">
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_german"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1. German Solid (BMW / Audi ฮาร์โมนิกคู่ แน่นๆ)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp"
+                            android:checked="true" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_volvo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2. European Dual-Chirp (Volvo ติ๊ด-ติ๊ด เร็ว 2 จังหวะ)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_cockpit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="3. Cockpit Master Caution (เสียงเครื่องบินรบ คมกริบ)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_tesla"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="4. High-Tech Bell (Tesla ระฆังแก้วไซไฟ นุ่มหู)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_lexus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="5. Japanese Buzzer (Toyota / Lexus บัซเซอร์คมชัด)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_tone_sonar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="6. Submarine Radar Sonar (คลื่นโซนาร์ไล่ความถี่)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+                    </RadioGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
