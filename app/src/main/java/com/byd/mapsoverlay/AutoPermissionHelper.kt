@@ -27,7 +27,7 @@ object AutoPermissionHelper {
     private const val DAEMON_PORT = 19890
     private const val DAEMON_NAME = "bydtelemetry"
     private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
-    private const val RETRY_INTERVAL_MS = 15_000L
+    private const val RETRY_INTERVAL_MS = 60_000L
 
     private val launchInFlight = AtomicBoolean(false)
     @Volatile private var lastLaunchAttemptMs = 0L
@@ -115,6 +115,12 @@ object AutoPermissionHelper {
                       BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
                       BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
                       BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
+                      BYDAUTO_AC_COMMON BYDAUTO_AC_GET BYDAUTO_AC_SET \
+                      BYDAUTO_SENSOR_COMMON BYDAUTO_SENSOR_GET BYDAUTO_SENSOR_SET \
+                      BYDAUTO_ADAS_COMMON BYDAUTO_ADAS_GET \
+                      BYDAUTO_LIGHT_COMMON BYDAUTO_LIGHT_GET \
+                      BYDAUTO_REMINDER_COMMON BYDAUTO_REMINDER_GET \
+                      BYDAUTO_TYRE_COMMON BYDAUTO_TYRE_GET \
                       BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
                       pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                     done

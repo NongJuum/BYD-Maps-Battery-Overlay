@@ -19,7 +19,7 @@
         android:layout_height="wrap_content"
         android:text="⋮⋮"
         android:textColor="#546E7A"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:paddingEnd="6dp" />
 
     <!-- 1. ระดับแบตเตอรี่ปัจจุบัน (Current SoC) -->
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:text="--%"
             android:textColor="#69F0AE"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -51,8 +51,8 @@
         android:id="@+id/divider_v2_1"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 2. พลังงานแบตเตอรี่คงเหลือจริง (Remaining kWh จาก BMS) -->
@@ -76,7 +76,7 @@
             android:layout_height="wrap_content"
             android:text="-- kWh"
             android:textColor="#00E676"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -84,8 +84,8 @@
         android:id="@+id/divider_v2_2"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 3. ระยะทางวิ่งได้จริง (Real Range) -->
@@ -109,7 +109,7 @@
             android:layout_height="wrap_content"
             android:text="-- km"
             android:textColor="#40C4FF"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -117,8 +117,8 @@
         android:id="@+id/divider_v2_dash_range"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF"
         android:visibility="gone" />
 
@@ -144,7 +144,7 @@
             android:layout_height="wrap_content"
             android:text="-- km"
             android:textColor="#80D8FF"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -152,8 +152,8 @@
         android:id="@+id/divider_v2_hv_temp"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 3C. อุณหภูมิแบตเตอรี่ลูกใหญ่ (HV Main Battery Temp) -->
@@ -178,7 +178,7 @@
             android:layout_height="wrap_content"
             android:text="29°C"
             android:textColor="#FFAB40"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -186,8 +186,8 @@
         android:id="@+id/divider_v2_cell_volt"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF"
         android:visibility="gone" />
 
@@ -213,7 +213,7 @@
             android:layout_height="wrap_content"
             android:text="3.32V"
             android:textColor="#EA80FC"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -221,8 +221,8 @@
         android:id="@+id/divider_v2_3"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 4. อัตราสิ้นเปลืองสด 50km (Consumption) -->
@@ -246,7 +246,7 @@
             android:layout_height="wrap_content"
             android:text="--.-"
             android:textColor="#FFD54F"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -254,8 +254,8 @@
         android:id="@+id/divider_v2_inst_power"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF"
         android:visibility="gone" />
 
@@ -282,7 +282,7 @@
             android:layout_height="wrap_content"
             android:text="0.0 kW"
             android:textColor="#FFD740"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -290,17 +290,18 @@
         android:id="@+id/divider_v2_4"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
-    <!-- 5. อุณหภูมิห้องโดยสาร (Cabin Temp) -->
+    <!-- 5. อุณหภูมิห้องโดยสาร (ปิดการแสดงผล) -->
     <LinearLayout
         android:id="@+id/container_v2_cabin_temp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -315,7 +316,7 @@
             android:layout_height="wrap_content"
             android:text="25°C"
             android:textColor="#80D8FF"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -323,10 +324,9 @@
         android:id="@+id/divider_v2_out_temp"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
-        android:background="#26FFFFFF"
-        android:visibility="gone" />
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
+        android:background="#26FFFFFF" />
 
     <!-- 5B. อุณหภูมิภายนอกรถ (Outside Temp) -->
     <LinearLayout
@@ -334,8 +334,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="wrap_content"
@@ -350,7 +349,7 @@
             android:layout_height="wrap_content"
             android:text="31°C"
             android:textColor="#FFE082"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -358,8 +357,8 @@
         android:id="@+id/divider_v2_5"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 6. สุขภาพแบตเตอรี่ (SOH) -->
@@ -383,7 +382,7 @@
             android:layout_height="wrap_content"
             android:text="100%"
             android:textColor="#B388FF"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -391,8 +390,8 @@
         android:id="@+id/divider_v2_6"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 7. แบตเตอรี่ลูกเล็ก 12V Aux -->
@@ -417,7 +416,7 @@
             android:layout_height="wrap_content"
             android:text="13.8V"
             android:textColor="#69F0AE"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -425,8 +424,8 @@
         android:id="@+id/divider_v2_tpms"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF"
         android:visibility="gone" />
 
@@ -452,7 +451,7 @@
             android:layout_height="wrap_content"
             android:text="250 kPa"
             android:textColor="#80CBC4"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -460,8 +459,8 @@
         android:id="@+id/divider_v2_odo"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF"
         android:visibility="gone" />
 
@@ -487,7 +486,7 @@
             android:layout_height="wrap_content"
             android:text="-- km"
             android:textColor="#B0BEC5"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -495,8 +494,8 @@
         android:id="@+id/divider_v2_7"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="3dp"
         android:background="#26FFFFFF" />
 
     <!-- 8. เกียร์และความเร็ว (Gear / Speed) -->
@@ -513,7 +512,7 @@
             android:layout_height="wrap_content"
             android:text="P"
             android:textColor="#FFAB40"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold"
             android:paddingEnd="3dp" />
 
@@ -523,7 +522,7 @@
             android:layout_height="wrap_content"
             android:text="0 km/h"
             android:textColor="#FFFFFF"
-            android:textSize="13sp"
+            android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 

@@ -16,6 +16,7 @@ object VehicleOverlayConfig {
     const val KEY_SHOW_REAL_RANGE = "pref_show_real_range"
     const val KEY_SHOW_DASHBOARD_RANGE = "pref_show_dashboard_range"
     const val KEY_SHOW_HV_BATT_TEMP = "pref_show_hv_batt_temp"
+    const val KEY_HV_BATT_TEMP_MODE = "pref_hv_batt_temp_mode" // "avg", "max", "min", "max_min"
     const val KEY_SHOW_CELL_VOLTAGE = "pref_show_cell_voltage"
     const val KEY_SHOW_BATTERY_SOH = "pref_show_battery_soh"
     const val KEY_SHOW_12V = "pref_show_12v"
@@ -31,6 +32,7 @@ object VehicleOverlayConfig {
     const val KEY_SHOW_CABIN_TEMP = "pref_show_cabin_temp"
     const val KEY_SHOW_OUTSIDE_TEMP = "pref_show_outside_temp"
     const val KEY_SHOW_TPMS_PRESSURE = "pref_show_tpms_pressure"
+    const val KEY_TPMS_UNIT = "pref_tpms_unit" // "kpa" or "psi"
 
     // การปรับแต่งหน้าต่าง Overlay
     const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 0 - 100%
@@ -40,6 +42,7 @@ object VehicleOverlayConfig {
     // หมวด 5: ระบบเตือนความปลอดภัย (Safety Chime)
     const val KEY_BSD_SOUND_ENABLED = "pref_bsd_sound_enabled"
     const val KEY_BSD_SOUND_TYPE = "pref_bsd_sound_type" // "tone_1" to "tone_10"
+    const val KEY_BSD_PULSE_INTERVAL = "pref_bsd_pulse_interval" // milliseconds: 350, 420, 500, 600
 
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -60,6 +63,9 @@ object VehicleOverlayConfig {
 
     fun isShowHvBattTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_HV_BATT_TEMP, true)
     fun setShowHvBattTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_HV_BATT_TEMP, value).apply()
+
+    fun getHvBattTempMode(context: Context): String = prefs(context).getString(KEY_HV_BATT_TEMP_MODE, "max_min") ?: "max_min"
+    fun setHvBattTempMode(context: Context, mode: String) = prefs(context).edit().putString(KEY_HV_BATT_TEMP_MODE, mode).apply()
 
     fun isShowCellVoltage(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CELL_VOLTAGE, false)
     fun setShowCellVoltage(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CELL_VOLTAGE, value).apply()
@@ -87,14 +93,17 @@ object VehicleOverlayConfig {
     fun setShowOdo(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_ODO, value).apply()
 
     // หมวด 3: อุณหภูมิและยาง
-    fun isShowCabinTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CABIN_TEMP, true)
+    fun isShowCabinTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CABIN_TEMP, false)
     fun setShowCabinTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CABIN_TEMP, value).apply()
 
-    fun isShowOutsideTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_OUTSIDE_TEMP, false)
+    fun isShowOutsideTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_OUTSIDE_TEMP, true)
     fun setShowOutsideTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_OUTSIDE_TEMP, value).apply()
 
     fun isShowTpmsPressure(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_TPMS_PRESSURE, false)
     fun setShowTpmsPressure(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_TPMS_PRESSURE, value).apply()
+
+    fun getTpmsUnit(context: Context): String = prefs(context).getString(KEY_TPMS_UNIT, "psi") ?: "psi"
+    fun setTpmsUnit(context: Context, unit: String) = prefs(context).edit().putString(KEY_TPMS_UNIT, unit).apply()
 
     // การปรับแต่งทั่วไป
     fun getOpacity(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_OPACITY, 85)
@@ -111,4 +120,7 @@ object VehicleOverlayConfig {
 
     fun getBsdSoundType(context: Context): String = prefs(context).getString(KEY_BSD_SOUND_TYPE, "tone_4") ?: "tone_4"
     fun setBsdSoundType(context: Context, type: String) = prefs(context).edit().putString(KEY_BSD_SOUND_TYPE, type).apply()
+
+    fun getBsdPulseIntervalMs(context: Context): Long = prefs(context).getLong(KEY_BSD_PULSE_INTERVAL, 420L)
+    fun setBsdPulseIntervalMs(context: Context, intervalMs: Long) = prefs(context).edit().putLong(KEY_BSD_PULSE_INTERVAL, intervalMs.coerceIn(250L, 1000L)).apply()
 }

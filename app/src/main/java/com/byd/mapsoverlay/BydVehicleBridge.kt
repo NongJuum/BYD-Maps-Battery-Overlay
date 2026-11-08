@@ -59,7 +59,9 @@ class BydVehicleBridge(
         private set
 
     // Temperatures, 12V, Driving, TPMS
-    var cabinTemperatureC: Int = 25
+    var cabinTemperatureC: Int = 28 // อุณหภูมิจริงในห้องโดยสาร (Real Indoor Sensor °C)
+        private set
+    var acSetpointTemperatureC: Int = 24 // อุณหภูมิแอร์ที่ตั้งไว้ (AC Setpoint °C)
         private set
     var outsideTemperatureC: Int = 31
         private set
@@ -73,8 +75,37 @@ class BydVehicleBridge(
         private set
     var totalMileageKm: Double = 0.0
         private set
+    var tpmsFlKpa: Int = 270
+        private set
+    var tpmsFrKpa: Int = 266
+        private set
+    var tpmsRlKpa: Int = 269
+        private set
+    var tpmsRrKpa: Int = 266
+        private set
     var tpmsSummary: String = "-- kPa"
         private set
+
+    fun getFormattedTpms(unit: String): String {
+        return if (unit.lowercase() == "psi") {
+            val flPsi = (tpmsFlKpa * 0.1450377).roundToInt()
+            val frPsi = (tpmsFrKpa * 0.1450377).roundToInt()
+            val rlPsi = (tpmsRlKpa * 0.1450377).roundToInt()
+            val rrPsi = (tpmsRrKpa * 0.1450377).roundToInt()
+            "$flPsi/$frPsi/$rlPsi/$rrPsi psi"
+        } else {
+            "$tpmsFlKpa/$tpmsFrKpa/$tpmsRlKpa/$tpmsRrKpa kPa"
+        }
+    }
+
+    fun getFormattedHvBattTemp(mode: String): String {
+        return when (mode.lowercase()) {
+            "max" -> String.format("%.0f°C (Max)", hvBattTempMaxC)
+            "min" -> String.format("%.0f°C (Min)", hvBattTempMinC)
+            "avg" -> String.format("%.0f°C", hvBattTempAvgC)
+            else -> String.format("%.0f/%.0f°C", hvBattTempMaxC, hvBattTempMinC)
+        }
+    }
 
     var detectedVehicleModel: String = "BYD Dolphin (Live Connected)"
         private set
@@ -90,6 +121,11 @@ class BydVehicleBridge(
     private var registeredAdasListener: Any? = null
     private var registeredLightListener: Any? = null
 
+    @Volatile private var isLeftTurnActive = false
+    @Volatile private var isRightTurnActive = false
+    @Volatile private var isLeftDangerActive = false
+    @Volatile private var isRightDangerActive = false
+
     fun startListening() {
         HiddenApiBypass.exemptAll()
         AutoPermissionHelper.ensureTelemetryDaemon(context)
@@ -103,9 +139,11 @@ class BydVehicleBridge(
         executor?.scheduleWithFixedDelay({
             try {
                 tickCount++
-                if (tickCount % 4 == 1) {
+                if (tickCount % 6 == 1) {
                     applyUserVehicleProfile()
-                    AutoPermissionHelper.ensureTelemetryDaemon(context)
+                    if (!isDaemonConnected) {
+                        AutoPermissionHelper.ensureTelemetryDaemon(context)
+                    }
                     pollDirectBydHardwareApi()
                     pollCabinTemperature()
                 }
@@ -230,6 +268,21 @@ class BydVehicleBridge(
     }
 
     private fun pollCabinTemperature() {
+        // 1. Try real indoor temperature sensor first (BYDAutoSensorDevice.getTemperatureSensorValue)
+        try {
+            val sensorCls = Class.forName("android.hardware.bydauto.sensor.BYDAutoSensorDevice")
+            val sensorDev = obtainDeviceInstance(sensorCls)
+            if (sensorDev != null) {
+                val m = sensorCls.getMethod("getTemperatureSensorValue")
+                m.isAccessible = true
+                val realT = (m.invoke(sensorDev) as? Number)?.toDouble()
+                if (realT != null && realT in 1.0..70.0) {
+                    cabinTemperatureC = realT.roundToInt()
+                }
+            }
+        } catch (_: Throwable) {}
+
+        // 2. Also read AC setpoint temperature and indoor cabin temperature
         try {
             val acCls = Class.forName("android.hardware.bydauto.ac.BYDAutoAcDevice")
             val wrappedCtx = BydPermissionContext.wrap(context)
@@ -244,9 +297,15 @@ class BydVehicleBridge(
             if (dev != null) {
                 val method = acCls.getMethod("getTemprature", Int::class.javaPrimitiveType)
                 method.isAccessible = true
-                val t = (method.invoke(dev, 1) as? Number)?.toInt() ?: 25
-                if (t in 15..45) {
-                    cabinTemperatureC = t
+                val tSet = (method.invoke(dev, 1) as? Number)?.toInt()
+                if (tSet != null && tSet in 15..35) {
+                    acSetpointTemperatureC = tSet
+                }
+                val tCabin = (method.invoke(dev, 3) as? Number)?.toInt()
+                if (tCabin != null && tCabin in 10..55) {
+                    cabinTemperatureC = tCabin
+                } else if (cabinTemperatureC == null && tSet != null) {
+                    cabinTemperatureC = tSet
                 }
             }
         } catch (_: Throwable) {}
@@ -315,6 +374,8 @@ class BydVehicleBridge(
                 val aux12 = json.optDouble("aux12v", -1.0)
 
                 val cabinT = json.optInt("cabinTempC", -100)
+                val realCabinT = json.optDouble("realCabinSensorTempC", -100.0)
+                val acSetT = json.optInt("acSetpointTempC", -100)
                 val outT = json.optInt("outsideTempC", -100)
                 val spd = json.optInt("speedKmh", -1)
                 val gearC = json.optInt("gearCode", -1)
@@ -352,8 +413,15 @@ class BydVehicleBridge(
                     aux12vVoltage = (aux12 * 10.0).roundToInt() / 10.0
                     changed = true
                 }
-                if (cabinT in 10..50) {
+                if (realCabinT in 1.0..70.0) {
+                    cabinTemperatureC = realCabinT.roundToInt()
+                    changed = true
+                } else if (cabinT in 1..70) {
                     cabinTemperatureC = cabinT
+                    changed = true
+                }
+                if (acSetT in 14..45) {
+                    acSetpointTemperatureC = acSetT
                     changed = true
                 }
                 if (outT in -30..65) {
@@ -384,27 +452,34 @@ class BydVehicleBridge(
                     val rl = tpmsObj.optInt("rl", 0)
                     val rr = tpmsObj.optInt("rr", 0)
                     if (fl > 0 || fr > 0 || rl > 0 || rr > 0) {
-                        tpmsSummary = "$fl/$fr/$rl/$rr kPa"
+                        if (fl > 0) tpmsFlKpa = fl
+                        if (fr > 0) tpmsFrKpa = fr
+                        if (rl > 0) tpmsRlKpa = rl
+                        if (rr > 0) tpmsRrKpa = rr
+                        tpmsSummary = getFormattedTpms(VehicleOverlayConfig.getTpmsUnit(context))
                         changed = true
                     }
                 }
 
-                // Check fast BSD + Turn Signal + Cluster Alarm state from UID 2000 daemon
-                val bsdState = json.optInt("bsdState", 0)
-                val turnFlash = json.optInt("turnFlashState", 0)
-                val turnLight = json.optInt("turnLightState", 0)
-                val clusterBuzzle = json.optInt("clusterBuzzleState", 0)
-                val clusterSoundFreq = json.optInt("clusterSoundFreq", 0)
-                val bsdAlertActive = json.optBoolean("bsdAlertActive", false)
+                // STRICT DIRECTIONAL RULE:
+                // Only trigger BSM Chime when signaling towards the side where obstacle is present!
+                val daemonLeftTurn = json.optBoolean("isLeftTurn", false) || (json.optInt("turnFlashState", 0) in 2..3 || json.optInt("turnLightState", 0) in 2..3)
+                val daemonRightTurn = json.optBoolean("isRightTurn", false) || (json.optInt("turnFlashState", 0) in 4..5 || json.optInt("turnLightState", 0) in 4..5)
+                val daemonLeftDanger = json.optBoolean("isLeftDanger", false) || json.optInt("dowWarnLeft", 0) > 0 || json.optInt("leftMirrorStatus", 0) > 0
+                val daemonRightDanger = json.optBoolean("isRightDanger", false) || json.optInt("dowWarnRight", 0) > 0 || json.optInt("rightMirrorStatus", 0) > 0
 
-                if (bsdState > 0) BlindspotAudioChime.isBsdActive = true
-                val turnOn = (turnFlash in 2..6 || turnFlash == 9 || turnLight in 2..5)
-                if (turnOn) BlindspotAudioChime.isTurnSignalActive = true
-                BlindspotAudioChime.isClusterAlarmActive = (clusterBuzzle == 1 || clusterSoundFreq > 0)
+                isLeftTurnActive = daemonLeftTurn
+                isRightTurnActive = daemonRightTurn
+                isLeftDangerActive = daemonLeftDanger
+                isRightDangerActive = daemonRightDanger
 
-                if (bsdAlertActive || (bsdState > 0 && turnOn)) {
-                    BlindspotAudioChime.onBlindspotFlashingDetected(context)
-                }
+                BlindspotAudioChime.updateBsmState(
+                    leftTurn = daemonLeftTurn,
+                    rightTurn = daemonRightTurn,
+                    leftDanger = daemonLeftDanger,
+                    rightDanger = daemonRightDanger,
+                    context = context
+                )
 
                 if (changed) {
                     recalculateRealTelemetry()
@@ -453,8 +528,14 @@ class BydVehicleBridge(
                 if (adasDevice != null) {
                     val adasListener = object : android.hardware.bydauto.adas.AbsBYDAutoADASListener() {
                         override fun onBSDStateChanged(state: Int) {
-                            BlindspotAudioChime.isBsdActive = (state > 0)
-                            checkAndTriggerChime()
+                            // state: 1=standby/clear, >=2=hazard
+                            if (state < 2) {
+                                isLeftDangerActive = false
+                                isRightDangerActive = false
+                                checkAndTriggerChime()
+                            }
+                            // NOTE: AbsBYDAutoADASListener.onBSDStateChanged does NOT specify direction (left vs right).
+                            // directional isolation is strictly enforced by BydTelemetryDaemon using DOW & mirror registers.
                         }
                     }
                     val regMethod = adasClass.methods.firstOrNull {
@@ -472,14 +553,19 @@ class BydVehicleBridge(
                 if (lightDevice != null) {
                     val lightListener = object : android.hardware.bydauto.light.AbsBYDAutoLightListener() {
                         override fun onTurnLightFlashStateChanged(state: Int) {
-                            val isFlashing = state in listOf(2, 3, 4, 5, 6, 9)
-                            BlindspotAudioChime.isTurnSignalActive = isFlashing
-                            checkAndTriggerChime()
+                            // Flash bulb toggles between (2/3 or 4/5) and 1 (dark phase).
+                            // Only trigger when active flash is present to avoid resetting during dark phase.
+                            if (state in 2..5) {
+                                isLeftTurnActive = (state == 2 || state == 3)
+                                isRightTurnActive = (state == 4 || state == 5)
+                                checkAndTriggerChime()
+                            }
                         }
 
                         override fun onTurnLightStateChanged(state: Int) {
-                            val isOn = state in 2..5
-                            BlindspotAudioChime.isTurnSignalActive = isOn
+                            // Physical turn lever stalk position (stays solid 2/3 or 4/5 while switch is engaged)
+                            isLeftTurnActive = (state == 2 || state == 3)
+                            isRightTurnActive = (state == 4 || state == 5)
                             checkAndTriggerChime()
                         }
                     }
@@ -497,9 +583,13 @@ class BydVehicleBridge(
     }
 
     private fun checkAndTriggerChime() {
-        if (BlindspotAudioChime.isBsdActive && BlindspotAudioChime.isTurnSignalActive) {
-            BlindspotAudioChime.onBlindspotFlashingDetected(context)
-        }
+        BlindspotAudioChime.updateBsmState(
+            leftTurn = isLeftTurnActive,
+            rightTurn = isRightTurnActive,
+            leftDanger = isLeftDangerActive,
+            rightDanger = isRightDangerActive,
+            context = context
+        )
     }
 
     private fun unregisterSafetyListeners() {

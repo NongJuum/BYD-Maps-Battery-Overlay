@@ -91,41 +91,7 @@
         android:background="#26FFFFFF"
         android:visibility="gone" />
 
-    <!-- 3. ระยะทางรวม Maps (ซ่อนตามค่าเริ่มต้นสำหรับโหมดคอมแพค) -->
-    <LinearLayout
-        android:id="@+id/container_maps_distance"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📍"
-            android:textSize="13sp"
-            android:paddingEnd="3dp" />
-
-        <TextView
-            android:id="@+id/tv_maps_distance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="-- km"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <!-- เส้นคั่น 3 -->
-    <View
-        android:id="@+id/divider_3"
-        android:layout_width="1dp"
-        android:layout_height="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:background="#26FFFFFF"
-        android:visibility="gone" />
 
     <!-- 4. อัตราสิ้นเปลือง -->
     <LinearLayout

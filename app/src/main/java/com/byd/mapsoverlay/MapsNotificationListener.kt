@@ -361,24 +361,7 @@ class MapsNotificationListener : NotificationListenerService() {
 
     companion object {
         fun requestRebindIfDisconnected(context: android.content.Context) {
-            val componentName = android.content.ComponentName(context, MapsNotificationListener::class.java)
-            try {
-                context.packageManager.setComponentEnabledSetting(
-                    componentName,
-                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                    android.content.pm.PackageManager.DONT_KILL_APP
-                )
-                context.packageManager.setComponentEnabledSetting(
-                    componentName,
-                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                    android.content.pm.PackageManager.DONT_KILL_APP
-                )
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                    requestRebind(componentName)
-                }
-            } catch (e: Exception) {
-                Log.w("MapsNotification", "Rebind error", e)
-            }
+            // Disabled: Google Maps navigation notification interception removed
         }
     }
 }

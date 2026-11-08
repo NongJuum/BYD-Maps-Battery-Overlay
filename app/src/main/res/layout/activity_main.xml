@@ -324,7 +324,7 @@
                             <TextView android:id="@+id/tv_dash_consumption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kWh" android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold"/>
                         </LinearLayout>
 
-                        <!-- 8. Cabin Temp -->
+                        <!-- 8. Real Indoor Cabin Temp -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -333,8 +333,8 @@
                             android:background="#1B2332"
                             android:padding="9dp"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="แอร์ในรถ / นอกรถ" android:textColor="#90A4AE" android:textSize="10sp"/>
-                            <TextView android:id="@+id/tv_dash_cabin_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="25°C" android:textColor="#80D8FF" android:textSize="15sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="อุณหภูมิภายนอกรถ" android:textColor="#90A4AE" android:textSize="10sp"/>
+                            <TextView android:id="@+id/tv_dash_cabin_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="31°C" android:textColor="#FFE082" android:textSize="15sp" android:textStyle="bold"/>
                         </LinearLayout>
 
                         <!-- 9. 12V Battery -->
@@ -428,11 +428,71 @@
                         android:id="@+id/switch_show_hv_batt_temp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🌡️ อุณหภูมิแบตเตอรี่ลูกใหญ่ (HV Battery Temp Max/Min °C)"
+                        android:text="🌡️ อุณหภูมิแบตเตอรี่ลูกใหญ่ (HV Battery Temp °C)"
                         android:textColor="#FFAB40"
                         android:textStyle="bold"
                         android:showText="false"
                         android:checked="true" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="12dp"
+                        android:paddingBottom="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="รูปแบบค่าอุณหภูมิแบตใหญ่:"
+                            android:textColor="#B0BEC5"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="8dp" />
+
+                        <RadioGroup
+                            android:id="@+id/rg_hv_temp_mode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <RadioButton
+                                android:id="@+id/rb_hv_temp_max_min"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="คู่ Max/Min"
+                                android:textColor="#FFAB40"
+                                android:textSize="11sp"
+                                android:checked="true" />
+
+                            <RadioButton
+                                android:id="@+id/rb_hv_temp_avg"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:text="เฉลี่ย (Avg)"
+                                android:textColor="#ECEFF1"
+                                android:textSize="11sp" />
+
+                            <RadioButton
+                                android:id="@+id/rb_hv_temp_max"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:text="สูงสุด (Max)"
+                                android:textColor="#ECEFF1"
+                                android:textSize="11sp" />
+
+                            <RadioButton
+                                android:id="@+id/rb_hv_temp_min"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:text="ต่ำสุด (Min)"
+                                android:textColor="#ECEFF1"
+                                android:textSize="11sp" />
+                        </RadioGroup>
+                    </LinearLayout>
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_cell_volt"
@@ -505,10 +565,11 @@
                         android:id="@+id/switch_show_cabin_temp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="❄️ อุณหภูมิแอร์ห้องโดยสาร (Cabin Temp °C)"
+                        android:text="❄️ อุณหภูมิแอร์ตั้งไว้ (AC Setpoint °C)"
                         android:textColor="#ECEFF1"
                         android:showText="false"
-                        android:checked="true" />
+                        android:checked="false"
+                        android:visibility="gone" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_out_temp"
@@ -516,15 +577,58 @@
                         android:layout_height="wrap_content"
                         android:text="🌤️ อุณหภูมิภายนอกรถ (Outside Temp °C)"
                         android:textColor="#ECEFF1"
-                        android:showText="false" />
+                        android:showText="false"
+                        android:checked="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_tpms"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🛞 แรงดันลมยาง 4 ล้อ (TPMS Pressure kPa)"
+                        android:text="🛞 แรงดันลมยาง 4 ล้อ (TPMS 4-Wheel Pressure)"
                         android:textColor="#ECEFF1"
                         android:showText="false" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="12dp"
+                        android:paddingBottom="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="หน่วยแรงดันลมยาง:"
+                            android:textColor="#B0BEC5"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="8dp" />
+
+                        <RadioGroup
+                            android:id="@+id/rg_tpms_unit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <RadioButton
+                                android:id="@+id/rb_tpms_psi"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="PSI (เช่น 39 psi)"
+                                android:textColor="#80CBC4"
+                                android:textSize="11sp"
+                                android:checked="true" />
+
+                            <RadioButton
+                                android:id="@+id/rb_tpms_kpa"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:text="kPa (เช่น 270 kPa)"
+                                android:textColor="#ECEFF1"
+                                android:textSize="11sp" />
+                        </RadioGroup>
+                    </LinearLayout>
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_odo"
@@ -832,6 +936,60 @@
                             android:text="🔴 10. Euro ADAS Cockpit (1.6k+2.1k ฮาร์โมนิกคู่ ชัดแม้เปิดเพลงดัง)"
                             android:textColor="#FF8A80"
                             android:textSize="12sp" />
+                    </RadioGroup>
+
+                    <!-- Cadence / Frequency of Repeating Chime -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="⏱️ ความถี่จังหวะเสียงเตือนกระพริบ (Pulsing Rhythm):"
+                        android:textColor="#B0BEC5"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/rg_bsd_interval"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/rb_interval_350"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚡ เร็ว (350ms)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="11sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_interval_420"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="⏱️ ปกติ (420ms)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="11sp"
+                            android:checked="true" />
+
+                        <RadioButton
+                            android:id="@+id/rb_interval_500"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="🔔 ช้า (500ms)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="11sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_interval_600"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="🐢 ช้ามาก (600ms)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="11sp" />
                     </RadioGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

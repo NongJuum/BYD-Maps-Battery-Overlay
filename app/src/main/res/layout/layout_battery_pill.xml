@@ -90,39 +90,7 @@
         android:layout_marginEnd="10dp"
         android:background="#26FFFFFF" />
 
-    <!-- 3. ระยะทางรวมไปจุดปลายทางตาม Google Maps (Total Nav Distance) -->
-    <LinearLayout
-        android:id="@+id/container_maps_distance"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📍"
-            android:textSize="13sp"
-            android:paddingEnd="4dp" />
-
-        <TextView
-            android:id="@+id/tv_maps_distance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="-- km"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <!-- เส้นคั่น 3 -->
-    <View
-        android:id="@+id/divider_3"
-        android:layout_width="1dp"
-        android:layout_height="18dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:background="#26FFFFFF" />
 
     <!-- 4. อัตราสิ้นเปลืองปัจจุบัน 50km (Consumption) -->
     <LinearLayout

@@ -105,10 +105,18 @@ class OverlayService : Service() {
             }
             ACTION_SIMULATE_BSD -> {
                 Thread {
-                    val selectedTone = VehicleOverlayConfig.getBsdSoundType(this)
+                    val toneExtra = intent.getStringExtra("extra_bsd_tone")
+                    val selectedTone = if (!toneExtra.isNullOrBlank()) {
+                        VehicleOverlayConfig.setBsdSoundType(this, toneExtra)
+                        toneExtra
+                    } else {
+                        VehicleOverlayConfig.getBsdSoundType(this)
+                    }
+                    // Simulate 3 side-mirror flashes at exact configured BSM pulse interval
+                    val interval = VehicleOverlayConfig.getBsdPulseIntervalMs(this)
                     for (i in 1..3) {
                         BlindspotAudioChime.playToneDirect(selectedTone, this)
-                        Thread.sleep(620)
+                        Thread.sleep(interval)
                     }
                 }.start()
             }
@@ -287,8 +295,13 @@ class OverlayService : Service() {
                             isDragging = true
                         }
                         if (isDragging) {
-                            currentParams.x = initialX + dx
-                            currentParams.y = (initialY + dy).coerceAtLeast(8)
+                            val screenWidth = resources.displayMetrics.widthPixels
+                            val screenHeight = resources.displayMetrics.heightPixels
+                            val viewWidth = overlayView?.width ?: 300
+                            val maxX = (screenWidth - viewWidth).coerceAtLeast(0)
+                            val maxY = (screenHeight - (overlayView?.height ?: 60)).coerceAtLeast(0)
+                            currentParams.x = (initialX + dx).coerceIn(0, maxX)
+                            currentParams.y = (initialY + dy).coerceIn(0, maxY)
                             windowManager?.updateViewLayout(overlayView, currentParams)
                         }
                         return true
@@ -306,6 +319,23 @@ class OverlayService : Service() {
                 return false
             }
         })
+
+        // Auto Boundary Enforcer: if the overlay expands or is near the right screen edge,
+        // automatically shift it so that the tail end is NEVER cut off!
+        v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val cp = windowParams ?: return@addOnLayoutChangeListener
+            val w = v.width
+            if (w <= 0) return@addOnLayoutChangeListener
+            val sw = resources.displayMetrics.widthPixels
+            val maxX = (sw - w).coerceAtLeast(0)
+            if (cp.x > maxX) {
+                cp.x = maxX
+                try {
+                    windowManager?.updateViewLayout(v, cp)
+                    sharedPreferences.edit().putInt("overlay_x", maxX).apply()
+                } catch (_: Throwable) {}
+            }
+        }
     }
 
     private fun resetPosition() {
@@ -382,7 +412,7 @@ class OverlayService : Service() {
                 } else {
                     lp.width = (1 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
                     lp.height = (11 * resources.displayMetrics.density).toInt()
-                    lp.setMargins((6 * resources.displayMetrics.density).toInt(), 0, (6 * resources.displayMetrics.density).toInt(), 0)
+                    lp.setMargins((3 * resources.displayMetrics.density).toInt(), 0, (3 * resources.displayMetrics.density).toInt(), 0)
                 }
                 div.layoutParams = lp
             }
@@ -419,11 +449,23 @@ class OverlayService : Service() {
         overlayView?.background?.mutate()?.alpha = bgAlpha255
         overlayView?.alpha = 1.0f
 
-        val scale = VehicleOverlayConfig.getScale(this) / 100f
-        overlayView?.scaleX = scale
-        overlayView?.scaleY = scale
-        overlayView?.pivotX = 0f
-        overlayView?.pivotY = 0f
+        // Native typography & padding scale (NEVER clips Surface boundary!)
+        val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 1.5f)
+        overlayView?.scaleX = 1.0f
+        overlayView?.scaleY = 1.0f
+
+        val baseSp = 11.5f * scale
+        val allTv = listOf(
+            tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
+            tvConsumption, tvInstPower, tvCabinTemp, tvOutTemp, tvSoh,
+            tv12v, tvTpms, tvOdo, tvGear, tvSpeed
+        )
+        for (tv in allTv) {
+            tv?.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
+        }
+        val padH = (8 * resources.displayMetrics.density * scale).toInt()
+        val padV = (3 * resources.displayMetrics.density * scale).toInt()
+        rootLayout?.setPadding(padH, padV, padH, padV)
     }
 
     private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
@@ -450,12 +492,9 @@ class OverlayService : Service() {
             tvDashRange?.text = "${bydBridge.elecRangeKm} km"
         }
 
-        // HV Main Battery Temperature & Cell Voltage
-        if (bydBridge.hvBattTempMaxC != bydBridge.hvBattTempMinC) {
-            tvHvTemp?.text = String.format("%.0f/%.0f°C", bydBridge.hvBattTempMaxC, bydBridge.hvBattTempMinC)
-        } else {
-            tvHvTemp?.text = String.format("%.0f°C", bydBridge.hvBattTempAvgC)
-        }
+        // HV Main Battery Temperature (Configurable: Max/Min, Avg, Max, Min) & Cell Voltage
+        val hvTempMode = VehicleOverlayConfig.getHvBattTempMode(this)
+        tvHvTemp?.text = bydBridge.getFormattedHvBattTemp(hvTempMode)
 
         tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
 
@@ -468,7 +507,8 @@ class OverlayService : Service() {
         tvOutTemp?.text = "${bydBridge.outsideTemperatureC}°C"
         tvSoh?.text = "${bydBridge.sohPercent}% SOH"
         tv12v?.text = String.format("%.1fV", bydBridge.aux12vVoltage)
-        tvTpms?.text = bydBridge.tpmsSummary
+        val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
+        tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
         if (bydBridge.totalMileageKm > 0) {
             tvOdo?.text = String.format("%.0f km", bydBridge.totalMileageKm)
         }

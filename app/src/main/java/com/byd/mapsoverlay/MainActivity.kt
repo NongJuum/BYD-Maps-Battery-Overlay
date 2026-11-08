@@ -69,10 +69,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rgOrientation: android.widget.RadioGroup
     private lateinit var rbHorizontal: android.widget.RadioButton
     private lateinit var rbVertical: android.widget.RadioButton
+    private lateinit var rgHvTempMode: android.widget.RadioGroup
+    private lateinit var rbHvTempMaxMin: android.widget.RadioButton
+    private lateinit var rbHvTempAvg: android.widget.RadioButton
+    private lateinit var rbHvTempMax: android.widget.RadioButton
+    private lateinit var rbHvTempMin: android.widget.RadioButton
+    private lateinit var rgTpmsUnit: android.widget.RadioGroup
+    private lateinit var rbTpmsPsi: android.widget.RadioButton
+    private lateinit var rbTpmsKpa: android.widget.RadioButton
     private lateinit var switchBsdSound: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var btnTestBsdSound: MaterialButton
     private lateinit var rgBsdTone: android.widget.RadioGroup
     private val rbTones = arrayOfNulls<android.widget.RadioButton>(10)
+    private lateinit var rgBsdInterval: android.widget.RadioGroup
+    private lateinit var rbInterval350: android.widget.RadioButton
+    private lateinit var rbInterval420: android.widget.RadioButton
+    private lateinit var rbInterval500: android.widget.RadioButton
+    private lateinit var rbInterval600: android.widget.RadioButton
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -151,6 +164,14 @@ class MainActivity : AppCompatActivity() {
         rgOrientation = findViewById(R.id.rg_overlay_orientation)
         rbHorizontal = findViewById(R.id.rb_orientation_horizontal)
         rbVertical = findViewById(R.id.rb_orientation_vertical)
+        rgHvTempMode = findViewById(R.id.rg_hv_temp_mode)
+        rbHvTempMaxMin = findViewById(R.id.rb_hv_temp_max_min)
+        rbHvTempAvg = findViewById(R.id.rb_hv_temp_avg)
+        rbHvTempMax = findViewById(R.id.rb_hv_temp_max)
+        rbHvTempMin = findViewById(R.id.rb_hv_temp_min)
+        rgTpmsUnit = findViewById(R.id.rg_tpms_unit)
+        rbTpmsPsi = findViewById(R.id.rb_tpms_psi)
+        rbTpmsKpa = findViewById(R.id.rb_tpms_kpa)
         switchBsdSound = findViewById(R.id.switch_bsd_sound)
         btnTestBsdSound = findViewById(R.id.btn_test_bsd_sound)
         rgBsdTone = findViewById(R.id.rg_bsd_tone)
@@ -161,6 +182,12 @@ class MainActivity : AppCompatActivity() {
         for (i in 0 until 10) {
             rbTones[i] = findViewById(toneResIds[i])
         }
+
+        rgBsdInterval = findViewById(R.id.rg_bsd_interval)
+        rbInterval350 = findViewById(R.id.rb_interval_350)
+        rbInterval420 = findViewById(R.id.rb_interval_420)
+        rbInterval500 = findViewById(R.id.rb_interval_500)
+        rbInterval600 = findViewById(R.id.rb_interval_600)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -219,12 +246,33 @@ class MainActivity : AppCompatActivity() {
             rbHorizontal.isChecked = true
         }
 
+        when (VehicleOverlayConfig.getHvBattTempMode(this)) {
+            "avg" -> rbHvTempAvg.isChecked = true
+            "max" -> rbHvTempMax.isChecked = true
+            "min" -> rbHvTempMin.isChecked = true
+            else -> rbHvTempMaxMin.isChecked = true
+        }
+
+        if (VehicleOverlayConfig.getTpmsUnit(this) == "kpa") {
+            rbTpmsKpa.isChecked = true
+        } else {
+            rbTpmsPsi.isChecked = true
+        }
+
         switchBsdSound.isChecked = VehicleOverlayConfig.isBsdSoundEnabled(this)
 
         val savedTone = VehicleOverlayConfig.getBsdSoundType(this)
         val toneIndex = savedTone.removePrefix("tone_").toIntOrNull()?.minus(1) ?: 3
         if (toneIndex in 0 until 10) {
             rbTones[toneIndex]?.isChecked = true
+        }
+
+        val savedInterval = VehicleOverlayConfig.getBsdPulseIntervalMs(this)
+        when (savedInterval) {
+            350L -> rbInterval350.isChecked = true
+            500L -> rbInterval500.isChecked = true
+            600L -> rbInterval600.isChecked = true
+            else -> rbInterval420.isChecked = true
         }
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
@@ -335,6 +383,23 @@ class MainActivity : AppCompatActivity() {
             notifyOverlayServiceConfigChanged()
         }
 
+        rgHvTempMode.setOnCheckedChangeListener { _, checkedId ->
+            val mode = when (checkedId) {
+                R.id.rb_hv_temp_avg -> "avg"
+                R.id.rb_hv_temp_max -> "max"
+                R.id.rb_hv_temp_min -> "min"
+                else -> "max_min"
+            }
+            VehicleOverlayConfig.setHvBattTempMode(this, mode)
+            notifyOverlayServiceConfigChanged()
+        }
+
+        rgTpmsUnit.setOnCheckedChangeListener { _, checkedId ->
+            val unit = if (checkedId == R.id.rb_tpms_kpa) "kpa" else "psi"
+            VehicleOverlayConfig.setTpmsUnit(this, unit)
+            notifyOverlayServiceConfigChanged()
+        }
+
         switchBsdSound.setOnCheckedChangeListener { _, isChecked ->
             VehicleOverlayConfig.setBsdSoundEnabled(this, isChecked)
             val msg = if (isChecked) "เปิดเสียงเตือนจุดอับสายตาแล้ว" else "ปิดเสียงเตือนจุดอับสายตาแล้ว"
@@ -357,6 +422,22 @@ class MainActivity : AppCompatActivity() {
             }
             VehicleOverlayConfig.setBsdSoundType(this, toneKey)
             BlindspotAudioChime.playToneDirect(toneKey, this)
+        }
+
+        rgBsdInterval.setOnCheckedChangeListener { _, checkedId ->
+            val interval = when (checkedId) {
+                R.id.rb_interval_350 -> 350L
+                R.id.rb_interval_500 -> 500L
+                R.id.rb_interval_600 -> 600L
+                else -> 420L
+            }
+            VehicleOverlayConfig.setBsdPulseIntervalMs(this, interval)
+            val selectedTone = VehicleOverlayConfig.getBsdSoundType(this)
+            // Play 2 test pulses so user can preview the cadence
+            BlindspotAudioChime.playToneDirect(selectedTone, this)
+            mainHandler.postDelayed({
+                BlindspotAudioChime.playToneDirect(selectedTone, this)
+            }, interval)
         }
 
         btnTestBsdSound.setOnClickListener {
@@ -444,7 +525,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 tvHvTemp.text = String.format("%.0f / %.0f °C", bydBridge.hvBattTempMaxC, bydBridge.hvBattTempMinC)
                 tvCellVolt.text = String.format("%.3f / %.3f V", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
-                tvCabinTemp.text = "${bydBridge.cabinTemperatureC}°C / ${bydBridge.outsideTemperatureC}°C"
+                tvCabinTemp.text = "${bydBridge.outsideTemperatureC}°C"
                 tv12v.text = String.format("%.1f V", bydBridge.aux12vVoltage)
                 tvVehicleModelBadge.text = bydBridge.detectedVehicleModel
                 updatePermissionStatusBadge()

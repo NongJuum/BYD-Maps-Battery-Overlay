@@ -37,8 +37,12 @@ class BootReceiver : BroadcastReceiver() {
                     Log.w(tag, "Failed to ensure telemetry daemon", e)
                 }
 
-                // 2. กู้คืน NotificationListener Proxy
-                MapsNotificationListener.requestRebindIfDisconnected(context)
+                // 2. กู้คืน NotificationListener Proxy เพื่อรักษาสิทธิ์เข้าถึงในระบบ
+                try {
+                    MapsNotificationListener.requestRebindIfDisconnected(context)
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to rebind listener", e)
+                }
 
                 // 3. สตาร์ท Foreground Overlay Service
                 val serviceIntent = Intent(context, OverlayService::class.java)
