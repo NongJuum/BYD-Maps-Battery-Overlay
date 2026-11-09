@@ -35,6 +35,7 @@ public final class BydTelemetryDaemon {
 
     // Fast ADAS / Turn Light / Cluster Buzzle states
     private static volatile int fastBsdState = 0;
+    private static volatile int fastBsdHalState = -1; // 0x41800018 ADAS_BSD_STATE_HAL (diagnostic only)
     private static volatile int fastDowWarnLeft = 0;
     private static volatile int fastDowWarnRight = 0;
     private static volatile int fastLeftMirrorStatus = 0;
@@ -210,6 +211,8 @@ public final class BydTelemetryDaemon {
 
                 Integer bsd = integer(adas, "getBSDState");
                 if (bsd != null) fastBsdState = bsd;
+                Integer bsdHal = getFeature(adas, 0x41800018);
+                if (bsdHal != null) fastBsdHalState = bsdHal;
 
                 Integer turnFlash = integer(light, "getTurnLightFlashState");
                 if (turnFlash != null) fastTurnFlashState = turnFlash;
@@ -262,6 +265,8 @@ public final class BydTelemetryDaemon {
 
                 // Strict Match Gate: Left signal with Left danger, or Right signal with Right danger
                 fastBsdAlertActive = (fastLeftTurn && fastLeftDanger) || (fastRightTurn && fastRightDanger);
+
+                recordBsmEvent();
 
                 JSONObject cur = snapshot;
                 if (cur != null) {
@@ -698,6 +703,34 @@ public final class BydTelemetryDaemon {
         } catch (Throwable t) {
             log("HTTP client error: " + t);
         }
+    }
+
+    private static String lastBsmSignature = "";
+    private static final File BSM_EVENT_LOG = new File("/data/local/tmp/bsm_events.log");
+
+    /**
+     * Passive recorder: appends one line whenever any ADAS/light/cluster register
+     * changes, so a real drive shows which value moves when the mirror BSM light flashes.
+     * Never affects chime behaviour. Log is capped at ~512 KB.
+     */
+    private static void recordBsmEvent() {
+        try {
+            // buzzle toggles 0/1 constantly while idle (noise) so it is logged but does not trigger a new line
+            String sig = "bsd=" + fastBsdState + " bsdHal=" + fastBsdHalState
+                    + " turnFlash=" + fastTurnFlashState
+                    + " turnLight=" + fastTurnLightState
+                    + " dashAlarm=" + fastClusterDashboardAlarm
+                    + " soundFreq=" + fastClusterSoundFreq
+                    + " soundType=" + fastClusterSoundType
+                    + " dowL=" + fastDowWarnLeft + " dowR=" + fastDowWarnRight
+                    + " mirL=" + fastLeftMirrorStatus + " mirR=" + fastRightMirrorStatus;
+            if (sig.equals(lastBsmSignature)) return;
+            lastBsmSignature = sig;
+            if (BSM_EVENT_LOG.length() > 512 * 1024) BSM_EVENT_LOG.delete();
+            try (java.io.FileWriter w = new java.io.FileWriter(BSM_EVENT_LOG, true)) {
+                w.write(System.currentTimeMillis() + " " + sig + " buzzle=" + fastClusterBuzzleState + "\n");
+            }
+        } catch (Throwable ignored) {}
     }
 
     private static void log(String message) {
