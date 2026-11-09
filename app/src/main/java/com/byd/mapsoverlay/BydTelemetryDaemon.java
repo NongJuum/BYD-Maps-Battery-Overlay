@@ -105,6 +105,10 @@ public final class BydTelemetryDaemon {
             fastSafetyPoller.setDaemon(true);
             fastSafetyPoller.start();
 
+            Thread sweep = new Thread(() -> discoverySweepLoop(context), "BydDiscoverySweep");
+            sweep.setDaemon(true);
+            sweep.start();
+
             serveLoop();
         } catch (Throwable t) {
             log("FATAL: " + t);
@@ -731,6 +735,65 @@ public final class BydTelemetryDaemon {
                 w.write(System.currentTimeMillis() + " " + sig + " buzzle=" + fastClusterBuzzleState + "\n");
             }
         } catch (Throwable ignored) {}
+    }
+
+    private static final File SWEEP_LOG = new File("/data/local/tmp/bsm_sweep.log");
+
+    /**
+     * Read-only discovery: polls every zero-arg getter named get... or is... (int/boolean/double) on the
+     * safety-related BYD devices once per second and logs only values that CHANGE.
+     * Used to find which register moves when the mirror BSM light flashes. Never writes to the car.
+     */
+    private static void discoverySweepLoop(Context context) {
+        String[] classes = {
+            "android.hardware.bydauto.adas.BYDAutoADASDevice",
+            "android.hardware.bydauto.light.BYDAutoLightDevice",
+            "android.hardware.bydauto.instrument.BYDAutoInstrumentDevice",
+            "android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice",
+            "android.hardware.bydauto.sensor.BYDAutoSensorDevice",
+            "android.hardware.bydauto.radar.BYDAutoRadarDevice",
+            "android.hardware.bydauto.doormirror.BYDAutoRearViewMirrorDevice",
+            "android.hardware.bydauto.funcnotice.BYDAutoFuncNoticeDevice"
+        };
+        java.util.Map<String, String> last = new java.util.HashMap<>();
+        java.util.Map<String, Object> devices = new java.util.HashMap<>();
+        java.util.Map<String, java.util.List<Method>> getters = new java.util.HashMap<>();
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                for (String c : classes) {
+                    Object dev = devices.get(c);
+                    if (dev == null) {
+                        dev = getDevice(c, context);
+                        if (dev == null) continue;
+                        devices.put(c, dev);
+                        java.util.List<Method> list = new java.util.ArrayList<>();
+                        for (Method m : dev.getClass().getMethods()) {
+                            String n = m.getName();
+                            Class<?> r = m.getReturnType();
+                            if (m.getParameterTypes().length != 0) continue;
+                            if (!(n.startsWith("get") || n.startsWith("is"))) continue;
+                            if (n.equals("getClass") || n.equals("getInstance")) continue;
+                            if (r == int.class || r == boolean.class || r == double.class) list.add(m);
+                        }
+                        getters.put(c, list);
+                    }
+                    String shortName = c.substring(c.lastIndexOf('.') + 1);
+                    for (Method m : getters.get(c)) {
+                        String key = shortName + "." + m.getName();
+                        String val;
+                        try { val = String.valueOf(m.invoke(dev)); } catch (Throwable t) { continue; }
+                        String prev = last.put(key, val);
+                        if (prev != null && !prev.equals(val)) {
+                            if (SWEEP_LOG.length() > 1024 * 1024) SWEEP_LOG.delete();
+                            try (java.io.FileWriter w = new java.io.FileWriter(SWEEP_LOG, true)) {
+                                w.write(System.currentTimeMillis() + " " + key + " " + prev + " -> " + val + "\n");
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+            try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
     }
 
     private static void log(String message) {
