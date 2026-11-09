@@ -463,10 +463,15 @@ class BydVehicleBridge(
 
                 // STRICT DIRECTIONAL RULE:
                 // Only trigger BSM Chime when signaling towards the side where obstacle is present!
+                val daemonBsdState = json.optInt("bsdState", 0)
                 val daemonLeftTurn = json.optBoolean("isLeftTurn", false) || (json.optInt("turnFlashState", 0) in 2..3 || json.optInt("turnLightState", 0) in 2..3)
                 val daemonRightTurn = json.optBoolean("isRightTurn", false) || (json.optInt("turnFlashState", 0) in 4..5 || json.optInt("turnLightState", 0) in 4..5)
-                val daemonLeftDanger = json.optBoolean("isLeftDanger", false) || json.optInt("dowWarnLeft", 0) > 0 || json.optInt("leftMirrorStatus", 0) > 0
-                val daemonRightDanger = json.optBoolean("isRightDanger", false) || json.optInt("dowWarnRight", 0) > 0 || json.optInt("rightMirrorStatus", 0) > 0
+
+                val bsdLeft = (daemonBsdState == 2 || daemonBsdState >= 4 || (daemonBsdState >= 2 && daemonLeftTurn))
+                val bsdRight = (daemonBsdState == 3 || daemonBsdState >= 4 || (daemonBsdState >= 2 && daemonRightTurn))
+
+                val daemonLeftDanger = json.optBoolean("isLeftDanger", false) || bsdLeft || json.optInt("dowWarnLeft", 0) > 0 || json.optInt("leftMirrorStatus", 0) > 0
+                val daemonRightDanger = json.optBoolean("isRightDanger", false) || bsdRight || json.optInt("dowWarnRight", 0) > 0 || json.optInt("rightMirrorStatus", 0) > 0
 
                 isLeftTurnActive = daemonLeftTurn
                 isRightTurnActive = daemonRightTurn
@@ -528,14 +533,30 @@ class BydVehicleBridge(
                 if (adasDevice != null) {
                     val adasListener = object : android.hardware.bydauto.adas.AbsBYDAutoADASListener() {
                         override fun onBSDStateChanged(state: Int) {
-                            // state: 1=standby/clear, >=2=hazard
-                            if (state < 2) {
-                                isLeftDangerActive = false
-                                isRightDangerActive = false
-                                checkAndTriggerChime()
+                            // BYD BSD state: 1=standby/clear, 2=Left, 3=Right, 4=Both/General hazard >= 2
+                            when {
+                                state < 2 -> {
+                                    isLeftDangerActive = false
+                                    isRightDangerActive = false
+                                }
+                                state == 2 -> {
+                                    isLeftDangerActive = true
+                                    isRightDangerActive = false
+                                }
+                                state == 3 -> {
+                                    isLeftDangerActive = false
+                                    isRightDangerActive = true
+                                }
+                                state >= 4 -> {
+                                    isLeftDangerActive = true
+                                    isRightDangerActive = true
+                                }
                             }
-                            // NOTE: AbsBYDAutoADASListener.onBSDStateChanged does NOT specify direction (left vs right).
-                            // directional isolation is strictly enforced by BydTelemetryDaemon using DOW & mirror registers.
+                            if (state >= 2) {
+                                if (isLeftTurnActive) isLeftDangerActive = true
+                                if (isRightTurnActive) isRightDangerActive = true
+                            }
+                            checkAndTriggerChime()
                         }
                     }
                     val regMethod = adasClass.methods.firstOrNull {

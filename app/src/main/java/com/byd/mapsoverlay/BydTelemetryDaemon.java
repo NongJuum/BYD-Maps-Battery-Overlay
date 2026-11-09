@@ -253,9 +253,12 @@ public final class BydTelemetryDaemon {
                 fastLeftTurn = (fastTurnFlashState == 2 || fastTurnFlashState == 3 || fastTurnLightState == 2 || fastTurnLightState == 3);
                 fastRightTurn = (fastTurnFlashState == 4 || fastTurnFlashState == 5 || fastTurnLightState == 4 || fastTurnLightState == 5);
 
-                // Danger on respective sides:
-                fastLeftDanger = (fastDowWarnLeft > 0 || fastLeftMirrorStatus > 0);
-                fastRightDanger = (fastDowWarnRight > 0 || fastRightMirrorStatus > 0);
+                // Danger on respective sides (BYD BSD: 2=Left, 3=Right, 4=Both/General hazard >= 2)
+                boolean bsdLeft = (fastBsdState == 2 || fastBsdState == 4 || (fastBsdState >= 2 && fastLeftTurn));
+                boolean bsdRight = (fastBsdState == 3 || fastBsdState == 4 || (fastBsdState >= 2 && fastRightTurn));
+
+                fastLeftDanger = bsdLeft || (fastDowWarnLeft > 0);
+                fastRightDanger = bsdRight || (fastDowWarnRight > 0);
 
                 // Strict Match Gate: Left signal with Left danger, or Right signal with Right danger
                 fastBsdAlertActive = (fastLeftTurn && fastLeftDanger) || (fastRightTurn && fastRightDanger);
