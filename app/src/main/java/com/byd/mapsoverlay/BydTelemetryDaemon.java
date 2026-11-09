@@ -3,6 +3,7 @@ package com.byd.mapsoverlay;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.os.SystemClock;
+import android.hardware.bydauto.adas.AbsBYDAutoADASListener;
 import android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener;
 
 import org.json.JSONObject;
@@ -36,8 +37,14 @@ public final class BydTelemetryDaemon {
     // Fast ADAS / Turn Light / Cluster Buzzle states
     private static volatile int fastBsdState = 0;
     private static volatile int fastBsdHalState = -1; // 0x41800018 ADAS_BSD_STATE_HAL (diagnostic only)
-    private static volatile int fastDowWarnLeft = 0;
-    private static volatile int fastDowWarnRight = 0;
+    private static volatile int fastLcaLeft = 0;      // 0x41800010 ADAS_LCA_WARN_LEFT
+    private static volatile int fastLcaRight = 0;     // 0x41800012 ADAS_LCA_WARN_RIGHT
+    private static volatile int fastDowWarnLeft = 0;  // 0x41800020 ADAS_DOW_WARN_LEFT
+    private static volatile int fastDowWarnRight = 0; // 0x41800022 ADAS_DOW_WARN_RIGHT
+    private static volatile int fastRctaLeft = 0;
+    private static volatile int fastRctaRight = 0;
+    private static volatile int fastRadarSoundLr = 0; // AUDIO_RADAR_SOUND_LR_STATE
+    private static volatile int fastRadarSoundRr = 0; // AUDIO_RADAR_SOUND_RR_STATE
     private static volatile int fastLeftMirrorStatus = 0;
     private static volatile int fastRightMirrorStatus = 0;
     private static volatile boolean fastLeftTurn = false;
@@ -54,6 +61,22 @@ public final class BydTelemetryDaemon {
     private static volatile boolean fastBsdAlertActive = false;
 
     private static volatile Object registeredStatisticDevice;
+    private static volatile Object registeredAdasDevice;
+    private static volatile int callbackBsdState = 0;
+    private static volatile long callbackBsdTimestampMs = 0L;
+
+    private static final AbsBYDAutoADASListener ADAS_LISTENER =
+            new AbsBYDAutoADASListener() {
+        @Override public void onBSDStateChanged(int state) {
+            callbackBsdState = state;
+            if (state >= 2) {
+                callbackBsdTimestampMs = SystemClock.elapsedRealtime();
+            }
+            try (java.io.FileWriter w = new java.io.FileWriter(SWEEP_LOG, true)) {
+                w.write(System.currentTimeMillis() + " CALLBACK.onBSDStateChanged -> " + state + "\n");
+            } catch (Throwable ignored) {}
+        }
+    };
 
     private static final Pattern BMS_LOG_PATTERN = Pattern.compile(
             "SOC=([0-9.]+)%\\s+12V=([0-9.]+)V\\s+Temp=([0-9.]+)/([0-9.]+)/([0-9.]+).*?CellV=([0-9.]+)/([0-9.]+)V"
@@ -100,14 +123,6 @@ public final class BydTelemetryDaemon {
             Thread poller = new Thread(() -> pollLoop(context), "BydTelemetryPoller");
             poller.setDaemon(true);
             poller.start();
-
-            Thread fastSafetyPoller = new Thread(() -> safetyPollLoop(context), "BydSafetyWatcher");
-            fastSafetyPoller.setDaemon(true);
-            fastSafetyPoller.start();
-
-            Thread sweep = new Thread(() -> discoverySweepLoop(context), "BydDiscoverySweep");
-            sweep.setDaemon(true);
-            sweep.start();
 
             serveLoop();
         } catch (Throwable t) {
@@ -198,7 +213,7 @@ public final class BydTelemetryDaemon {
     }
 
     /**
-     * Fast 250ms watcher for ADAS BSD, Directional Danger (DOW / Mirrors), Turn Signals, and Cluster Alarms.
+     * Fast 250ms watcher for ADAS BSD/LCA/DOW/RCTA, Radar Sound States, Turn Signals, and Cluster Alarms.
      * Runs as UID 2000 so BYD hardware permissions are never blocked.
      */
     private static void safetyPollLoop(Context context) {
@@ -206,15 +221,27 @@ public final class BydTelemetryDaemon {
         Object light = null;
         Object instrument = null;
         Object settingDev = null;
+        Object audioDev = null;
+        java.util.Map<String, Integer> adasFeatureIds = null;
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                if (adas == null) adas = getDevice("android.hardware.bydauto.adas.BYDAutoADASDevice", context);
+                if (adas == null) {
+                    adas = getDevice("android.hardware.bydauto.adas.BYDAutoADASDevice", context);
+                    if (adas != null) registerAdasListener(adas);
+                }
                 if (light == null) light = getDevice("android.hardware.bydauto.light.BYDAutoLightDevice", context);
                 if (instrument == null) instrument = getDevice("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", context);
                 if (settingDev == null) settingDev = getDevice("android.hardware.bydauto.setting.BYDAutoSettingDevice", context);
+                if (audioDev == null) audioDev = getDevice("android.hardware.bydauto.audio.BYDAutoAudioDevice", context);
+                if (adasFeatureIds == null) adasFeatureIds = discoverSafetyFeatureIds();
 
                 Integer bsd = integer(adas, "getBSDState");
-                if (bsd != null) fastBsdState = bsd;
+                long sinceCb = SystemClock.elapsedRealtime() - callbackBsdTimestampMs;
+                if (callbackBsdState >= 2 && sinceCb < 1500) {
+                    fastBsdState = callbackBsdState;
+                } else if (bsd != null) {
+                    fastBsdState = bsd;
+                }
                 Integer bsdHal = getFeature(adas, 0x41800018);
                 if (bsdHal != null) fastBsdHalState = bsdHal;
 
@@ -239,33 +266,60 @@ public final class BydTelemetryDaemon {
                 Integer soundType = integer(instrument, "getSoundType");
                 if (soundType != null) fastClusterSoundType = soundType;
 
-                // Directional BSD & DOW hazard indicators
-                // 0x41800020: ADAS_DOW_WARN_LEFT
-                // 0x41800022: ADAS_DOW_WARN_RIGHT
-                Integer dowLeft = getFeature(adas, 0x41800020);
-                if (dowLeft != null && dowLeft >= 0) fastDowWarnLeft = dowLeft;
+                // Directional BSD / LCA (0x41800010 Left, 0x41800012 Right)
+                Integer lcaL = getFeatureValid(adas, resolveFid(adasFeatureIds, "ADAS_LCA_WARN_LEFT", 0x41800010));
+                if (lcaL != null) fastLcaLeft = lcaL;
+                Integer lcaR = getFeatureValid(adas, resolveFid(adasFeatureIds, "ADAS_LCA_WARN_RIGHT", 0x41800012));
+                if (lcaR != null) fastLcaRight = lcaR;
 
-                Integer dowRight = getFeature(adas, 0x41800022);
-                if (dowRight != null && dowRight >= 0) fastDowWarnRight = dowRight;
+                // Directional DOW (0x41800020 Left, 0x41800022 Right)
+                Integer dowLeft = getFeatureValid(adas, resolveFid(adasFeatureIds, "ADAS_DOW_WARN_LEFT", 0x41800020));
+                if (dowLeft != null) fastDowWarnLeft = dowLeft;
+                Integer dowRight = getFeatureValid(adas, resolveFid(adasFeatureIds, "ADAS_DOW_WARN_RIGHT", 0x41800022));
+                if (dowRight != null) fastDowWarnRight = dowRight;
+
+                // Directional RCTA (Rear Cross Traffic Alert - same rear corner radar)
+                int rctaLId = resolveFid(adasFeatureIds, "ADAS_RCTA_WARN_LEFT", 0x41800030);
+                Integer rctaL = getFeatureValid(adas, rctaLId);
+                if (rctaL != null) fastRctaLeft = rctaL;
+                int rctaRId = resolveFid(adasFeatureIds, "ADAS_RCTA_WARN_RIGHT", 0x41800032);
+                Integer rctaR = getFeatureValid(adas, rctaRId);
+                if (rctaR != null) fastRctaRight = rctaR;
+
+                // Rear corner radar sound state (AUDIO_RADAR_SOUND_LR_STATE / RR_STATE)
+                int radLrId = resolveFid(adasFeatureIds, "AUDIO_RADAR_SOUND_LR_STATE", 0);
+                if (radLrId != 0) {
+                    Integer rLr = getFeatureValid(audioDev, radLrId);
+                    if (rLr != null) fastRadarSoundLr = rLr;
+                }
+                int radRrId = resolveFid(adasFeatureIds, "AUDIO_RADAR_SOUND_RR_STATE", 0);
+                if (radRrId != 0) {
+                    Integer rRr = getFeatureValid(audioDev, radRrId);
+                    if (rRr != null) fastRadarSoundRr = rRr;
+                }
 
                 // 0x49400014: SETTING_LEFT_OUT_MIRROR_SYSTEM_WORKING_STATUS
                 // 0x41C00018: SETTING_RIGHT_OUT_MIRROR_SYSTEM_WORKING_STATUS
-                Integer mirrorLeft = getFeature(settingDev, 0x49400014);
-                if (mirrorLeft != null && mirrorLeft >= 0) fastLeftMirrorStatus = mirrorLeft;
+                Integer mirrorLeft = getFeatureValid(settingDev, 0x49400014);
+                if (mirrorLeft != null) fastLeftMirrorStatus = mirrorLeft;
 
-                Integer mirrorRight = getFeature(settingDev, 0x41C00018);
-                if (mirrorRight != null && mirrorRight >= 0) fastRightMirrorStatus = mirrorRight;
+                Integer mirrorRight = getFeatureValid(settingDev, 0x41C00018);
+                if (mirrorRight != null) fastRightMirrorStatus = mirrorRight;
 
                 // Turn signal directions: 2, 3 = Left; 4, 5 = Right
                 fastLeftTurn = (fastTurnFlashState == 2 || fastTurnFlashState == 3 || fastTurnLightState == 2 || fastTurnLightState == 3);
                 fastRightTurn = (fastTurnFlashState == 4 || fastTurnFlashState == 5 || fastTurnLightState == 4 || fastTurnLightState == 5);
 
-                // Danger on respective sides (BYD BSD: 2=Left, 3=Right, 4=Both/General hazard >= 2)
+                // Danger on respective sides:
+                // - fastBsdState: 2=Left, 3=Right, 4=Both (or >=2 when turn signal on that side is active)
+                // - fastLcaLeft / fastLcaRight > 0 (0x41800010 / 0x41800012)
+                // - fastDowWarnLeft / fastDowWarnRight > 0 (0x41800020 / 0x41800022)
+                // - fastRctaLeft / fastRctaRight > 0
                 boolean bsdLeft = (fastBsdState == 2 || fastBsdState == 4 || (fastBsdState >= 2 && fastLeftTurn));
                 boolean bsdRight = (fastBsdState == 3 || fastBsdState == 4 || (fastBsdState >= 2 && fastRightTurn));
 
-                fastLeftDanger = bsdLeft || (fastDowWarnLeft > 0);
-                fastRightDanger = bsdRight || (fastDowWarnRight > 0);
+                fastLeftDanger = bsdLeft || (fastLcaLeft > 0) || (fastDowWarnLeft > 0) || (fastRctaLeft > 0);
+                fastRightDanger = bsdRight || (fastLcaRight > 0) || (fastDowWarnRight > 0) || (fastRctaRight > 0);
 
                 // Strict Match Gate: Left signal with Left danger, or Right signal with Right danger
                 fastBsdAlertActive = (fastLeftTurn && fastLeftDanger) || (fastRightTurn && fastRightDanger);
@@ -276,6 +330,10 @@ public final class BydTelemetryDaemon {
                 if (cur != null) {
                     synchronized (BydTelemetryDaemon.class) {
                         cur.put("bsdState", fastBsdState);
+                        cur.put("lcaLeft", fastLcaLeft);
+                        cur.put("lcaRight", fastLcaRight);
+                        cur.put("rctaLeft", fastRctaLeft);
+                        cur.put("rctaRight", fastRctaRight);
                         cur.put("turnFlashState", fastTurnFlashState);
                         cur.put("turnLightState", fastTurnLightState);
                         cur.put("doubleFlashState", fastDoubleFlashState);
@@ -573,6 +631,30 @@ public final class BydTelemetryDaemon {
         } catch (Throwable ignored) {}
     }
 
+    private static synchronized void registerAdasListener(Object device) {
+        if (registeredAdasDevice == device) return;
+        try {
+            Class<?> listenerType = Class.forName(
+                    "android.hardware.bydauto.adas.AbsBYDAutoADASListener",
+                    true,
+                    device.getClass().getClassLoader());
+            Method register = device.getClass().getMethod("registerListener", listenerType);
+            register.invoke(device, ADAS_LISTENER);
+            registeredAdasDevice = device;
+        } catch (NoSuchMethodException missingSingleArg) {
+            try {
+                Class<?> listenerType = Class.forName(
+                        "android.hardware.bydauto.adas.AbsBYDAutoADASListener",
+                        true,
+                        device.getClass().getClassLoader());
+                Method register = device.getClass().getMethod(
+                        "registerListener", listenerType, int[].class);
+                register.invoke(device, ADAS_LISTENER, new int[0]);
+                registeredAdasDevice = device;
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
+    }
+
     private static Object getDevice(String className, Context context) {
         try {
             Class<?> cls = Class.forName(className);
@@ -657,6 +739,45 @@ public final class BydTelemetryDaemon {
         }
     }
 
+    private static Integer getFeatureValid(Object device, int featureId) {
+        if (featureId == 0) return null;
+        Integer v = getFeature(device, featureId);
+        if (v != null && v >= 0 && v != 65535) return v;
+        return null;
+    }
+
+    private static int resolveFid(java.util.Map<String, Integer> map, String name, int fallback) {
+        if (map != null && map.containsKey(name)) {
+            Integer v = map.get(name);
+            if (v != null) return v;
+        }
+        return fallback;
+    }
+
+    private static java.util.Map<String, Integer> discoverSafetyFeatureIds() {
+        java.util.Map<String, Integer> map = new java.util.HashMap<>();
+        try {
+            Class<?> fidCls = Class.forName("android.hardware.bydauto.BYDAutoFeatureIds");
+            StringBuilder dump = new StringBuilder();
+            for (java.lang.reflect.Field f : fidCls.getFields()) {
+                if (f.getType() != int.class) continue;
+                String n = f.getName();
+                int v = f.getInt(null);
+                if (n.contains("BSD") || n.contains("DOW") || n.contains("RCTA") || n.contains("RTCA")
+                        || n.contains("LCA") || n.contains("RCW") || n.contains("RADAR")
+                        || n.contains("MIRROR") || n.contains("TURN") || n.contains("BLIND")
+                        || n.contains("ALARM") || n.contains("SOUND")) {
+                    map.put(n, v);
+                    dump.append(n).append("=0x").append(Integer.toHexString(v)).append("\n");
+                }
+            }
+            try (java.io.FileWriter w = new java.io.FileWriter("/data/local/tmp/bsm_fids.txt", false)) {
+                w.write(dump.toString());
+            }
+        } catch (Throwable ignored) {}
+        return map;
+    }
+
     private static JSONObject unavailable(String reason) {
         JSONObject data = new JSONObject();
         try {
@@ -721,12 +842,15 @@ public final class BydTelemetryDaemon {
         try {
             // buzzle toggles 0/1 constantly while idle (noise) so it is logged but does not trigger a new line
             String sig = "bsd=" + fastBsdState + " bsdHal=" + fastBsdHalState
+                    + " lcaL=" + fastLcaLeft + " lcaR=" + fastLcaRight
+                    + " dowL=" + fastDowWarnLeft + " dowR=" + fastDowWarnRight
+                    + " rctaL=" + fastRctaLeft + " rctaR=" + fastRctaRight
+                    + " radLr=" + fastRadarSoundLr + " radRr=" + fastRadarSoundRr
                     + " turnFlash=" + fastTurnFlashState
                     + " turnLight=" + fastTurnLightState
                     + " dashAlarm=" + fastClusterDashboardAlarm
                     + " soundFreq=" + fastClusterSoundFreq
                     + " soundType=" + fastClusterSoundType
-                    + " dowL=" + fastDowWarnLeft + " dowR=" + fastDowWarnRight
                     + " mirL=" + fastLeftMirrorStatus + " mirR=" + fastRightMirrorStatus;
             if (sig.equals(lastBsmSignature)) return;
             lastBsmSignature = sig;
@@ -740,8 +864,8 @@ public final class BydTelemetryDaemon {
     private static final File SWEEP_LOG = new File("/data/local/tmp/bsm_sweep.log");
 
     /**
-     * Read-only discovery: polls every zero-arg getter named get... or is... (int/boolean/double) on the
-     * safety-related BYD devices once per second and logs only values that CHANGE.
+     * Read-only discovery: polls every zero-arg getter named get... or is... (int/boolean/double/int[])
+     * AND every safety Feature ID in BYDAutoFeatureIds once per second, logging only values that CHANGE.
      * Used to find which register moves when the mirror BSM light flashes. Never writes to the car.
      */
     private static void discoverySweepLoop(Context context) {
@@ -753,11 +877,17 @@ public final class BydTelemetryDaemon {
             "android.hardware.bydauto.sensor.BYDAutoSensorDevice",
             "android.hardware.bydauto.radar.BYDAutoRadarDevice",
             "android.hardware.bydauto.doormirror.BYDAutoRearViewMirrorDevice",
-            "android.hardware.bydauto.funcnotice.BYDAutoFuncNoticeDevice"
+            "android.hardware.bydauto.funcnotice.BYDAutoFuncNoticeDevice",
+            "android.hardware.bydauto.audio.BYDAutoAudioDevice",
+            "android.hardware.bydauto.reminder.BYDAutoReminderDevice",
+            "android.hardware.bydauto.signal.BYDAutoSignalDevice",
+            "android.hardware.bydauto.collision.BYDAutoCollisionDevice",
+            "android.hardware.bydauto.panorama.BYDAutoPanoramaDevice"
         };
         java.util.Map<String, String> last = new java.util.HashMap<>();
         java.util.Map<String, Object> devices = new java.util.HashMap<>();
         java.util.Map<String, java.util.List<Method>> getters = new java.util.HashMap<>();
+        java.util.Map<String, Integer> fids = discoverSafetyFeatureIds();
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 for (String c : classes) {
@@ -772,8 +902,8 @@ public final class BydTelemetryDaemon {
                             Class<?> r = m.getReturnType();
                             if (m.getParameterTypes().length != 0) continue;
                             if (!(n.startsWith("get") || n.startsWith("is"))) continue;
-                            if (n.equals("getClass") || n.equals("getInstance")) continue;
-                            if (r == int.class || r == boolean.class || r == double.class) list.add(m);
+                            if (n.equals("getClass") || n.equals("getInstance") || n.equals("getAlarmBuzzleState")) continue;
+                            if (r == int.class || r == boolean.class || r == double.class || r == int[].class) list.add(m);
                         }
                         getters.put(c, list);
                     }
@@ -781,7 +911,14 @@ public final class BydTelemetryDaemon {
                     for (Method m : getters.get(c)) {
                         String key = shortName + "." + m.getName();
                         String val;
-                        try { val = String.valueOf(m.invoke(dev)); } catch (Throwable t) { continue; }
+                        try {
+                            Object raw = m.invoke(dev);
+                            if (raw instanceof int[]) {
+                                val = java.util.Arrays.toString((int[]) raw);
+                            } else {
+                                val = String.valueOf(raw);
+                            }
+                        } catch (Throwable t) { continue; }
                         String prev = last.put(key, val);
                         if (prev != null && !prev.equals(val)) {
                             if (SWEEP_LOG.length() > 1024 * 1024) SWEEP_LOG.delete();
@@ -790,9 +927,68 @@ public final class BydTelemetryDaemon {
                             }
                         }
                     }
+                    // Also poll 1-arg int methods on RadarDevice (area 1..6)
+                    if (shortName.equals("BYDAutoRadarDevice")) {
+                        for (int area = 1; area <= 6; area++) {
+                            Integer p = integerWithIntArg(dev, "getRadarProbeState", area);
+                            if (p != null) {
+                                String k = "Radar.probe[" + area + "]";
+                                String v = String.valueOf(p);
+                                String prev = last.put(k, v);
+                                if (prev != null && !prev.equals(v)) {
+                                    try (java.io.FileWriter w = new java.io.FileWriter(SWEEP_LOG, true)) {
+                                        w.write(System.currentTimeMillis() + " " + k + " " + prev + " -> " + v + "\n");
+                                    }
+                                }
+                            }
+                            Integer d = integerWithIntArg(dev, "getRadarObstacleDistance", area);
+                            if (d != null) {
+                                String k = "Radar.dist[" + area + "]";
+                                String v = String.valueOf(d);
+                                String prev = last.put(k, v);
+                                if (prev != null && !prev.equals(v)) {
+                                    try (java.io.FileWriter w = new java.io.FileWriter(SWEEP_LOG, true)) {
+                                        w.write(System.currentTimeMillis() + " " + k + " " + prev + " -> " + v + "\n");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // Sweep ADAS raw feature range 0x41800000 .. 0x41800060 on ADASDevice
+                Object adasDev = devices.get("android.hardware.bydauto.adas.BYDAutoADASDevice");
+                if (adasDev != null) {
+                    for (int fid = 0x41800000; fid <= 0x41800060; fid += 2) {
+                        Integer fv = getFeature(adasDev, fid);
+                        if (fv != null && fv != -10011 && fv != 65535) {
+                            String k = "ADAS_FID[0x" + Integer.toHexString(fid) + "]";
+                            String v = String.valueOf(fv);
+                            String prev = last.put(k, v);
+                            if (prev != null && !prev.equals(v)) {
+                                try (java.io.FileWriter w = new java.io.FileWriter(SWEEP_LOG, true)) {
+                                    w.write(System.currentTimeMillis() + " " + k + " " + prev + " -> " + v + "\n");
+                                }
+                            }
+                        }
+                    }
+                    if (fids != null) {
+                        for (java.util.Map.Entry<String, Integer> e : fids.entrySet()) {
+                            Integer fv = getFeature(adasDev, e.getValue());
+                            if (fv != null && fv != -10011 && fv != 65535) {
+                                String k = "FID." + e.getKey();
+                                String v = String.valueOf(fv);
+                                String prev = last.put(k, v);
+                                if (prev != null && !prev.equals(v)) {
+                                    try (java.io.FileWriter w = new java.io.FileWriter(SWEEP_LOG, true)) {
+                                        w.write(System.currentTimeMillis() + " " + k + " " + prev + " -> " + v + "\n");
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             } catch (Throwable ignored) {}
-            try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
     }
 

@@ -77,15 +77,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rgTpmsUnit: android.widget.RadioGroup
     private lateinit var rbTpmsPsi: android.widget.RadioButton
     private lateinit var rbTpmsKpa: android.widget.RadioButton
-    private lateinit var switchBsdSound: com.google.android.material.switchmaterial.SwitchMaterial
-    private lateinit var btnTestBsdSound: MaterialButton
-    private lateinit var rgBsdTone: android.widget.RadioGroup
-    private val rbTones = arrayOfNulls<android.widget.RadioButton>(10)
-    private lateinit var rgBsdInterval: android.widget.RadioGroup
-    private lateinit var rbInterval350: android.widget.RadioButton
-    private lateinit var rbInterval420: android.widget.RadioButton
-    private lateinit var rbInterval500: android.widget.RadioButton
-    private lateinit var rbInterval600: android.widget.RadioButton
 
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
@@ -97,7 +88,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         HiddenApiBypass.exemptAll()
         AutoPermissionHelper.ensureTelemetryDaemon(this)
-        BlindspotAudioChime.init(this)
 
         setContentView(R.layout.activity_main)
 
@@ -172,22 +162,6 @@ class MainActivity : AppCompatActivity() {
         rgTpmsUnit = findViewById(R.id.rg_tpms_unit)
         rbTpmsPsi = findViewById(R.id.rb_tpms_psi)
         rbTpmsKpa = findViewById(R.id.rb_tpms_kpa)
-        switchBsdSound = findViewById(R.id.switch_bsd_sound)
-        btnTestBsdSound = findViewById(R.id.btn_test_bsd_sound)
-        rgBsdTone = findViewById(R.id.rg_bsd_tone)
-        val toneResIds = intArrayOf(
-            R.id.rb_tone_1, R.id.rb_tone_2, R.id.rb_tone_3, R.id.rb_tone_4, R.id.rb_tone_5,
-            R.id.rb_tone_6, R.id.rb_tone_7, R.id.rb_tone_8, R.id.rb_tone_9, R.id.rb_tone_10
-        )
-        for (i in 0 until 10) {
-            rbTones[i] = findViewById(toneResIds[i])
-        }
-
-        rgBsdInterval = findViewById(R.id.rg_bsd_interval)
-        rbInterval350 = findViewById(R.id.rb_interval_350)
-        rbInterval420 = findViewById(R.id.rb_interval_420)
-        rbInterval500 = findViewById(R.id.rb_interval_500)
-        rbInterval600 = findViewById(R.id.rb_interval_600)
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
@@ -257,22 +231,6 @@ class MainActivity : AppCompatActivity() {
             rbTpmsKpa.isChecked = true
         } else {
             rbTpmsPsi.isChecked = true
-        }
-
-        switchBsdSound.isChecked = VehicleOverlayConfig.isBsdSoundEnabled(this)
-
-        val savedTone = VehicleOverlayConfig.getBsdSoundType(this)
-        val toneIndex = savedTone.removePrefix("tone_").toIntOrNull()?.minus(1) ?: 3
-        if (toneIndex in 0 until 10) {
-            rbTones[toneIndex]?.isChecked = true
-        }
-
-        val savedInterval = VehicleOverlayConfig.getBsdPulseIntervalMs(this)
-        when (savedInterval) {
-            350L -> rbInterval350.isChecked = true
-            500L -> rbInterval500.isChecked = true
-            600L -> rbInterval600.isChecked = true
-            else -> rbInterval420.isChecked = true
         }
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
@@ -398,56 +356,6 @@ class MainActivity : AppCompatActivity() {
             val unit = if (checkedId == R.id.rb_tpms_kpa) "kpa" else "psi"
             VehicleOverlayConfig.setTpmsUnit(this, unit)
             notifyOverlayServiceConfigChanged()
-        }
-
-        switchBsdSound.setOnCheckedChangeListener { _, isChecked ->
-            VehicleOverlayConfig.setBsdSoundEnabled(this, isChecked)
-            val msg = if (isChecked) "เปิดเสียงเตือนจุดอับสายตาแล้ว" else "ปิดเสียงเตือนจุดอับสายตาแล้ว"
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-        }
-
-        rgBsdTone.setOnCheckedChangeListener { _, checkedId ->
-            val toneKey = when (checkedId) {
-                R.id.rb_tone_1 -> "tone_1"
-                R.id.rb_tone_2 -> "tone_2"
-                R.id.rb_tone_3 -> "tone_3"
-                R.id.rb_tone_4 -> "tone_4"
-                R.id.rb_tone_5 -> "tone_5"
-                R.id.rb_tone_6 -> "tone_6"
-                R.id.rb_tone_7 -> "tone_7"
-                R.id.rb_tone_8 -> "tone_8"
-                R.id.rb_tone_9 -> "tone_9"
-                R.id.rb_tone_10 -> "tone_10"
-                else -> "tone_4"
-            }
-            VehicleOverlayConfig.setBsdSoundType(this, toneKey)
-            BlindspotAudioChime.playToneDirect(toneKey, this)
-        }
-
-        rgBsdInterval.setOnCheckedChangeListener { _, checkedId ->
-            val interval = when (checkedId) {
-                R.id.rb_interval_350 -> 350L
-                R.id.rb_interval_500 -> 500L
-                R.id.rb_interval_600 -> 600L
-                else -> 420L
-            }
-            VehicleOverlayConfig.setBsdPulseIntervalMs(this, interval)
-            val selectedTone = VehicleOverlayConfig.getBsdSoundType(this)
-            // Play 2 test pulses so user can preview the cadence
-            BlindspotAudioChime.playToneDirect(selectedTone, this)
-            mainHandler.postDelayed({
-                BlindspotAudioChime.playToneDirect(selectedTone, this)
-            }, interval)
-        }
-
-        btnTestBsdSound.setOnClickListener {
-            val selectedTone = VehicleOverlayConfig.getBsdSoundType(this)
-            BlindspotAudioChime.playToneDirect(selectedTone, this)
-            val serviceIntent = Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_SIMULATE_BSD
-            }
-            startService(serviceIntent)
-            Toast.makeText(this, "🔔 กำลังส่งเสียงเตือน 3 ครั้งทางลำโพงรถ (Media + Navi + Broadcast)...", Toast.LENGTH_SHORT).show()
         }
 
         btnSaveConfig.setOnClickListener {

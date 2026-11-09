@@ -39,11 +39,6 @@ object VehicleOverlayConfig {
     const val KEY_OVERLAY_SCALE = "pref_overlay_scale" // 70 - 150% (Default 100)
     const val KEY_OVERLAY_ORIENTATION = "pref_overlay_orientation" // "horizontal" or "vertical"
 
-    // หมวด 5: ระบบเตือนความปลอดภัย (Safety Chime)
-    const val KEY_BSD_SOUND_ENABLED = "pref_bsd_sound_enabled"
-    const val KEY_BSD_SOUND_TYPE = "pref_bsd_sound_type" // "tone_1" to "tone_10"
-    const val KEY_BSD_PULSE_INTERVAL = "pref_bsd_pulse_interval" // milliseconds: 350, 420, 500, 600
-
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -114,13 +109,4 @@ object VehicleOverlayConfig {
 
     fun isVerticalLayout(context: Context): Boolean = prefs(context).getString(KEY_OVERLAY_ORIENTATION, "horizontal") == "vertical"
     fun setVerticalLayout(context: Context, isVertical: Boolean) = prefs(context).edit().putString(KEY_OVERLAY_ORIENTATION, if (isVertical) "vertical" else "horizontal").apply()
-
-    fun isBsdSoundEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_BSD_SOUND_ENABLED, true)
-    fun setBsdSoundEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_BSD_SOUND_ENABLED, enabled).apply()
-
-    fun getBsdSoundType(context: Context): String = prefs(context).getString(KEY_BSD_SOUND_TYPE, "tone_4") ?: "tone_4"
-    fun setBsdSoundType(context: Context, type: String) = prefs(context).edit().putString(KEY_BSD_SOUND_TYPE, type).apply()
-
-    fun getBsdPulseIntervalMs(context: Context): Long = prefs(context).getLong(KEY_BSD_PULSE_INTERVAL, 420L)
-    fun setBsdPulseIntervalMs(context: Context, intervalMs: Long) = prefs(context).edit().putLong(KEY_BSD_PULSE_INTERVAL, intervalMs.coerceIn(250L, 1000L)).apply()
 }

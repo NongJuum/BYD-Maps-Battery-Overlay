@@ -20,7 +20,7 @@
             android:layout_height="?attr/actionBarSize"
             app:title="🚗 BYD Vehicle Data Overlay 2.1"
             app:titleTextColor="#FFFFFF"
-            app:subtitle="BYD Full Telemetry + HV Battery Temp + BSD Chime"
+            app:subtitle="BYD Full Telemetry + HV Battery Temp Dashboard"
             app:subtitleTextColor="#80D8FF" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -656,7 +656,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- หมวด 3: ความโปร่งใส & เสียงเตือน BSD (Transparency & Safety Chime) -->
+            <!-- หมวด 3: ความโปร่งใส & รูปแบบการแสดงผล (Transparency & Layout) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -790,207 +790,6 @@
                                 android:textColor="#ECEFF1" />
                         </RadioGroup>
                     </LinearLayout>
-
-                    <!-- BSD Safety Chime Switch -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="🔊 เสียงเตือนจุดอับสายตา + สัญญาณหน้าปัด Cluster (BSD Chime)"
-                                android:textColor="#ECEFF1"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="ออกลำโพงคู่ (Media + Navi) พร้อมส่ง Broadcast เมื่อมีรถในจุดอับ + เปิดไฟเลี้ยว/Cluster เตือน"
-                                android:textColor="#78909C"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/switch_bsd_sound"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true" />
-                    </LinearLayout>
-
-                    <!-- Test Chime Button -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_test_bsd_sound"
-                        android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:layout_marginTop="10dp"
-                        android:text="🔔 กดจำลองเสียงเตือน BSD 3 ครั้ง (Test Chime บนลำโพงรถ)"
-                        android:textSize="12sp"
-                        app:cornerRadius="10dp"
-                        app:backgroundTint="#37474F" />
-
-                    <!-- Sound Tone Selector RadioGroup -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="🎵 เลือกสไตล์เสียงเตือน 10 แบบ (กดเลือกเพื่อฟังเสียงทันที):"
-                        android:textColor="#B0BEC5"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <RadioGroup
-                        android:id="@+id/rg_bsd_tone"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="vertical">
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_1"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟢 1. Kalimba Warm Wood (380Hz เคาะไม้คาลิมบา อบอุ่น นุ่มนวล)"
-                            android:textColor="#81C784"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_2"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟢 2. Luxury Deep Thud (240Hz ทุ้มลึก หนักแน่น สไตล์รถยุโรปหรู)"
-                            android:textColor="#81C784"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_3"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟢 3. Soft Marimba (520Hz มาริมบากลมมน ไม่แสบแก้วหู)"
-                            android:textColor="#81C784"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_4"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✨ 4. High-Tech Glass Bell (Tesla ระฆังแก้วไซไฟ กังวานหรูหรา)"
-                            android:textColor="#38BDF8"
-                            android:textSize="12sp"
-                            android:checked="true" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_5"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✨ 5. Cyber Pulse Ping (880Hz ยานอวกาศล้ำยุค คมชัด)"
-                            android:textColor="#38BDF8"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_6"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟡 6. Mercedes Harmony Chord (คอร์ดเมเจอร์หรูหรา 3 โน้ต)"
-                            android:textColor="#FFD54F"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_7"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟡 7. Porsche Sport Chime (850Hz ระฆังสปอร์ต ฉับไว ปลุกสมาธิ)"
-                            android:textColor="#FFD54F"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_8"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="💎 8. EV Future Sweep (Sci-Fi กวาดความถี่ล้ำยุค ชวนมองกระจก)"
-                            android:textColor="#38BDF8"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_9"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🟡 9. Crystal Sonar Radar (1.3kHz โซนาร์แก้วใส คมชัด)"
-                            android:textColor="#FFD54F"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_tone_10"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🔴 10. Euro ADAS Cockpit (1.6k+2.1k ฮาร์โมนิกคู่ ชัดแม้เปิดเพลงดัง)"
-                            android:textColor="#FF8A80"
-                            android:textSize="12sp" />
-                    </RadioGroup>
-
-                    <!-- Cadence / Frequency of Repeating Chime -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="⏱️ ความถี่จังหวะเสียงเตือนกระพริบ (Pulsing Rhythm):"
-                        android:textColor="#B0BEC5"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <RadioGroup
-                        android:id="@+id/rg_bsd_interval"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="horizontal">
-
-                        <RadioButton
-                            android:id="@+id/rb_interval_350"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="⚡ เร็ว (350ms)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="11sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_interval_420"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="⏱️ ปกติ (420ms)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="11sp"
-                            android:checked="true" />
-
-                        <RadioButton
-                            android:id="@+id/rb_interval_500"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="🔔 ช้า (500ms)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="11sp" />
-
-                        <RadioButton
-                            android:id="@+id/rb_interval_600"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="🐢 ช้ามาก (600ms)"
-                            android:textColor="#ECEFF1"
-                            android:textSize="11sp" />
-                    </RadioGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -81,7 +81,6 @@ class OverlayService : Service() {
         super.onCreate()
         HiddenApiBypass.exemptAll()
         AutoPermissionHelper.ensureTelemetryDaemon(this)
-        BlindspotAudioChime.init(this)
 
         sharedPreferences = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
 
@@ -102,23 +101,6 @@ class OverlayService : Service() {
             ACTION_UPDATE_CONFIG -> {
                 applyUserFieldPreferences()
                 updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
-            }
-            ACTION_SIMULATE_BSD -> {
-                Thread {
-                    val toneExtra = intent.getStringExtra("extra_bsd_tone")
-                    val selectedTone = if (!toneExtra.isNullOrBlank()) {
-                        VehicleOverlayConfig.setBsdSoundType(this, toneExtra)
-                        toneExtra
-                    } else {
-                        VehicleOverlayConfig.getBsdSoundType(this)
-                    }
-                    // Simulate 3 side-mirror flashes at exact configured BSM pulse interval
-                    val interval = VehicleOverlayConfig.getBsdPulseIntervalMs(this)
-                    for (i in 1..3) {
-                        BlindspotAudioChime.playToneDirect(selectedTone, this)
-                        Thread.sleep(interval)
-                    }
-                }.start()
             }
             else -> {
                 applyUserFieldPreferences()
@@ -553,7 +535,6 @@ class OverlayService : Service() {
         private const val NOTIFICATION_ID = 2026
         const val ACTION_UPDATE_CONFIG = "com.byd.mapsoverlay.ACTION_UPDATE_CONFIG"
         const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
-        const val ACTION_SIMULATE_BSD = "com.byd.mapsoverlay.ACTION_SIMULATE_BSD"
         const val ACTION_UPDATE_DISTANCE = "com.byd.mapsoverlay.ACTION_UPDATE_DISTANCE"
         const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
         const val EXTRA_DISTANCE_KM = "extra_distance_km"

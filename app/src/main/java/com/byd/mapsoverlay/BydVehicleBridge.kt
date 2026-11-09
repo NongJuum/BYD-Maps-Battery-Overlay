@@ -13,12 +13,11 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 /**
- * BydVehicleBridge V2.1 (Full Vehicle Telemetry + Fast BSD/Cluster Watcher)
+ * BydVehicleBridge V2.2 (Pure Telemetry Bridge)
  * - Auto-starts BydTelemetryDaemon (UID 2000) via AutoPermissionHelper
  * - Reads HV Battery Temp (Max/Min/Avg °C), Cell Voltage (Max/Min V), 12V Aux,
  *   SoC %, Remain kWh, Dashboard Range, Real Range, 50km Avg Consumption, Instant Power,
  *   Cabin Temp, Outside Temp, Speed, Gear, Odometer, and TPMS 4-wheel pressures.
- * - Watches ADAS BSD + Turn Signal + Cluster Buzzle/Alarm state every 450ms for instant chime.
  */
 class BydVehicleBridge(
     private val context: Context,
@@ -118,20 +117,10 @@ class BydVehicleBridge(
     private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Any, Long>>()
     private val cacheTtlMs = 60_000L
 
-    private var registeredAdasListener: Any? = null
-    private var registeredLightListener: Any? = null
-
-    @Volatile private var isLeftTurnActive = false
-    @Volatile private var isRightTurnActive = false
-    @Volatile private var isLeftDangerActive = false
-    @Volatile private var isRightDangerActive = false
-
     fun startListening() {
         HiddenApiBypass.exemptAll()
         AutoPermissionHelper.ensureTelemetryDaemon(context)
         applyUserVehicleProfile()
-        BlindspotAudioChime.init(context)
-        registerSafetyListeners()
 
         executor?.shutdownNow()
         executor = Executors.newSingleThreadScheduledExecutor()
@@ -139,7 +128,7 @@ class BydVehicleBridge(
         executor?.scheduleWithFixedDelay({
             try {
                 tickCount++
-                if (tickCount % 6 == 1) {
+                if (tickCount % 5 == 1) {
                     applyUserVehicleProfile()
                     if (!isDaemonConnected) {
                         AutoPermissionHelper.ensureTelemetryDaemon(context)
@@ -147,16 +136,14 @@ class BydVehicleBridge(
                     pollDirectBydHardwareApi()
                     pollCabinTemperature()
                 }
-                // Fast poll (every 450ms) to localhost daemon for instant BSD + live telemetry
                 fetchTelemetryDaemonStatus()
             } catch (t: Throwable) {
-                Log.w(tag, "Zero-hole cycle catch: ${t.message}")
+                Log.w(tag, "Telemetry cycle catch: ${t.message}")
             }
-        }, 0, 450, TimeUnit.MILLISECONDS)
+        }, 0, 1000, TimeUnit.MILLISECONDS)
     }
 
     fun stopListening() {
-        unregisterSafetyListeners()
         executor?.shutdownNow()
         executor = null
         deviceCache.clear()
@@ -461,31 +448,6 @@ class BydVehicleBridge(
                     }
                 }
 
-                // STRICT DIRECTIONAL RULE:
-                // Only trigger BSM Chime when signaling towards the side where obstacle is present!
-                val daemonBsdState = json.optInt("bsdState", 0)
-                val daemonLeftTurn = json.optBoolean("isLeftTurn", false) || (json.optInt("turnFlashState", 0) in 2..3 || json.optInt("turnLightState", 0) in 2..3)
-                val daemonRightTurn = json.optBoolean("isRightTurn", false) || (json.optInt("turnFlashState", 0) in 4..5 || json.optInt("turnLightState", 0) in 4..5)
-
-                val bsdLeft = (daemonBsdState == 2 || daemonBsdState >= 4 || (daemonBsdState >= 2 && daemonLeftTurn))
-                val bsdRight = (daemonBsdState == 3 || daemonBsdState >= 4 || (daemonBsdState >= 2 && daemonRightTurn))
-
-                val daemonLeftDanger = json.optBoolean("isLeftDanger", false) || bsdLeft || json.optInt("dowWarnLeft", 0) > 0 || json.optInt("leftMirrorStatus", 0) > 0
-                val daemonRightDanger = json.optBoolean("isRightDanger", false) || bsdRight || json.optInt("dowWarnRight", 0) > 0 || json.optInt("rightMirrorStatus", 0) > 0
-
-                isLeftTurnActive = daemonLeftTurn
-                isRightTurnActive = daemonRightTurn
-                isLeftDangerActive = daemonLeftDanger
-                isRightDangerActive = daemonRightDanger
-
-                BlindspotAudioChime.updateBsmState(
-                    leftTurn = daemonLeftTurn,
-                    rightTurn = daemonRightTurn,
-                    leftDanger = daemonLeftDanger,
-                    rightDanger = daemonRightDanger,
-                    context = context
-                )
-
                 if (changed) {
                     recalculateRealTelemetry()
                     notifyUpdate()
@@ -523,109 +485,5 @@ class BydVehicleBridge(
         mainHandler.post {
             onTelemetryUpdate(currentSoc, currentConsumption)
         }
-    }
-
-    private fun registerSafetyListeners() {
-        try {
-            val adasClass = try { Class.forName("android.hardware.bydauto.adas.BYDAutoADASDevice") } catch (_: Throwable) { null }
-            if (adasClass != null) {
-                val adasDevice = obtainDeviceInstance(adasClass)
-                if (adasDevice != null) {
-                    val adasListener = object : android.hardware.bydauto.adas.AbsBYDAutoADASListener() {
-                        override fun onBSDStateChanged(state: Int) {
-                            // BYD BSD state: 1=standby/clear, 2=Left, 3=Right, 4=Both/General hazard >= 2
-                            when {
-                                state < 2 -> {
-                                    isLeftDangerActive = false
-                                    isRightDangerActive = false
-                                }
-                                state == 2 -> {
-                                    isLeftDangerActive = true
-                                    isRightDangerActive = false
-                                }
-                                state == 3 -> {
-                                    isLeftDangerActive = false
-                                    isRightDangerActive = true
-                                }
-                                state >= 4 -> {
-                                    isLeftDangerActive = true
-                                    isRightDangerActive = true
-                                }
-                            }
-                            if (state >= 2) {
-                                if (isLeftTurnActive) isLeftDangerActive = true
-                                if (isRightTurnActive) isRightDangerActive = true
-                            }
-                            checkAndTriggerChime()
-                        }
-                    }
-                    val regMethod = adasClass.methods.firstOrNull {
-                        it.name == "registerListener" && it.parameterTypes.size == 1 &&
-                            it.parameterTypes[0].isAssignableFrom(adasListener.javaClass)
-                    }
-                    regMethod?.invoke(adasDevice, adasListener)
-                    registeredAdasListener = Pair(adasDevice, adasListener)
-                }
-            }
-
-            val lightClass = try { Class.forName("android.hardware.bydauto.light.BYDAutoLightDevice") } catch (_: Throwable) { null }
-            if (lightClass != null) {
-                val lightDevice = obtainDeviceInstance(lightClass)
-                if (lightDevice != null) {
-                    val lightListener = object : android.hardware.bydauto.light.AbsBYDAutoLightListener() {
-                        override fun onTurnLightFlashStateChanged(state: Int) {
-                            // Flash bulb toggles between (2/3 or 4/5) and 1 (dark phase).
-                            // Only trigger when active flash is present to avoid resetting during dark phase.
-                            if (state in 2..5) {
-                                isLeftTurnActive = (state == 2 || state == 3)
-                                isRightTurnActive = (state == 4 || state == 5)
-                                checkAndTriggerChime()
-                            }
-                        }
-
-                        override fun onTurnLightStateChanged(state: Int) {
-                            // Physical turn lever stalk position (stays solid 2/3 or 4/5 while switch is engaged)
-                            isLeftTurnActive = (state == 2 || state == 3)
-                            isRightTurnActive = (state == 4 || state == 5)
-                            checkAndTriggerChime()
-                        }
-                    }
-                    val regMethod = lightClass.methods.firstOrNull {
-                        it.name == "registerListener" && it.parameterTypes.size == 1 &&
-                            it.parameterTypes[0].isAssignableFrom(lightListener.javaClass)
-                    }
-                    regMethod?.invoke(lightDevice, lightListener)
-                    registeredLightListener = Pair(lightDevice, lightListener)
-                }
-            }
-        } catch (t: Throwable) {
-            Log.w(tag, "Failed to register safety listeners: ${t.message}")
-        }
-    }
-
-    private fun checkAndTriggerChime() {
-        BlindspotAudioChime.updateBsmState(
-            leftTurn = isLeftTurnActive,
-            rightTurn = isRightTurnActive,
-            leftDanger = isLeftDangerActive,
-            rightDanger = isRightDangerActive,
-            context = context
-        )
-    }
-
-    private fun unregisterSafetyListeners() {
-        try {
-            (registeredAdasListener as? Pair<*, *>)?.let { (dev, listener) ->
-                val unreg = dev?.javaClass?.methods?.firstOrNull { it.name == "unregisterListener" && it.parameterCount == 1 }
-                unreg?.invoke(dev, listener)
-            }
-            registeredAdasListener = null
-
-            (registeredLightListener as? Pair<*, *>)?.let { (dev, listener) ->
-                val unreg = dev?.javaClass?.methods?.firstOrNull { it.name == "unregisterListener" && it.parameterCount == 1 }
-                unreg?.invoke(dev, listener)
-            }
-            registeredLightListener = null
-        } catch (_: Throwable) {}
     }
 }
