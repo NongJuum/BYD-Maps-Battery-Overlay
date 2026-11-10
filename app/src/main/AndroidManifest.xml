@@ -99,6 +99,10 @@
             android:foregroundServiceType="connectedDevice">
             <intent-filter>
                 <action android:name="com.byd.mapsoverlay.START_OVERLAY" />
+                <action android:name="com.byd.mapsoverlay.ACTION_CAR_WAKE" />
+                <action android:name="com.byd.mapsoverlay.ACTION_SHOW_OVERLAY" />
+                <action android:name="com.byd.mapsoverlay.ACTION_UPDATE_CONFIG" />
+                <action android:name="com.byd.mapsoverlay.ACTION_RESET_POSITION" />
             </intent-filter>
         </service>
 

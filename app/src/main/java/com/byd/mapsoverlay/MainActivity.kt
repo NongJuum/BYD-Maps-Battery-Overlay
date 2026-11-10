@@ -89,6 +89,16 @@ class MainActivity : AppCompatActivity() {
         HiddenApiBypass.exemptAll()
         AutoPermissionHelper.ensureTelemetryDaemon(this)
 
+        if (intent?.getBooleanExtra("extra_autostart_only", false) == true) {
+            val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("service_running", true) && checkOverlayPermission()) {
+                startOverlayService()
+            }
+            moveTaskToBack(true)
+            finish()
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
         initViews()
@@ -100,6 +110,18 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
         if (prefs.getBoolean("service_running", true) && checkOverlayPermission()) {
             startOverlayService()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        if (intent?.getBooleanExtra("extra_autostart_only", false) == true) {
+            val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("service_running", true) && checkOverlayPermission()) {
+                startOverlayService()
+            }
+            moveTaskToBack(true)
+            finish()
         }
     }
 
@@ -433,7 +455,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 tvHvTemp.text = String.format("%.0f / %.0f °C", bydBridge.hvBattTempMaxC, bydBridge.hvBattTempMinC)
                 tvCellVolt.text = String.format("%.3f / %.3f V", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
-                tvCabinTemp.text = "${bydBridge.outsideTemperatureC}°C"
+                tvCabinTemp.text = "${bydBridge.getDisplayAcTemp()}°C"
                 tv12v.text = String.format("%.1f V", bydBridge.aux12vVoltage)
                 tvVehicleModelBadge.text = bydBridge.detectedVehicleModel
                 updatePermissionStatusBadge()

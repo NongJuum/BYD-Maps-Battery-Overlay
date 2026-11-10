@@ -45,7 +45,7 @@ class BootReceiver : BroadcastReceiver() {
                 }
 
                 // 3. สตาร์ท Foreground Overlay Service
-                val serviceIntent = Intent(context, OverlayService::class.java)
+                val serviceIntent = Intent(context, OverlayService::class.java).setAction(OverlayService.ACTION_CAR_WAKE)
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(serviceIntent)

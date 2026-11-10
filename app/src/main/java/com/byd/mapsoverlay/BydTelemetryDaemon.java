@@ -3,6 +3,7 @@ package com.byd.mapsoverlay;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.os.SystemClock;
+import android.hardware.bydauto.ac.AbsBYDAutoAcListener;
 import android.hardware.bydauto.adas.AbsBYDAutoADASListener;
 import android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener;
 
@@ -62,8 +63,26 @@ public final class BydTelemetryDaemon {
 
     private static volatile Object registeredStatisticDevice;
     private static volatile Object registeredAdasDevice;
+    private static volatile Object registeredAcDevice;
+    private static volatile int callbackAcSetpointTemp = -1;
+    private static volatile int callbackAcCabinTemp = -1;
+    private static volatile long lastClientHeartbeatMs = SystemClock.elapsedRealtime();
+    private static volatile long lastAutostartAttemptMs = 0L;
     private static volatile int callbackBsdState = 0;
     private static volatile long callbackBsdTimestampMs = 0L;
+
+    private static final AbsBYDAutoAcListener AC_LISTENER =
+            new AbsBYDAutoAcListener() {
+        @Override public void onTemperatureChanged(int area, int temp) {
+            if (temp >= 14 && temp <= 40) {
+                if (area == 1 || area == 2) {
+                    callbackAcSetpointTemp = temp;
+                } else if (area == 3) {
+                    callbackAcCabinTemp = temp;
+                }
+            }
+        }
+    };
 
     private static final AbsBYDAutoADASListener ADAS_LISTENER =
             new AbsBYDAutoADASListener() {
@@ -120,7 +139,7 @@ public final class BydTelemetryDaemon {
             Context context = createBydContext(targetPkg);
             if (context == null) throw new IllegalStateException("Could not create BYD package context");
 
-            Thread poller = new Thread(() -> pollLoop(context), "BydTelemetryPoller");
+            Thread poller = new Thread(() -> pollLoop(context, targetPkg), "BydTelemetryPoller");
             poller.setDaemon(true);
             poller.start();
 
@@ -361,7 +380,7 @@ public final class BydTelemetryDaemon {
         }
     }
 
-    private static void pollLoop(Context context) {
+    private static void pollLoop(Context context, String targetPkg) {
         Object statistic = null;
         Object power = null;
         Object instrument = null;
@@ -381,7 +400,10 @@ public final class BydTelemetryDaemon {
                 }
                 if (power == null) power = getDevice("android.hardware.bydauto.power.BYDAutoPowerDevice", context);
                 if (instrument == null) instrument = getDevice("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice", context);
-                if (ac == null) ac = getDevice("android.hardware.bydauto.ac.BYDAutoAcDevice", context);
+                if (ac == null) {
+                    ac = getDevice("android.hardware.bydauto.ac.BYDAutoAcDevice", context);
+                    if (ac != null) registerAcListener(ac);
+                }
                 if (speedDev == null) speedDev = getDevice("android.hardware.bydauto.speed.BYDAutoSpeedDevice", context);
                 if (gearbox == null) gearbox = getDevice("android.hardware.bydauto.gearbox.BYDAutoGearboxDevice", context);
                 if (tyre == null) tyre = getDevice("android.hardware.bydauto.tyre.BYDAutoTyreDevice", context);
@@ -459,8 +481,8 @@ public final class BydTelemetryDaemon {
                 }
 
                 // Real Cabin Indoor Sensor Temp + AC Setpoint + Humidity + Outside Temp
-                Integer acCabinTemp = integerWithIntArg(ac, "getTemprature", 3);
-                Integer acSetpointTemp = integerWithIntArg(ac, "getTemprature", 1);
+                Integer acCabinTemp = callbackAcCabinTemp > 0 ? callbackAcCabinTemp : integerWithIntArg(ac, "getTemprature", 3);
+                Integer acSetpointTemp = callbackAcSetpointTemp > 0 ? callbackAcSetpointTemp : integerWithIntArg(ac, "getTemprature", 1);
                 Double realCabinSensorTemp = number(sensor, "getTemperatureSensorValue");
                 Double cabinHumidity = number(sensor, "getHumiditySensorValue");
                 Integer outsideTemp = integer(instrument, "getOutCarTemperature");
@@ -573,6 +595,28 @@ public final class BydTelemetryDaemon {
                     snapshot = data;
                 }
 
+                // Autostart Watchdog: keep OverlayService active whenever vehicle is awake
+                long nowWatchdog = SystemClock.elapsedRealtime();
+                if (validSoc && (nowWatchdog - lastClientHeartbeatMs > 15000L) && (nowWatchdog - lastAutostartAttemptMs > 15000L)) {
+                    lastAutostartAttemptMs = nowWatchdog;
+                    try {
+                        Process p = Runtime.getRuntime().exec(new String[]{
+                            "am", "start-foreground-service",
+                            "-a", "com.byd.mapsoverlay.START_OVERLAY",
+                            "-p", targetPkg
+                        });
+                        p.waitFor();
+                        if (p.exitValue() != 0) {
+                            Runtime.getRuntime().exec(new String[]{
+                                "am", "start",
+                                "-n", targetPkg + "/com.byd.mapsoverlay.MainActivity",
+                                "--ez", "extra_autostart_only", "true",
+                                "--activity-no-animation"
+                            });
+                        }
+                    } catch (Throwable ignored) {}
+                }
+
                 long now = SystemClock.elapsedRealtime();
                 if (now - lastLog > 30000) {
                     log("Telemetry status=" + data.optString("status")
@@ -653,6 +697,34 @@ public final class BydTelemetryDaemon {
                 registeredAdasDevice = device;
             } catch (Throwable ignored) {}
         } catch (Throwable ignored) {}
+    }
+
+    private static synchronized void registerAcListener(Object device) {
+        if (registeredAcDevice == device || device == null) return;
+        try {
+            Class<?> listenerType = Class.forName(
+                    "android.hardware.bydauto.ac.AbsBYDAutoAcListener",
+                    true,
+                    device.getClass().getClassLoader());
+            Method register = device.getClass().getMethod("registerListener", listenerType);
+            register.invoke(device, AC_LISTENER);
+            registeredAcDevice = device;
+            log("Registered AbsBYDAutoAcListener successfully");
+        } catch (NoSuchMethodException missingSingleArg) {
+            try {
+                Class<?> listenerType = Class.forName(
+                        "android.hardware.bydauto.ac.AbsBYDAutoAcListener",
+                        true,
+                        device.getClass().getClassLoader());
+                Method register = device.getClass().getMethod(
+                        "registerListener", listenerType, int[].class);
+                register.invoke(device, AC_LISTENER, new int[0]);
+                registeredAcDevice = device;
+                log("Registered AbsBYDAutoAcListener (int[] overload) successfully");
+            } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            log("Failed to register AC listener: " + t);
+        }
     }
 
     private static Object getDevice(String className, Context context) {
@@ -807,6 +879,7 @@ public final class BydTelemetryDaemon {
     }
 
     private static void handleClient(Socket client) {
+        lastClientHeartbeatMs = SystemClock.elapsedRealtime();
         try (Socket c = client) {
             c.setSoTimeout(1500);
             BufferedReader reader = new BufferedReader(new InputStreamReader(c.getInputStream()));

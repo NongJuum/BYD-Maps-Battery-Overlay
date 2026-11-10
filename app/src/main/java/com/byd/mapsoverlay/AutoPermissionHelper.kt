@@ -134,9 +134,13 @@ object AutoPermissionHelper {
                     service call accmodemanager 3 s16 '$targetPkg' 2>/dev/null || true
                     appops set $targetPkg RUN_IN_BACKGROUND allow 2>/dev/null || true
                     appops set $targetPkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null || true
+                    appops set $targetPkg START_FOREGROUND allow 2>/dev/null || true
+                    appops set $targetPkg SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
                     appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
                     dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
                     settings put global byd_data_cache_whitelist $targetPkg 1 2>/dev/null || true
+                    CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
+                    CUR=${'$'}(settings get secure ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put secure ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
                     cmd appops set $targetPkg TOAST_WINDOW allow 2>/dev/null || true
                     APK_PATH=$(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
                     if [ -z "${'$'}APK_PATH" ]; then

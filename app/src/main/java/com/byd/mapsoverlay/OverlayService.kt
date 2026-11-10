@@ -75,6 +75,14 @@ class OverlayService : Service() {
     private lateinit var bydBridge: BydVehicleBridge
     private lateinit var sharedPreferences: SharedPreferences
 
+    private val wakeReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            mainHandler.post {
+                ensureOverlayAttachedAndVisible()
+            }
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -93,6 +101,16 @@ class OverlayService : Service() {
 
         startForeground(NOTIFICATION_ID, createNotification())
         createOverlayView()
+
+        val filter = android.content.IntentFilter().apply {
+            addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction("com.byd.intent.action.POWER_ON")
+            addAction("com.byd.intent.action.ACC_ON")
+        }
+        try {
+            registerReceiver(wakeReceiver, filter)
+        } catch (_: Throwable) {}
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -102,12 +120,32 @@ class OverlayService : Service() {
                 applyUserFieldPreferences()
                 updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
             }
+            ACTION_CAR_WAKE, ACTION_SHOW_OVERLAY -> {
+                ensureOverlayAttachedAndVisible()
+            }
             else -> {
-                applyUserFieldPreferences()
-                updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
+                ensureOverlayAttachedAndVisible()
             }
         }
         return START_STICKY
+    }
+
+    private fun ensureOverlayAttachedAndVisible() {
+        if (overlayView == null) {
+            createOverlayView()
+        } else {
+            overlayView?.visibility = View.VISIBLE
+            clampOverlayToScreenBounds()
+            windowParams?.let { lp ->
+                try {
+                    windowManager?.updateViewLayout(overlayView, lp)
+                } catch (_: Throwable) {}
+            }
+        }
+        applyUserFieldPreferences()
+        if (::bydBridge.isInitialized) {
+            updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -125,13 +163,21 @@ class OverlayService : Service() {
         val screenW = dm.widthPixels
         val screenH = dm.heightPixels
 
+        if (screenW < 500 || screenH < 300) return
+
+        val viewW = if (view.width > 0) view.width else (300 * dm.density).toInt()
+        val viewH = if (view.height > 0) view.height else (40 * dm.density).toInt()
+
+        val maxX = (screenW - viewW).coerceAtLeast(0)
+        val maxY = (screenH - viewH).coerceAtLeast(0)
+
         var changed = false
-        if (params.x > screenW - 100) {
-            params.x = (screenW - view.width).coerceAtLeast(20)
+        if (params.x > maxX) {
+            params.x = maxX
             changed = true
         }
-        if (params.y > screenH - 60) {
-            params.y = (screenH - view.height).coerceAtLeast(20)
+        if (params.y > maxY) {
+            params.y = maxY
             changed = true
         }
         if (changed) {
@@ -485,7 +531,7 @@ class OverlayService : Service() {
         }
 
         tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
-        tvCabinTemp?.text = "${bydBridge.cabinTemperatureC}°C"
+        tvCabinTemp?.text = "${bydBridge.getDisplayAcTemp()}°C"
         tvOutTemp?.text = "${bydBridge.outsideTemperatureC}°C"
         tvSoh?.text = "${bydBridge.sohPercent}% SOH"
         tv12v?.text = String.format("%.1fV", bydBridge.aux12vVoltage)
@@ -520,6 +566,9 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            unregisterReceiver(wakeReceiver)
+        } catch (_: Throwable) {}
         bydBridge.stopListening()
         if (overlayView != null) {
             try {
@@ -537,6 +586,8 @@ class OverlayService : Service() {
         const val ACTION_RESET_POSITION = "com.byd.mapsoverlay.ACTION_RESET_POSITION"
         const val ACTION_UPDATE_DISTANCE = "com.byd.mapsoverlay.ACTION_UPDATE_DISTANCE"
         const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
+        const val ACTION_SHOW_OVERLAY = "com.byd.mapsoverlay.ACTION_SHOW_OVERLAY"
+        const val ACTION_CAR_WAKE = "com.byd.mapsoverlay.ACTION_CAR_WAKE"
         const val EXTRA_DISTANCE_KM = "extra_distance_km"
     }
 }

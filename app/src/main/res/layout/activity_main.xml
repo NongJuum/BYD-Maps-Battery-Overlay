@@ -614,7 +614,7 @@
                                 android:id="@+id/rb_tpms_psi"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="PSI (เช่น 39 psi)"
+                                android:text="PSI (FL:39 FR:39 | RL:39 RR:39)"
                                 android:textColor="#80CBC4"
                                 android:textSize="11sp"
                                 android:checked="true" />
@@ -624,7 +624,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="10dp"
-                                android:text="kPa (เช่น 270 kPa)"
+                                android:text="kPa (FL:270 FR:266 | RL:269 RR:266)"
                                 android:textColor="#ECEFF1"
                                 android:textSize="11sp" />
                         </RadioGroup>

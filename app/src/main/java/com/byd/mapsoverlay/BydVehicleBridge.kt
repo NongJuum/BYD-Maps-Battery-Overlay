@@ -86,14 +86,22 @@ class BydVehicleBridge(
         private set
 
     fun getFormattedTpms(unit: String): String {
-        return if (unit.lowercase() == "psi") {
-            val flPsi = (tpmsFlKpa * 0.1450377).roundToInt()
-            val frPsi = (tpmsFrKpa * 0.1450377).roundToInt()
-            val rlPsi = (tpmsRlKpa * 0.1450377).roundToInt()
-            val rrPsi = (tpmsRrKpa * 0.1450377).roundToInt()
-            "$flPsi/$frPsi/$rlPsi/$rrPsi psi"
+        val isPsi = unit.lowercase() == "psi"
+        fun fmt(kpa: Int): String {
+            if (kpa <= 0) return "--"
+            return if (isPsi) "${(kpa * 0.1450377).roundToInt()}" else "$kpa"
+        }
+        val unitLabel = if (isPsi) "psi" else "kPa"
+        return "FL:${fmt(tpmsFlKpa)} FR:${fmt(tpmsFrKpa)} | RL:${fmt(tpmsRlKpa)} RR:${fmt(tpmsRrKpa)} $unitLabel"
+    }
+
+    fun getDisplayAcTemp(): Int {
+        return if (acSetpointTemperatureC in 14..35) {
+            acSetpointTemperatureC
+        } else if (cabinTemperatureC in 10..50) {
+            cabinTemperatureC
         } else {
-            "$tpmsFlKpa/$tpmsFrKpa/$tpmsRlKpa/$tpmsRrKpa kPa"
+            24
         }
     }
 
