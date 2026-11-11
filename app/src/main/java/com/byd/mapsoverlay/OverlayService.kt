@@ -611,6 +611,31 @@ class OverlayService : Service() {
         val dm = resources.displayMetrics
         val statusBarHeightPx = (56 * dm.density).toInt().coerceAtLeast(84)
 
+        // Custom Theme Colors (Text Color and Background Color)
+        val textColorTheme = VehicleOverlayConfig.getTextColorTheme(this)
+        val bgColorTheme = VehicleOverlayConfig.getBgColorTheme(this)
+
+        val primaryTextColor = when (textColorTheme) {
+            "cyan" -> android.graphics.Color.parseColor("#40C4FF")
+            "emerald" -> android.graphics.Color.parseColor("#69F0AE")
+            "amber" -> android.graphics.Color.parseColor("#FFB74D")
+            "violet" -> android.graphics.Color.parseColor("#E1BEE7")
+            else -> android.graphics.Color.parseColor("#ECEFF1") // "white"
+        }
+
+        val textValueViews = listOf(tvKwh, tvDashRange, tvRealRange, tvConsumption, tv12v, tvOdo, tvSpeed, tvGear)
+        for (tv in textValueViews) {
+            tv?.setTextColor(primaryTextColor)
+        }
+
+        val (bgColorInt, hairlineColorInt) = when (bgColorTheme) {
+            "glass" -> Pair(android.graphics.Color.parseColor("#E6181E26"), android.graphics.Color.parseColor("#33FFFFFF"))
+            "carbon" -> Pair(android.graphics.Color.parseColor("#F2121212"), android.graphics.Color.parseColor("#26FFFFFF"))
+            "midnight" -> Pair(android.graphics.Color.parseColor("#F20D1B2A"), android.graphics.Color.parseColor("#2640C4FF"))
+            "transparent" -> Pair(android.graphics.Color.parseColor("#00000000"), android.graphics.Color.parseColor("#14FFFFFF"))
+            else -> Pair(android.graphics.Color.parseColor("#FF0B0E14"), android.graphics.Color.parseColor("#FF1A2433")) // "black"
+        }
+
         if (isStockBar) {
             dragHandle?.visibility = View.GONE
             containerStockClock?.visibility = View.VISIBLE
@@ -620,7 +645,16 @@ class OverlayService : Service() {
             spacerStockLeft?.visibility = View.VISIBLE
             spacerStockRight?.visibility = View.VISIBLE
 
-            overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_full)
+            if (bgColorTheme == "black") {
+                overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_full)
+            } else {
+                val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    setColor(bgColorInt)
+                    setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), hairlineColorInt)
+                }
+                overlayView?.background = bgDrawable
+            }
             overlayView?.elevation = 0f
             windowParams?.let { lp ->
                 lp.width = WindowManager.LayoutParams.MATCH_PARENT
@@ -641,7 +675,17 @@ class OverlayService : Service() {
             spacerStockLeft?.visibility = View.GONE
             spacerStockRight?.visibility = View.GONE
 
-            overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
+            if (bgColorTheme == "black") {
+                overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
+            } else {
+                val pillDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = 16 * resources.displayMetrics.density
+                    setColor(bgColorInt)
+                    setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), hairlineColorInt)
+                }
+                overlayView?.background = pillDrawable
+            }
             overlayView?.elevation = 8 * resources.displayMetrics.density
             val opacityPercent = VehicleOverlayConfig.getOpacity(this).coerceIn(0, 100)
             val bgAlpha255 = (opacityPercent * 255 / 100).coerceIn(0, 255)
@@ -759,8 +803,10 @@ class OverlayService : Service() {
 
         tvStatusCamera?.text = status.cameraText
         if (status.isCameraActive) {
+            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
+            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
 

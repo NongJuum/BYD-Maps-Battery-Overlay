@@ -46,6 +46,8 @@ object VehicleOverlayConfig {
     const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 0 - 100%
     const val KEY_OVERLAY_SCALE = "pref_overlay_scale" // 70 - 150% (Default 100)
     const val KEY_OVERLAY_ORIENTATION = "pref_overlay_orientation" // "horizontal" or "vertical"
+    const val KEY_TEXT_COLOR_THEME = "pref_text_color_theme" // "white", "cyan", "emerald", "amber", "violet"
+    const val KEY_BG_COLOR_THEME = "pref_bg_color_theme" // "black", "glass", "carbon", "midnight", "transparent"
 
     private fun prefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -139,4 +141,11 @@ object VehicleOverlayConfig {
 
     fun isVerticalLayout(context: Context): Boolean = prefs(context).getString(KEY_OVERLAY_ORIENTATION, "horizontal") == "vertical"
     fun setVerticalLayout(context: Context, isVertical: Boolean) = prefs(context).edit().putString(KEY_OVERLAY_ORIENTATION, if (isVertical) "vertical" else "horizontal").apply()
+
+    // ธีมสีตัวอักษรและสีพื้นหลัง (Custom Colors)
+    fun getTextColorTheme(context: Context): String = prefs(context).getString(KEY_TEXT_COLOR_THEME, "white") ?: "white"
+    fun setTextColorTheme(context: Context, value: String) = prefs(context).edit().putString(KEY_TEXT_COLOR_THEME, value).apply()
+
+    fun getBgColorTheme(context: Context): String = prefs(context).getString(KEY_BG_COLOR_THEME, "black") ?: "black"
+    fun setBgColorTheme(context: Context, value: String) = prefs(context).edit().putString(KEY_BG_COLOR_THEME, value).apply()
 }

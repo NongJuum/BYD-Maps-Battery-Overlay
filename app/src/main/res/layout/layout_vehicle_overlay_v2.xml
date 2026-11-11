@@ -572,24 +572,28 @@
         android:orientation="horizontal"
         android:paddingEnd="8dp">
 
-        <!-- 1. กล้องบันทึกรอบคัน / กล้องหน้ารถ (DVR / Panoramic Camera) -->
+        <!-- 1. กล้องบันทึกรอบคัน / กล้องหน้ารถ (DASHCAM / DVR REC) -->
         <LinearLayout
             android:id="@+id/container_status_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            android:background="@drawable/bg_badge_dvr"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:layout_marginEnd="6dp"
             android:visibility="gone">
 
             <TextView
                 android:id="@+id/tv_status_camera"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔴 REC"
-                android:textColor="#FF5252"
-                android:textSize="11sp"
+                android:text="📷 DVR"
+                android:textColor="#90A4AE"
+                android:textSize="10.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -600,8 +604,12 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            android:background="@drawable/bg_status_capsule"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:layout_marginEnd="6dp"
             android:visibility="gone">
 
             <TextView
@@ -610,7 +618,7 @@
                 android:layout_height="wrap_content"
                 android:text="📍 GPS"
                 android:textColor="#40C4FF"
-                android:textSize="11sp"
+                android:textSize="10.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -621,8 +629,12 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            android:background="@drawable/bg_status_capsule"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:layout_marginEnd="6dp"
             android:visibility="gone">
 
             <TextView
@@ -642,17 +654,21 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            android:background="@drawable/bg_status_capsule"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:layout_marginEnd="6dp"
             android:visibility="gone">
 
             <TextView
                 android:id="@+id/tv_status_wifi"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📶 Wi-Fi"
-                android:textColor="#80CBC4"
-                android:textSize="11sp"
+                android:text="Wi-Fi"
+                android:textColor="#ECEFF1"
+                android:textSize="10.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -663,17 +679,21 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            android:background="@drawable/bg_status_capsule"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:layout_marginEnd="6dp"
             android:visibility="gone">
 
             <TextView
                 android:id="@+id/tv_status_sim"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📶 4G"
-                android:textColor="#69F0AE"
-                android:textSize="11sp"
+                android:text="4G"
+                android:textColor="#ECEFF1"
+                android:textSize="10.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 

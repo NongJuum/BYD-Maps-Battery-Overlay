@@ -913,6 +913,135 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- หมวด 4: ปรับแต่งสีตัวอักษรและสีพื้นหลัง (Custom Colors & Themes) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="14dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E2633"
+                app:cardBackgroundColor="#141A24">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎨 ธีมสีตัวเลข &amp; ตัวอักษร (Text Color Theme)"
+                        android:textColor="#40C4FF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/rg_text_color_theme"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="6dp">
+
+                        <RadioButton
+                            android:id="@+id/rb_text_color_white"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ขาว OEM"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp"
+                            android:checked="true" />
+
+                        <RadioButton
+                            android:id="@+id/rb_text_color_cyan"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="ฟ้าสปอร์ต"
+                            android:textColor="#40C4FF"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_text_color_emerald"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="เขียวอีโค"
+                            android:textColor="#69F0AE"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_text_color_amber"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="ส้มเรซซิ่ง"
+                            android:textColor="#FFB74D"
+                            android:textSize="12sp" />
+                    </RadioGroup>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#1E2A38"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="10dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🌌 ธีมสีพื้นหลังแถบสถานะ (Background Color Theme)"
+                        android:textColor="#B388FF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <RadioGroup
+                        android:id="@+id/rg_bg_color_theme"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="6dp">
+
+                        <RadioButton
+                            android:id="@+id/rb_bg_color_black"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ดำมืด OEM"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp"
+                            android:checked="true" />
+
+                        <RadioButton
+                            android:id="@+id/rb_bg_color_glass"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="กระจกรมควัน"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_bg_color_midnight"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="มิดไนท์บลู"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rb_bg_color_transparent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="ใสโปร่งแสง"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+                    </RadioGroup>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 4. ACTION CONTROLS & RESET BUTTON -->
             <LinearLayout
                 android:layout_width="match_parent"

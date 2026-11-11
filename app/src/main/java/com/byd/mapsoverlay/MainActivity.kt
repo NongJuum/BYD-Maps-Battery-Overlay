@@ -88,6 +88,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbTpmsPsi: android.widget.RadioButton
     private lateinit var rbTpmsKpa: android.widget.RadioButton
 
+    private lateinit var rgTextColorTheme: android.widget.RadioGroup
+    private lateinit var rbTextColorWhite: android.widget.RadioButton
+    private lateinit var rbTextColorCyan: android.widget.RadioButton
+    private lateinit var rbTextColorEmerald: android.widget.RadioButton
+    private lateinit var rbTextColorAmber: android.widget.RadioButton
+
+    private lateinit var rgBgColorTheme: android.widget.RadioGroup
+    private lateinit var rbBgColorBlack: android.widget.RadioButton
+    private lateinit var rbBgColorGlass: android.widget.RadioButton
+    private lateinit var rbBgColorMidnight: android.widget.RadioButton
+    private lateinit var rbBgColorTransparent: android.widget.RadioButton
+
     private lateinit var btnResetPos: MaterialButton
     private lateinit var btnSaveConfig: MaterialButton
 
@@ -204,6 +216,18 @@ class MainActivity : AppCompatActivity() {
         rbTpmsPsi = findViewById(R.id.rb_tpms_psi)
         rbTpmsKpa = findViewById(R.id.rb_tpms_kpa)
 
+        rgTextColorTheme = findViewById(R.id.rg_text_color_theme)
+        rbTextColorWhite = findViewById(R.id.rb_text_color_white)
+        rbTextColorCyan = findViewById(R.id.rb_text_color_cyan)
+        rbTextColorEmerald = findViewById(R.id.rb_text_color_emerald)
+        rbTextColorAmber = findViewById(R.id.rb_text_color_amber)
+
+        rgBgColorTheme = findViewById(R.id.rg_bg_color_theme)
+        rbBgColorBlack = findViewById(R.id.rb_bg_color_black)
+        rbBgColorGlass = findViewById(R.id.rb_bg_color_glass)
+        rbBgColorMidnight = findViewById(R.id.rb_bg_color_midnight)
+        rbBgColorTransparent = findViewById(R.id.rb_bg_color_transparent)
+
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
     }
@@ -283,6 +307,20 @@ class MainActivity : AppCompatActivity() {
             rbTpmsKpa.isChecked = true
         } else {
             rbTpmsPsi.isChecked = true
+        }
+
+        when (VehicleOverlayConfig.getTextColorTheme(this)) {
+            "cyan" -> rbTextColorCyan.isChecked = true
+            "emerald" -> rbTextColorEmerald.isChecked = true
+            "amber" -> rbTextColorAmber.isChecked = true
+            else -> rbTextColorWhite.isChecked = true
+        }
+
+        when (VehicleOverlayConfig.getBgColorTheme(this)) {
+            "glass" -> rbBgColorGlass.isChecked = true
+            "midnight" -> rbBgColorMidnight.isChecked = true
+            "transparent" -> rbBgColorTransparent.isChecked = true
+            else -> rbBgColorBlack.isChecked = true
         }
 
         val prefs = getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
@@ -415,6 +453,28 @@ class MainActivity : AppCompatActivity() {
         rgTpmsUnit.setOnCheckedChangeListener { _, checkedId ->
             val unit = if (checkedId == R.id.rb_tpms_kpa) "kpa" else "psi"
             VehicleOverlayConfig.setTpmsUnit(this, unit)
+            notifyOverlayServiceConfigChanged()
+        }
+
+        rgTextColorTheme.setOnCheckedChangeListener { _, checkedId ->
+            val theme = when (checkedId) {
+                R.id.rb_text_color_cyan -> "cyan"
+                R.id.rb_text_color_emerald -> "emerald"
+                R.id.rb_text_color_amber -> "amber"
+                else -> "white"
+            }
+            VehicleOverlayConfig.setTextColorTheme(this, theme)
+            notifyOverlayServiceConfigChanged()
+        }
+
+        rgBgColorTheme.setOnCheckedChangeListener { _, checkedId ->
+            val theme = when (checkedId) {
+                R.id.rb_bg_color_glass -> "glass"
+                R.id.rb_bg_color_midnight -> "midnight"
+                R.id.rb_bg_color_transparent -> "transparent"
+                else -> "black"
+            }
+            VehicleOverlayConfig.setBgColorTheme(this, theme)
             notifyOverlayServiceConfigChanged()
         }
 
