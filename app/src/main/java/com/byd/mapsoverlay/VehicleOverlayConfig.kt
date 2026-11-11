@@ -128,8 +128,8 @@ object VehicleOverlayConfig {
     fun isShowBluetooth(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_BLUETOOTH, true)
     fun setShowBluetooth(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_BLUETOOTH, value).apply()
 
-    // โหมดการแสดงผล (Stock Bar vs Floating Pill)
-    fun isStockBarMode(context: Context): Boolean = prefs(context).getString(KEY_DISPLAY_MODE, "floating") == "stock_bar"
+    // โหมดการแสดงผล (Stock Bar vs Floating Pill) - ค่าเริ่มต้นเป็น stock_bar ตามสเปกแทนที่แถบเดิม
+    fun isStockBarMode(context: Context): Boolean = prefs(context).getString(KEY_DISPLAY_MODE, "stock_bar") == "stock_bar"
     fun setStockBarMode(context: Context, isStockBar: Boolean) = prefs(context).edit().putString(KEY_DISPLAY_MODE, if (isStockBar) "stock_bar" else "floating").apply()
 
     // การปรับแต่งทั่วไป
