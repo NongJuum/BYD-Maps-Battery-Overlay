@@ -89,16 +89,39 @@ class OverlayService : Service() {
     private lateinit var bydBridge: BydVehicleBridge
     private lateinit var sharedPreferences: SharedPreferences
 
-    private val wakeReceiver = object : android.content.BroadcastReceiver() {
+    private val carStateReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val act = intent?.action
-            android.util.Log.i("OverlayService", "Car wake event received: $act -> Ensuring overlay and status bar")
-            mainHandler.post {
-                val isStockBar = VehicleOverlayConfig.isStockBarMode(this@OverlayService)
-                if (isStockBar) {
-                    AutoPermissionHelper.setStockBarImmersive(true, this@OverlayService)
+            val act = intent?.action ?: return
+            when (act) {
+                "com.byd.action.ACC_OFF",
+                Intent.ACTION_SCREEN_OFF -> {
+                    android.util.Log.i("OverlayService", "Car sleep event received: $act -> Entering dormant mode to protect 12V battery")
+                    mainHandler.post {
+                        systemStatusManager?.stopMonitoring()
+                        bydBridge.stopListening()
+                        overlayView?.visibility = View.GONE
+                    }
                 }
-                ensureOverlayAttachedAndVisible()
+                Intent.ACTION_SCREEN_ON,
+                Intent.ACTION_USER_PRESENT,
+                Intent.ACTION_USER_UNLOCKED,
+                "android.intent.action.QUICKBOOT_POWERON",
+                "com.htc.intent.action.QUICKBOOT_POWERON",
+                "com.byd.action.ACC_ON",
+                "com.byd.action.IGN_ON",
+                "com.byd.intent.action.POWER_ON",
+                "com.byd.intent.action.ACC_ON" -> {
+                    android.util.Log.i("OverlayService", "Car wake event received: $act -> Restoring telemetry and overlay")
+                    mainHandler.post {
+                        bydBridge.startListening()
+                        systemStatusManager?.startMonitoring()
+                        val isStockBar = VehicleOverlayConfig.isStockBarMode(this@OverlayService)
+                        if (isStockBar) {
+                            AutoPermissionHelper.setStockBarImmersive(true, this@OverlayService)
+                        }
+                        ensureOverlayAttachedAndVisible()
+                    }
+                }
             }
         }
     }
@@ -107,6 +130,9 @@ class OverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Start foreground immediately to comply with 5-second timeout on Android 8.0+
+        startForeground(NOTIFICATION_ID, createNotification())
+
         HiddenApiBypass.exemptAll()
         AutoPermissionHelper.ensureTelemetryDaemon(this)
 
@@ -119,7 +145,6 @@ class OverlayService : Service() {
         }
         bydBridge.startListening()
 
-        startForeground(NOTIFICATION_ID, createNotification())
         createOverlayView()
 
         systemStatusManager = SystemStatusManager(this) { status ->
@@ -133,6 +158,7 @@ class OverlayService : Service() {
             addAction(Intent.ACTION_USER_PRESENT)
             addAction(Intent.ACTION_USER_UNLOCKED)
             addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
             addAction("android.intent.action.QUICKBOOT_POWERON")
             addAction("com.htc.intent.action.QUICKBOOT_POWERON")
             addAction("com.byd.action.ACC_ON")
@@ -142,7 +168,7 @@ class OverlayService : Service() {
             addAction("com.byd.intent.action.ACC_ON")
         }
         try {
-            registerReceiver(wakeReceiver, filter)
+            registerReceiver(carStateReceiver, filter)
         } catch (_: Throwable) {}
     }
 
@@ -153,7 +179,18 @@ class OverlayService : Service() {
                 applyUserFieldPreferences()
                 updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
             }
+            ACTION_CAR_SLEEP, ACTION_HIDE_OVERLAY -> {
+                systemStatusManager?.stopMonitoring()
+                bydBridge.stopListening()
+                overlayView?.visibility = View.GONE
+            }
             ACTION_CAR_WAKE, ACTION_SHOW_OVERLAY -> {
+                bydBridge.startListening()
+                systemStatusManager?.startMonitoring()
+                val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
+                if (isStockBar) {
+                    AutoPermissionHelper.setStockBarImmersive(true, this)
+                }
                 ensureOverlayAttachedAndVisible()
             }
             else -> {
@@ -456,6 +493,7 @@ class OverlayService : Service() {
     }
 
     private fun applyUserFieldPreferences() {
+        val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
         val showSoc = VehicleOverlayConfig.isShowSoc(this)
         val showKwh = VehicleOverlayConfig.isShowRemainKwh(this)
         val showRealRange = VehicleOverlayConfig.isShowRealRange(this)
@@ -502,6 +540,18 @@ class OverlayService : Service() {
         containerStatusGps?.visibility = if (showGps) View.VISIBLE else View.GONE
         containerStatusCamera?.visibility = if (showCamera) View.VISIBLE else View.GONE
         containerStatusBt?.visibility = if (showBt) View.VISIBLE else View.GONE
+
+        // Portrait mode adaptive layout (1080px width: hide secondary metrics to prevent overflow)
+        val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT ||
+                resources.displayMetrics.widthPixels < resources.displayMetrics.heightPixels
+        if (isPortrait && isStockBar) {
+            containerTpms?.visibility = View.GONE
+            container12v?.visibility = View.GONE
+            containerSoh?.visibility = View.GONE
+            containerOutTemp?.visibility = View.GONE
+            containerInstPower?.visibility = View.GONE
+            containerCellVolt?.visibility = View.GONE
+        }
 
         // Smart Divider Visibility: show divider only if the container before it is visible AND at least one container after it is visible
         val rootLayout = overlayView as? LinearLayout
@@ -550,7 +600,6 @@ class OverlayService : Service() {
         }
 
         // จัดการโหมดการแสดงผล (Stock Bar Mode vs Floating Pill)
-        val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
         AutoPermissionHelper.setStockBarImmersive(isStockBar, this)
 
         val dragHandle = overlayView?.findViewById<View>(R.id.tv_drag_handle)
@@ -615,7 +664,7 @@ class OverlayService : Service() {
         overlayView?.scaleX = 1.0f
         overlayView?.scaleY = 1.0f
 
-        val baseSp = if (isStockBar) 11.5f else 11.5f * scale
+        val baseSp = if (isStockBar) 12.0f else 11.5f * scale
         val allTv = listOf(
             tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
             tvConsumption, tvInstPower, tvOutTemp, tvSoh,
@@ -657,16 +706,20 @@ class OverlayService : Service() {
         val hvTempMode = VehicleOverlayConfig.getHvBattTempMode(this)
         tvHvTemp?.text = bydBridge.getFormattedHvBattTemp(hvTempMode)
 
-        tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
+        if (bydBridge.cellVoltMaxV > 0.0) {
+            tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
+        } else {
+            tvCellVolt?.text = "--/--V"
+        }
 
         if (consumption > 0.0) {
             tvConsumption?.text = String.format("%.1f", consumption)
         }
 
         tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
-        tvOutTemp?.text = "${bydBridge.outsideTemperatureC}°C"
-        tvSoh?.text = "${bydBridge.sohPercent}%"
-        tv12v?.text = String.format("%.1fV", bydBridge.aux12vVoltage)
+        tvOutTemp?.text = if (bydBridge.outsideTemperatureC != 0) "${bydBridge.outsideTemperatureC}°C" else "--°C"
+        tvSoh?.text = if (bydBridge.sohPercent > 0) "${bydBridge.sohPercent}%" else "--%"
+        tv12v?.text = if (bydBridge.aux12vVoltage > 0.0) String.format("%.1fV", bydBridge.aux12vVoltage) else "--V"
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
         tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
         if (bydBridge.totalMileageKm > 0) {
@@ -685,7 +738,7 @@ class OverlayService : Service() {
             tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#40C4FF"))
         } else {
             tvStatusGps?.text = "📍"
-            tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#78909C"))
+            tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
 
         if (status.isCameraActive) {
@@ -693,7 +746,7 @@ class OverlayService : Service() {
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
             tvStatusCamera?.text = "📷"
-            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#78909C"))
+            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
 
         val showBt = VehicleOverlayConfig.isShowBluetooth(this)
@@ -724,7 +777,7 @@ class OverlayService : Service() {
         super.onDestroy()
         AutoPermissionHelper.setStockBarImmersive(false, this)
         try {
-            unregisterReceiver(wakeReceiver)
+            unregisterReceiver(carStateReceiver)
         } catch (_: Throwable) {}
         systemStatusManager?.stopMonitoring()
         systemStatusManager = null
@@ -747,6 +800,7 @@ class OverlayService : Service() {
         const val ACTION_HIDE_OVERLAY = "com.byd.mapsoverlay.ACTION_HIDE_OVERLAY"
         const val ACTION_SHOW_OVERLAY = "com.byd.mapsoverlay.ACTION_SHOW_OVERLAY"
         const val ACTION_CAR_WAKE = "com.byd.mapsoverlay.ACTION_CAR_WAKE"
+        const val ACTION_CAR_SLEEP = "com.byd.mapsoverlay.ACTION_CAR_SLEEP"
         const val EXTRA_DISTANCE_KM = "extra_distance_km"
     }
 }

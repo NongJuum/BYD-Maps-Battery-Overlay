@@ -30,12 +30,11 @@ class BootReceiver : BroadcastReceiver() {
             "com.htc.intent.action.QUICKBOOT_POWERON",
             "com.byd.action.ACC_ON",
             "com.byd.action.IGN_ON",
-            "com.byd.action.ACC_OFF",
             "com.byd.intent.action.POWER_ON",
             "com.byd.intent.action.ACC_ON" -> {
                 Log.i(tag, "Car started / DiLink woke from sleep -> Ensuring services and permissions")
                 
-                // 1. ตรวจสอบและเชื่อมต่อ Local ADB Telemetry Daemon ทันที
+                // 1. ตรวจสอบและเชื่อมต่อ Local ADB Telemetry Daemon ทันที (Background thread)
                 try {
                     AutoPermissionHelper.ensureTelemetryDaemon(context)
                 } catch (e: Exception) {
@@ -68,6 +67,17 @@ class BootReceiver : BroadcastReceiver() {
                     }
                 } catch (e: Exception) {
                     Log.w(tag, "Failed to start OverlayService on boot", e)
+                }
+            }
+
+            "com.byd.action.ACC_OFF",
+            Intent.ACTION_SCREEN_OFF -> {
+                Log.i(tag, "Car shutdown / DiLink entering sleep ($action) -> Forwarding sleep signal to OverlayService to preserve 12V battery")
+                val sleepIntent = Intent(context, OverlayService::class.java).setAction(OverlayService.ACTION_CAR_SLEEP)
+                try {
+                    context.startService(sleepIntent)
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to send sleep action to OverlayService", e)
                 }
             }
         }

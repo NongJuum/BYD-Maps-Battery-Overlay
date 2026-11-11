@@ -32,9 +32,11 @@ object AutoPermissionHelper {
     private val launchInFlight = AtomicBoolean(false)
     @Volatile private var lastLaunchAttemptMs = 0L
 
-    /** Safe to call repeatedly. Retry failed starts with a 15-second backoff. */
+    private val immersiveInFlight = AtomicBoolean(false)
+    @Volatile private var lastImmersiveAttemptMs = 0L
+
+    /** Safe to call repeatedly on any thread. Retry failed starts with backoff. */
     fun ensureTelemetryDaemon(context: Context) {
-        if (isTelemetryDaemonReachable()) return
         val now = SystemClock.elapsedRealtime()
         if (now - lastLaunchAttemptMs < RETRY_INTERVAL_MS) return
         if (!launchInFlight.compareAndSet(false, true)) return
@@ -358,7 +360,12 @@ object AutoPermissionHelper {
             Settings.Global.putString(appContext.contentResolver, "policy_control", if (enabled) "immersive.status=*" else null)
         } catch (_: Throwable) {}
 
-        Thread {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastImmersiveAttemptMs < 1000L && immersiveInFlight.get()) return
+        if (!immersiveInFlight.compareAndSet(false, true)) return
+        lastImmersiveAttemptMs = now
+
+        Thread({
             try {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
@@ -367,7 +374,9 @@ object AutoPermissionHelper {
                 Log.i(TAG, "Stock Bar immersive set to: $value")
             } catch (t: Throwable) {
                 Log.w(TAG, "setStockBarImmersive ADB error: ${t.message}")
+            } finally {
+                immersiveInFlight.set(false)
             }
-        }.start()
+        }, "StockBarImmersiveThread").start()
     }
 }

@@ -45,28 +45,28 @@ class BydVehicleBridge(
     var realRangeKm: Double = 0.0
         private set
 
-    // HV Main Battery Temperature & Cell Voltage
-    var hvBattTempAvgC: Double = 29.0
+    // HV Main Battery Temperature & Cell Voltage (Initializes to 0.0 until live CAN bus data arrives)
+    var hvBattTempAvgC: Double = 0.0
         private set
-    var hvBattTempMaxC: Double = 30.0
+    var hvBattTempMaxC: Double = 0.0
         private set
-    var hvBattTempMinC: Double = 29.0
+    var hvBattTempMinC: Double = 0.0
         private set
-    var cellVoltMaxV: Double = 3.326
+    var cellVoltMaxV: Double = 0.0
         private set
-    var cellVoltMinV: Double = 3.320
+    var cellVoltMinV: Double = 0.0
         private set
 
-    // Temperatures, 12V, Driving, TPMS
-    var cabinTemperatureC: Int = 28 // อุณหภูมิจริงในห้องโดยสาร (Real Indoor Sensor °C)
+    // Temperatures, 12V, Driving, TPMS (Initializes to waiting state until live CAN bus data arrives)
+    var cabinTemperatureC: Int = 0 // อุณหภูมิจริงในห้องโดยสาร (Real Indoor Sensor °C)
         private set
-    var acSetpointTemperatureC: Int = 24 // อุณหภูมิแอร์ที่ตั้งไว้ (AC Setpoint °C)
+    var acSetpointTemperatureC: Int = 0 // อุณหภูมิแอร์ที่ตั้งไว้ (AC Setpoint °C)
         private set
-    var outsideTemperatureC: Int = 31
+    var outsideTemperatureC: Int = 0
         private set
-    var aux12vVoltage: Double = 13.8
+    var aux12vVoltage: Double = 0.0
         private set
-    var currentGear: String = "P"
+    var currentGear: String = "--"
         private set
     var vehicleSpeedKmH: Int = 0
         private set
@@ -74,13 +74,13 @@ class BydVehicleBridge(
         private set
     var totalMileageKm: Double = 0.0
         private set
-    var tpmsFlKpa: Int = 270
+    var tpmsFlKpa: Int = 0
         private set
-    var tpmsFrKpa: Int = 266
+    var tpmsFrKpa: Int = 0
         private set
-    var tpmsRlKpa: Int = 269
+    var tpmsRlKpa: Int = 0
         private set
-    var tpmsRrKpa: Int = 266
+    var tpmsRrKpa: Int = 0
         private set
     var tpmsSummary: String = "-- kPa"
         private set
@@ -105,11 +105,12 @@ class BydVehicleBridge(
     }
 
     fun getFormattedHvBattTemp(mode: String): String {
+        if (hvBattTempMaxC <= 0.0 && hvBattTempAvgC <= 0.0) return "--°C"
         return when (mode.lowercase()) {
             "max" -> String.format("%.0f°C", hvBattTempMaxC)
             "min" -> String.format("%.0f°C", hvBattTempMinC)
             "avg" -> String.format("%.0f°C", hvBattTempAvgC)
-            else -> String.format("%.0f/%.0f°C", hvBattTempMaxC, hvBattTempMinC)
+            else -> if (hvBattTempMaxC <= 0.0) "--/--°C" else String.format("%.0f/%.0f°C", hvBattTempMaxC, hvBattTempMinC)
         }
     }
 
