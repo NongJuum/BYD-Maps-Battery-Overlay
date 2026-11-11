@@ -22,6 +22,35 @@
         android:textSize="11sp"
         android:paddingEnd="6dp" />
 
+    <!-- Left Section in Stock Bar Mode: Clock -->
+    <LinearLayout
+        android:id="@+id/container_stock_clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingEnd="8dp"
+        android:visibility="gone">
+
+        <TextClock
+            android:id="@+id/tc_stock_clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="HH:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider_stock_clock"
+        android:layout_width="1dp"
+        android:layout_height="12dp"
+        android:layout_marginEnd="6dp"
+        android:background="#33FFFFFF"
+        android:visibility="gone" />
+
     <!-- 1. ระดับแบตเตอรี่ปัจจุบัน (Current SoC) -->
     <LinearLayout
         android:id="@+id/container_v2_soc"
@@ -486,6 +515,36 @@
             android:textColor="#FFFFFF"
             android:textSize="11.5sp"
             android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider_stock_date"
+        android:layout_width="1dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="6dp"
+        android:background="#33FFFFFF"
+        android:visibility="gone" />
+
+    <!-- Right Section in Stock Bar Mode: Date -->
+    <LinearLayout
+        android:id="@+id/container_stock_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:visibility="gone">
+
+        <TextClock
+            android:id="@+id/tc_stock_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="E d MMM"
+            android:format24Hour="E d MMM"
+            android:textColor="#90A4AE"
+            android:textSize="11.5sp" />
     </LinearLayout>
 
 </LinearLayout>

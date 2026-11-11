@@ -345,6 +345,7 @@ class MainActivity : AppCompatActivity() {
         rgDisplayMode.setOnCheckedChangeListener { _, checkedId ->
             val isStockBar = checkedId == R.id.rb_mode_stock_bar
             VehicleOverlayConfig.setStockBarMode(this, isStockBar)
+            AutoPermissionHelper.setStockBarImmersive(isStockBar, this)
             notifyOverlayServiceConfigChanged()
         }
 

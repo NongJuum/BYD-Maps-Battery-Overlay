@@ -273,13 +273,17 @@ class OverlayService : Service() {
         }
 
         val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
-        val savedX = if (isStockBar) 245 else sharedPreferences.getInt("overlay_x", 245)
+        val dm = resources.displayMetrics
+        val statusBarHeightPx = (56 * dm.density).toInt().coerceAtLeast(84)
+        val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
+        val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
+        val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
         val savedY = if (isStockBar) 0 else sharedPreferences.getInt("overlay_y", 32)
 
         for (layoutType in candidateTypes) {
             val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                initialW,
+                initialH,
                 layoutType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -485,13 +489,31 @@ class OverlayService : Service() {
 
         // จัดการโหมดการแสดงผล (Stock Bar Mode vs Floating Pill)
         val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
+        AutoPermissionHelper.setStockBarImmersive(isStockBar, this)
+
         val dragHandle = overlayView?.findViewById<View>(R.id.tv_drag_handle)
+        val containerStockClock = overlayView?.findViewById<View>(R.id.container_stock_clock)
+        val dividerStockClock = overlayView?.findViewById<View>(R.id.divider_stock_clock)
+        val containerStockDate = overlayView?.findViewById<View>(R.id.container_stock_date)
+        val dividerStockDate = overlayView?.findViewById<View>(R.id.divider_stock_date)
+
+        val dm = resources.displayMetrics
+        val statusBarHeightPx = (56 * dm.density).toInt().coerceAtLeast(84)
+
         if (isStockBar) {
             dragHandle?.visibility = View.GONE
-            overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_mode)
+            containerStockClock?.visibility = View.VISIBLE
+            dividerStockClock?.visibility = View.VISIBLE
+            containerStockDate?.visibility = View.VISIBLE
+            dividerStockDate?.visibility = View.VISIBLE
+
+            overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_full)
             overlayView?.elevation = 0f
             windowParams?.let { lp ->
-                lp.x = 245
+                lp.width = WindowManager.LayoutParams.MATCH_PARENT
+                lp.height = statusBarHeightPx
+                lp.gravity = Gravity.TOP or Gravity.START
+                lp.x = 0
                 lp.y = 0
                 try {
                     windowManager?.updateViewLayout(overlayView, lp)
@@ -499,12 +521,20 @@ class OverlayService : Service() {
             }
         } else {
             dragHandle?.visibility = View.VISIBLE
+            containerStockClock?.visibility = View.GONE
+            dividerStockClock?.visibility = View.GONE
+            containerStockDate?.visibility = View.GONE
+            dividerStockDate?.visibility = View.GONE
+
             overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
             overlayView?.elevation = 8 * resources.displayMetrics.density
             val opacityPercent = VehicleOverlayConfig.getOpacity(this).coerceIn(0, 100)
             val bgAlpha255 = (opacityPercent * 255 / 100).coerceIn(0, 255)
             overlayView?.background?.mutate()?.alpha = bgAlpha255
             windowParams?.let { lp ->
+                lp.width = WindowManager.LayoutParams.WRAP_CONTENT
+                lp.height = WindowManager.LayoutParams.WRAP_CONTENT
+                lp.gravity = Gravity.TOP or Gravity.START
                 lp.x = sharedPreferences.getInt("overlay_x", 245)
                 lp.y = sharedPreferences.getInt("overlay_y", 32)
                 try {
@@ -519,7 +549,7 @@ class OverlayService : Service() {
         overlayView?.scaleX = 1.0f
         overlayView?.scaleY = 1.0f
 
-        val baseSp = 11.5f * scale
+        val baseSp = if (isStockBar) 11.5f else 11.5f * scale
         val allTv = listOf(
             tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
             tvConsumption, tvInstPower, tvOutTemp, tvSoh,
@@ -528,8 +558,8 @@ class OverlayService : Service() {
         for (tv in allTv) {
             tv?.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
         }
-        val padH = if (isStockBar) (4 * resources.displayMetrics.density * scale).toInt() else (8 * resources.displayMetrics.density * scale).toInt()
-        val padV = if (isStockBar) (2 * resources.displayMetrics.density * scale).toInt() else (3 * resources.displayMetrics.density * scale).toInt()
+        val padH = if (isStockBar) (14 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * scale).toInt()
+        val padV = if (isStockBar) (0).toInt() else (3 * resources.displayMetrics.density * scale).toInt()
         rootLayout?.setPadding(padH, padV, padH, padV)
     }
 
@@ -602,6 +632,7 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        AutoPermissionHelper.setStockBarImmersive(false, this)
         try {
             unregisterReceiver(wakeReceiver)
         } catch (_: Throwable) {}

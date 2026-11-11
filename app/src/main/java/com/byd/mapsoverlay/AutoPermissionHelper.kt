@@ -236,7 +236,8 @@ object AutoPermissionHelper {
                           BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
                           BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
                           BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
-                          BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
+                          BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA \
+                          WRITE_SECURE_SETTINGS WRITE_SETTINGS STATUS_BAR STATUS_BAR_SERVICE; do
                           pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                         done
                         pm grant $targetPkg com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
@@ -343,5 +344,29 @@ object AutoPermissionHelper {
             } catch (_: Exception) {}
         }
         return false
+    }
+
+    /**
+     * ซ่อนหรือแสดง System Status Bar เดิมของรถ (Android Policy Control)
+     * เพื่อให้แถบของแอปเราเข้าแทนที่ Stock Bar ได้อย่างสมบูรณ์แบบเสมือน DUDU / Kinex
+     */
+    fun setStockBarImmersive(enabled: Boolean, context: Context) {
+        val appContext = context.applicationContext ?: context
+        val value = if (enabled) "immersive.status=*" else "null"
+        try {
+            Settings.Global.putString(appContext.contentResolver, "policy_control", if (enabled) "immersive.status=*" else null)
+        } catch (_: Throwable) {}
+
+        Thread {
+            try {
+                val keyPair = loadOrCreateAdbKeyPair(appContext)
+                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
+                    adb.shell("settings put global policy_control $value")
+                }
+                Log.i(TAG, "Stock Bar immersive set to: $value")
+            } catch (t: Throwable) {
+                Log.w(TAG, "setStockBarImmersive ADB error: ${t.message}")
+            }
+        }.start()
     }
 }
