@@ -61,6 +61,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchSpeed: SwitchCompat
     private lateinit var switchGear: SwitchCompat
 
+    // Selection Switches - Group 3 (System Status Indicators)
+    private lateinit var switchSim: SwitchCompat
+    private lateinit var switchWifi: SwitchCompat
+    private lateinit var switchGps: SwitchCompat
+    private lateinit var switchCameraDvr: SwitchCompat
+    private lateinit var switchBluetooth: SwitchCompat
+
     private lateinit var rgDisplayMode: android.widget.RadioGroup
     private lateinit var rbModeFloating: android.widget.RadioButton
     private lateinit var rbModeStockBar: android.widget.RadioButton
@@ -170,6 +177,12 @@ class MainActivity : AppCompatActivity() {
         switchSpeed = findViewById(R.id.switch_show_speed)
         switchGear = findViewById(R.id.switch_show_gear)
 
+        switchSim = findViewById(R.id.switch_show_sim)
+        switchWifi = findViewById(R.id.switch_show_wifi)
+        switchGps = findViewById(R.id.switch_show_gps)
+        switchCameraDvr = findViewById(R.id.switch_show_camera_dvr)
+        switchBluetooth = findViewById(R.id.switch_show_bluetooth)
+
         rgDisplayMode = findViewById(R.id.rg_display_mode)
         rbModeFloating = findViewById(R.id.rb_mode_floating)
         rbModeStockBar = findViewById(R.id.rb_mode_stock_bar)
@@ -231,6 +244,12 @@ class MainActivity : AppCompatActivity() {
         switchOdo.isChecked = VehicleOverlayConfig.isShowOdo(this)
         switchSpeed.isChecked = VehicleOverlayConfig.isShowSpeed(this)
         switchGear.isChecked = VehicleOverlayConfig.isShowGear(this)
+
+        switchSim.isChecked = VehicleOverlayConfig.isShowSim(this)
+        switchWifi.isChecked = VehicleOverlayConfig.isShowWifi(this)
+        switchGps.isChecked = VehicleOverlayConfig.isShowGps(this)
+        switchCameraDvr.isChecked = VehicleOverlayConfig.isShowCameraDvr(this)
+        switchBluetooth.isChecked = VehicleOverlayConfig.isShowBluetooth(this)
 
         if (VehicleOverlayConfig.isStockBarMode(this)) {
             rbModeStockBar.isChecked = true
@@ -328,12 +347,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Instant toggle listeners for all 15 vehicle telemetry fields
+        // Instant toggle listeners for all vehicle telemetry and system status fields
         val allFieldSwitches = listOf(
             switchSoc, switchKwh, switchRealRange, switchDashRange,
             switchHvBattTemp, switchCellVolt, switchSoh, switch12v,
             switchConsume50km, switchInstPower, switchOutTemp,
-            switchTpms, switchOdo, switchSpeed, switchGear
+            switchTpms, switchOdo, switchSpeed, switchGear,
+            switchSim, switchWifi, switchGps, switchCameraDvr, switchBluetooth
         )
         for (sw in allFieldSwitches) {
             sw.setOnCheckedChangeListener { _, _ ->
@@ -446,6 +466,12 @@ class MainActivity : AppCompatActivity() {
         VehicleOverlayConfig.setShowOdo(this, switchOdo.isChecked)
         VehicleOverlayConfig.setShowSpeed(this, switchSpeed.isChecked)
         VehicleOverlayConfig.setShowGear(this, switchGear.isChecked)
+
+        VehicleOverlayConfig.setShowSim(this, switchSim.isChecked)
+        VehicleOverlayConfig.setShowWifi(this, switchWifi.isChecked)
+        VehicleOverlayConfig.setShowGps(this, switchGps.isChecked)
+        VehicleOverlayConfig.setShowCameraDvr(this, switchCameraDvr.isChecked)
+        VehicleOverlayConfig.setShowBluetooth(this, switchBluetooth.isChecked)
 
         VehicleOverlayConfig.setStockBarMode(this, rbModeStockBar.isChecked)
         VehicleOverlayConfig.setOpacity(this, seekOpacity.progress.coerceIn(0, 100))

@@ -121,6 +121,7 @@ object AutoPermissionHelper {
                       BYDAUTO_LIGHT_COMMON BYDAUTO_LIGHT_GET \
                       BYDAUTO_REMINDER_COMMON BYDAUTO_REMINDER_GET \
                       BYDAUTO_TYRE_COMMON BYDAUTO_TYRE_GET \
+                      READ_PHONE_STATE ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION CAMERA \
                       BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA; do
                       pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                     done

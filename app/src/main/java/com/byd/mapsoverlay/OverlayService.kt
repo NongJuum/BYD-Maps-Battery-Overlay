@@ -67,6 +67,22 @@ class OverlayService : Service() {
     private var containerOdo: View? = null
     private var containerGearSpeed: View? = null
 
+    // System Status Views (Stock Bar Right Section)
+    private var spacerStockLeft: View? = null
+    private var spacerStockRight: View? = null
+    private var containerStatusCamera: View? = null
+    private var tvStatusCamera: TextView? = null
+    private var containerStatusGps: View? = null
+    private var tvStatusGps: TextView? = null
+    private var containerStatusBt: View? = null
+    private var tvStatusBt: TextView? = null
+    private var containerStatusWifi: View? = null
+    private var tvStatusWifi: TextView? = null
+    private var containerStatusSim: View? = null
+    private var tvStatusSim: TextView? = null
+
+    private var systemStatusManager: SystemStatusManager? = null
+
     // Dividers
     private var allDividers: List<View?> = emptyList()
 
@@ -75,7 +91,13 @@ class OverlayService : Service() {
 
     private val wakeReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            val act = intent?.action
+            android.util.Log.i("OverlayService", "Car wake event received: $act -> Ensuring overlay and status bar")
             mainHandler.post {
+                val isStockBar = VehicleOverlayConfig.isStockBarMode(this@OverlayService)
+                if (isStockBar) {
+                    AutoPermissionHelper.setStockBarImmersive(true, this@OverlayService)
+                }
                 ensureOverlayAttachedAndVisible()
             }
         }
@@ -100,9 +122,22 @@ class OverlayService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
         createOverlayView()
 
+        systemStatusManager = SystemStatusManager(this) { status ->
+            mainHandler.post {
+                updateSystemStatusUi(status)
+            }
+        }
+        systemStatusManager?.startMonitoring()
+
         val filter = android.content.IntentFilter().apply {
             addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_USER_UNLOCKED)
             addAction(Intent.ACTION_SCREEN_ON)
+            addAction("android.intent.action.QUICKBOOT_POWERON")
+            addAction("com.htc.intent.action.QUICKBOOT_POWERON")
+            addAction("com.byd.action.ACC_ON")
+            addAction("com.byd.action.IGN_ON")
+            addAction("com.byd.action.ACC_OFF")
             addAction("com.byd.intent.action.POWER_ON")
             addAction("com.byd.intent.action.ACC_ON")
         }
@@ -157,7 +192,7 @@ class OverlayService : Service() {
     private fun clampOverlayToScreenBounds() {
         val params = windowParams ?: return
         if (VehicleOverlayConfig.isStockBarMode(this)) {
-            params.x = 245
+            params.x = 0
             params.y = 0
             try {
                 windowManager?.updateViewLayout(overlayView, params)
@@ -239,6 +274,20 @@ class OverlayService : Service() {
         containerTpms = v.findViewById(R.id.container_v2_tpms)
         containerOdo = v.findViewById(R.id.container_v2_odo)
         containerGearSpeed = v.findViewById(R.id.container_v2_gear_speed)
+
+        // Bind System Status Views
+        spacerStockLeft = v.findViewById(R.id.spacer_stock_left)
+        spacerStockRight = v.findViewById(R.id.spacer_stock_right)
+        containerStatusCamera = v.findViewById(R.id.container_status_camera)
+        tvStatusCamera = v.findViewById(R.id.tv_status_camera)
+        containerStatusGps = v.findViewById(R.id.container_status_gps)
+        tvStatusGps = v.findViewById(R.id.tv_status_gps)
+        containerStatusBt = v.findViewById(R.id.container_status_bt)
+        tvStatusBt = v.findViewById(R.id.tv_status_bt)
+        containerStatusWifi = v.findViewById(R.id.container_status_wifi)
+        tvStatusWifi = v.findViewById(R.id.tv_status_wifi)
+        containerStatusSim = v.findViewById(R.id.container_status_sim)
+        tvStatusSim = v.findViewById(R.id.tv_status_sim)
 
         // Bind Dividers
         allDividers = listOf(
@@ -379,9 +428,9 @@ class OverlayService : Service() {
     private fun resetPosition() {
         val params = windowParams ?: return
         if (VehicleOverlayConfig.isStockBarMode(this)) {
-            params.x = 245
+            params.x = 0
             params.y = 0
-            sharedPreferences.edit().putInt("overlay_x", 245).putInt("overlay_y", 0).apply()
+            sharedPreferences.edit().putInt("overlay_x", 0).putInt("overlay_y", 0).apply()
             try {
                 windowManager?.updateViewLayout(overlayView, params)
             } catch (_: Exception) {}
@@ -440,6 +489,19 @@ class OverlayService : Service() {
         containerGearSpeed?.visibility = if (showGearSpeed) View.VISIBLE else View.GONE
         tvGear?.visibility = if (showGear) View.VISIBLE else View.GONE
         tvSpeed?.visibility = if (showSpeed) View.VISIBLE else View.GONE
+
+        // System status visibility
+        val showSim = VehicleOverlayConfig.isShowSim(this)
+        val showWifi = VehicleOverlayConfig.isShowWifi(this)
+        val showGps = VehicleOverlayConfig.isShowGps(this)
+        val showCamera = VehicleOverlayConfig.isShowCameraDvr(this)
+        val showBt = VehicleOverlayConfig.isShowBluetooth(this)
+
+        containerStatusSim?.visibility = if (showSim) View.VISIBLE else View.GONE
+        containerStatusWifi?.visibility = if (showWifi) View.VISIBLE else View.GONE
+        containerStatusGps?.visibility = if (showGps) View.VISIBLE else View.GONE
+        containerStatusCamera?.visibility = if (showCamera) View.VISIBLE else View.GONE
+        containerStatusBt?.visibility = if (showBt) View.VISIBLE else View.GONE
 
         // Smart Divider Visibility: show divider only if the container before it is visible AND at least one container after it is visible
         val rootLayout = overlayView as? LinearLayout
@@ -506,6 +568,8 @@ class OverlayService : Service() {
             dividerStockClock?.visibility = View.VISIBLE
             containerStockDate?.visibility = View.VISIBLE
             dividerStockDate?.visibility = View.VISIBLE
+            spacerStockLeft?.visibility = View.VISIBLE
+            spacerStockRight?.visibility = View.VISIBLE
 
             overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_full)
             overlayView?.elevation = 0f
@@ -525,6 +589,8 @@ class OverlayService : Service() {
             dividerStockClock?.visibility = View.GONE
             containerStockDate?.visibility = View.GONE
             dividerStockDate?.visibility = View.GONE
+            spacerStockLeft?.visibility = View.GONE
+            spacerStockRight?.visibility = View.GONE
 
             overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
             overlayView?.elevation = 8 * resources.displayMetrics.density
@@ -610,6 +676,30 @@ class OverlayService : Service() {
         tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
     }
 
+    private fun updateSystemStatusUi(status: SystemStatusManager.StatusData) {
+        tvStatusSim?.text = status.simText
+        tvStatusWifi?.text = status.wifiText
+        
+        if (status.isGpsActive) {
+            tvStatusGps?.text = "📍 GPS"
+            tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#40C4FF"))
+        } else {
+            tvStatusGps?.text = "📍"
+            tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#78909C"))
+        }
+
+        if (status.isCameraActive) {
+            tvStatusCamera?.text = "🔴 REC"
+            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
+        } else {
+            tvStatusCamera?.text = "📷"
+            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#78909C"))
+        }
+
+        val showBt = VehicleOverlayConfig.isShowBluetooth(this)
+        containerStatusBt?.visibility = if (showBt && status.isBluetoothConnected) View.VISIBLE else View.GONE
+    }
+
     private fun createNotification(): Notification {
         val channelId = "byd_vehicle_overlay_v2"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -636,6 +726,8 @@ class OverlayService : Service() {
         try {
             unregisterReceiver(wakeReceiver)
         } catch (_: Throwable) {}
+        systemStatusManager?.stopMonitoring()
+        systemStatusManager = null
         bydBridge.stopListening()
         if (overlayView != null) {
             try {

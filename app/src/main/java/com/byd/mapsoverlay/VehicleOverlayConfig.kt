@@ -34,6 +34,13 @@ object VehicleOverlayConfig {
     const val KEY_SHOW_TPMS_PRESSURE = "pref_show_tpms_pressure"
     const val KEY_TPMS_UNIT = "pref_tpms_unit" // "kpa" or "psi"
 
+    // หมวด 4: สถานะระบบและการเชื่อมต่อ (System Status Indicators)
+    const val KEY_SHOW_SIM = "pref_show_sim"
+    const val KEY_SHOW_WIFI = "pref_show_wifi"
+    const val KEY_SHOW_GPS = "pref_show_gps"
+    const val KEY_SHOW_CAMERA_DVR = "pref_show_camera_dvr"
+    const val KEY_SHOW_BLUETOOTH = "pref_show_bluetooth"
+
     // การปรับแต่งหน้าต่าง Overlay
     const val KEY_DISPLAY_MODE = "pref_overlay_display_mode" // "floating" or "stock_bar"
     const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 0 - 100%
@@ -102,6 +109,22 @@ object VehicleOverlayConfig {
 
     fun getTpmsUnit(context: Context): String = prefs(context).getString(KEY_TPMS_UNIT, "psi") ?: "psi"
     fun setTpmsUnit(context: Context, unit: String) = prefs(context).edit().putString(KEY_TPMS_UNIT, unit).apply()
+
+    // หมวด 4: สถานะระบบและการเชื่อมต่อ
+    fun isShowSim(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_SIM, true)
+    fun setShowSim(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_SIM, value).apply()
+
+    fun isShowWifi(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_WIFI, true)
+    fun setShowWifi(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_WIFI, value).apply()
+
+    fun isShowGps(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_GPS, true)
+    fun setShowGps(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_GPS, value).apply()
+
+    fun isShowCameraDvr(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CAMERA_DVR, true)
+    fun setShowCameraDvr(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CAMERA_DVR, value).apply()
+
+    fun isShowBluetooth(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_BLUETOOTH, true)
+    fun setShowBluetooth(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_BLUETOOTH, value).apply()
 
     // โหมดการแสดงผล (Stock Bar vs Floating Pill)
     fun isStockBarMode(context: Context): Boolean = prefs(context).getString(KEY_DISPLAY_MODE, "floating") == "stock_bar"

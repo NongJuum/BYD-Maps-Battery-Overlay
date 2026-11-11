@@ -51,6 +51,14 @@
         android:background="#33FFFFFF"
         android:visibility="gone" />
 
+    <!-- Left spacer: pushes telemetry to center in Stock Bar Mode -->
+    <View
+        android:id="@+id/spacer_stock_left"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:visibility="gone" />
+
     <!-- 1. ระดับแบตเตอรี่ปัจจุบัน (Current SoC) -->
     <LinearLayout
         android:id="@+id/container_v2_soc"
@@ -517,34 +525,155 @@
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Right spacer: pushes system status indicators to right in Stock Bar Mode -->
     <View
-        android:id="@+id/divider_stock_date"
-        android:layout_width="1dp"
-        android:layout_height="12dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginEnd="6dp"
-        android:background="#33FFFFFF"
+        android:id="@+id/spacer_stock_right"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
         android:visibility="gone" />
 
-    <!-- Right Section in Stock Bar Mode: Date -->
+    <!-- Right Section: System Status Indicators & Date -->
     <LinearLayout
-        android:id="@+id/container_stock_date"
+        android:id="@+id/container_system_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:visibility="gone">
+        android:paddingEnd="8dp">
 
-        <TextClock
-            android:id="@+id/tc_stock_date"
+        <!-- 1. กล้องบันทึกรอบคัน / กล้องหน้ารถ (DVR / Panoramic Camera) -->
+        <LinearLayout
+            android:id="@+id/container_status_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:format12Hour="E d MMM"
-            android:format24Hour="E d MMM"
-            android:textColor="#90A4AE"
-            android:textSize="11.5sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔴 REC"
+                android:textColor="#FF5252"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 2. การเข้าถึงตำแหน่ง (GPS / Location Access Indicator) -->
+        <LinearLayout
+            android:id="@+id/container_status_gps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_gps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📍 GPS"
+                android:textColor="#40C4FF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 3. บลูทูธ (Bluetooth Connected) -->
+        <LinearLayout
+            android:id="@+id/container_status_bt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_bt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ᛒ"
+                android:textColor="#80D8FF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 4. ไวไฟ (Wi-Fi Status & Signal) -->
+        <LinearLayout
+            android:id="@+id/container_status_wifi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_wifi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📶 Wi-Fi"
+                android:textColor="#80CBC4"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 5. สัญญาณซิม 4G / มือถือ (Cellular Signal / SIM) -->
+        <LinearLayout
+            android:id="@+id/container_status_sim"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_sim"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📶 4G"
+                android:textColor="#69F0AE"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/divider_stock_date"
+            android:layout_width="1dp"
+            android:layout_height="12dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="6dp"
+            android:background="#33FFFFFF"
+            android:visibility="gone" />
+
+        <!-- วันที่ (Date) -->
+        <LinearLayout
+            android:id="@+id/container_stock_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextClock
+                android:id="@+id/tc_stock_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="E d MMM"
+                android:format24Hour="E d MMM"
+                android:textColor="#90A4AE"
+                android:textSize="11.5sp" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

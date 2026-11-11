@@ -646,6 +646,86 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- หมวด 2B: สถานะระบบและการเชื่อมต่อ (System Status & Connectivity) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="14dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#1E2633"
+                app:cardBackgroundColor="#141A24">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📡 สถานะระบบและการเชื่อมต่อ (System Indicators)"
+                        android:textColor="#80D8FF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="เลือกเปิด-ปิดสถานะการทำงานเพื่อแสดงบน Stock Bar หรือ Overlay"
+                        android:textColor="#90A4AE"
+                        android:textSize="11sp" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_sim"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📶 สัญญาณซิม 4G / มือถือ (Cellular Signal / SIM)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false"
+                        android:checked="true" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_wifi"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📶 สัญญาณ Wi-Fi (Wi-Fi Status and Signal)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false"
+                        android:checked="true" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_gps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📍 การเข้าถึงตำแหน่ง (GPS / Location Indicator)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false"
+                        android:checked="true" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_camera_dvr"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🎥 กล้องบันทึกรอบคัน / กล้องหน้ารถ (Dashcam / Panoramic Camera)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false"
+                        android:checked="true" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switch_show_bluetooth"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ᛒ บลูทูธที่เชื่อมต่อ (Bluetooth Connected)"
+                        android:textColor="#ECEFF1"
+                        android:showText="false"
+                        android:checked="true" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- หมวด 3: ความโปร่งใส & รูปแบบการแสดงผล (Transparency & Layout) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
