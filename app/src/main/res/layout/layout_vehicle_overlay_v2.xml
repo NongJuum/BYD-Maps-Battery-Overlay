@@ -161,9 +161,9 @@
         android:id="@+id/divider_v2_dash_range"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF"
         android:visibility="gone" />
 
     <!-- 3B. ระยะทางบนหน้าปัดรถ (Dashboard Range) -->
@@ -178,29 +178,32 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📟"
-            android:textSize="11sp"
-            android:paddingEnd="2dp" />
+            android:text="DASH"
+            android:textColor="#78909C"
+            android:textSize="9.5sp"
+            android:textStyle="bold"
+            android:paddingEnd="3dp" />
 
         <TextView
             android:id="@+id/tv_v2_dash_range"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="-- km"
-            android:textColor="#80D8FF"
+            android:textColor="#ECEFF1"
             android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Group 2: แบตเตอรี่ลูกใหญ่และประสิทธิภาพ (HV Battery & Performance) -->
     <View
         android:id="@+id/divider_v2_hv_temp"
         android:layout_width="1dp"
-        android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF" />
+        android:layout_height="12dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:background="#33FFFFFF" />
 
-    <!-- 3C. อุณหภูมิแบตเตอรี่ลูกใหญ่ (HV Main Battery Temp) -->
+    <!-- 4. อุณหภูมิแบตเตอรี่ลูกใหญ่ (HV Main Battery Temp) -->
     <LinearLayout
         android:id="@+id/container_v2_hv_temp"
         android:layout_width="wrap_content"
@@ -212,7 +215,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="BATT"
-            android:textColor="#90A4AE"
+            android:textColor="#78909C"
             android:textSize="9.5sp"
             android:textStyle="bold"
             android:paddingEnd="3dp" />
@@ -228,153 +231,14 @@
     </LinearLayout>
 
     <View
-        android:id="@+id/divider_v2_cell_volt"
+        android:id="@+id/divider_v2_soh"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF"
-        android:visibility="gone" />
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF" />
 
-    <!-- 3D. แรงดันเซลล์แบตใหญ่ (HV Cell Voltage) -->
-    <LinearLayout
-        android:id="@+id/container_v2_cell_volt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔬"
-            android:textSize="11sp"
-            android:paddingEnd="2dp" />
-
-        <TextView
-            android:id="@+id/tv_v2_cell_volt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="3.32V"
-            android:textColor="#EA80FC"
-            android:textSize="11.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider_v2_3"
-        android:layout_width="1dp"
-        android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF" />
-
-    <!-- 4. อัตราสิ้นเปลืองสด 50km (Consumption) -->
-    <LinearLayout
-        android:id="@+id/container_v2_consumption"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="AVG"
-            android:textColor="#90A4AE"
-            android:textSize="9.5sp"
-            android:textStyle="bold"
-            android:paddingEnd="3dp" />
-
-        <TextView
-            android:id="@+id/tv_v2_consumption"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="--.-"
-            android:textColor="#FFD54F"
-            android:textSize="11.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider_v2_inst_power"
-        android:layout_width="1dp"
-        android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF"
-        android:visibility="gone" />
-
-    <!-- 4B. กำลังไฟขณะขับขี่สด (Instant Power kW) -->
-    <LinearLayout
-        android:id="@+id/container_v2_inst_power"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="⚡"
-            android:textSize="11sp"
-            android:paddingEnd="2dp" />
-        <TextView
-            android:id="@+id/tv_v2_inst_power"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0.0 kW"
-            android:textColor="#FFD740"
-            android:textSize="11.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider_v2_out_temp"
-        android:layout_width="1dp"
-        android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF" />
-
-    <!-- 5B. อุณหภูมิภายนอกรถ (Outside Temp) -->
-    <LinearLayout
-        android:id="@+id/container_v2_out_temp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="OUT"
-            android:textColor="#90A4AE"
-            android:textSize="9.5sp"
-            android:textStyle="bold"
-            android:paddingEnd="3dp" />
-
-        <TextView
-            android:id="@+id/tv_v2_out_temp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="31°C"
-            android:textColor="#FFE082"
-            android:textSize="11.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider_v2_5"
-        android:layout_width="1dp"
-        android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF" />
-
-    <!-- 6. สุขภาพแบตเตอรี่ (SOH) -->
+    <!-- 5. สุขภาพแบตเตอรี่ (SOH) -->
     <LinearLayout
         android:id="@+id/container_v2_soh"
         android:layout_width="wrap_content"
@@ -386,7 +250,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="SOH"
-            android:textColor="#90A4AE"
+            android:textColor="#78909C"
             android:textSize="9.5sp"
             android:textStyle="bold"
             android:paddingEnd="3dp" />
@@ -396,22 +260,22 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="100%"
-            android:textColor="#B388FF"
+            android:textColor="#ECEFF1"
             android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <View
-        android:id="@+id/divider_v2_6"
+        android:id="@+id/divider_v2_consumption"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF" />
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF" />
 
-    <!-- 7. แบตเตอรี่ลูกเล็ก 12V Aux -->
+    <!-- 6. อัตราสิ้นเปลืองสด 50km (Consumption) -->
     <LinearLayout
-        android:id="@+id/container_v2_12v"
+        android:id="@+id/container_v2_consumption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -420,32 +284,107 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="12V"
-            android:textColor="#90A4AE"
+            android:text="AVG"
+            android:textColor="#78909C"
             android:textSize="9.5sp"
             android:textStyle="bold"
             android:paddingEnd="3dp" />
 
         <TextView
-            android:id="@+id/tv_v2_12v"
+            android:id="@+id/tv_v2_consumption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="13.8V"
-            android:textColor="#69F0AE"
+            android:text="--.-"
+            android:textColor="#ECEFF1"
             android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <View
-        android:id="@+id/divider_v2_tpms"
+        android:id="@+id/divider_v2_cell_volt"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF"
         android:visibility="gone" />
 
-    <!-- 7B. แรงดันลมยาง 4 ล้อ (TPMS) -->
+    <!-- 6B. แรงดันเซลล์แบตใหญ่ (HV Cell Voltage) -->
+    <LinearLayout
+        android:id="@+id/container_v2_cell_volt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CELL"
+            android:textColor="#78909C"
+            android:textSize="9.5sp"
+            android:textStyle="bold"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_v2_cell_volt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3.32V"
+            android:textColor="#ECEFF1"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider_v2_inst_power"
+        android:layout_width="1dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF"
+        android:visibility="gone" />
+
+    <!-- 6C. กำลังไฟขณะขับขี่สด (Instant Power kW) -->
+    <LinearLayout
+        android:id="@+id/container_v2_inst_power"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PWR"
+            android:textColor="#78909C"
+            android:textSize="9.5sp"
+            android:textStyle="bold"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_v2_inst_power"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0.0 kW"
+            android:textColor="#ECEFF1"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Group 3: ล้อ แบต 12V และสภาพอากาศ (Chassis, 12V & Ambient) -->
+    <View
+        android:id="@+id/divider_v2_tpms"
+        android:layout_width="1dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:background="#33FFFFFF"
+        android:visibility="gone" />
+
+    <!-- 7. แรงดันลมยาง 4 ล้อ (TPMS) -->
     <LinearLayout
         android:id="@+id/container_v2_tpms"
         android:layout_width="wrap_content"
@@ -458,7 +397,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TPMS"
-            android:textColor="#90A4AE"
+            android:textColor="#78909C"
             android:textSize="9.5sp"
             android:textStyle="bold"
             android:paddingEnd="3dp" />
@@ -474,15 +413,85 @@
     </LinearLayout>
 
     <View
+        android:id="@+id/divider_v2_12v"
+        android:layout_width="1dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF" />
+
+    <!-- 8. แบตเตอรี่ลูกเล็ก 12V Aux -->
+    <LinearLayout
+        android:id="@+id/container_v2_12v"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="12V"
+            android:textColor="#78909C"
+            android:textSize="9.5sp"
+            android:textStyle="bold"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_v2_12v"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="13.8V"
+            android:textColor="#ECEFF1"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider_v2_out_temp"
+        android:layout_width="1dp"
+        android:layout_height="11dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF" />
+
+    <!-- 9. อุณหภูมิภายนอกรถ (Outside Temp) -->
+    <LinearLayout
+        android:id="@+id/container_v2_out_temp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OUT"
+            android:textColor="#78909C"
+            android:textSize="9.5sp"
+            android:textStyle="bold"
+            android:paddingEnd="3dp" />
+
+        <TextView
+            android:id="@+id/tv_v2_out_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="31°C"
+            android:textColor="#ECEFF1"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
         android:id="@+id/divider_v2_odo"
         android:layout_width="1dp"
         android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#20FFFFFF"
         android:visibility="gone" />
 
-    <!-- 7C. เลขไมล์รวม (Odometer) -->
+    <!-- 10. เลขไมล์สะสม (Odometer) -->
     <LinearLayout
         android:id="@+id/container_v2_odo"
         android:layout_width="wrap_content"
@@ -494,16 +503,18 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🛣️"
-            android:textSize="11sp"
-            android:paddingEnd="2dp" />
+            android:text="ODO"
+            android:textColor="#78909C"
+            android:textSize="9.5sp"
+            android:textStyle="bold"
+            android:paddingEnd="3dp" />
 
         <TextView
             android:id="@+id/tv_v2_odo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="-- km"
-            android:textColor="#B0BEC5"
+            android:textColor="#ECEFF1"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>

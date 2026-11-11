@@ -295,13 +295,13 @@ class OverlayService : Service() {
             v.findViewById(R.id.divider_v2_2),
             v.findViewById(R.id.divider_v2_dash_range),
             v.findViewById(R.id.divider_v2_hv_temp),
+            v.findViewById(R.id.divider_v2_soh),
+            v.findViewById(R.id.divider_v2_consumption),
             v.findViewById(R.id.divider_v2_cell_volt),
-            v.findViewById(R.id.divider_v2_3),
             v.findViewById(R.id.divider_v2_inst_power),
-            v.findViewById(R.id.divider_v2_out_temp),
-            v.findViewById(R.id.divider_v2_5),
-            v.findViewById(R.id.divider_v2_6),
             v.findViewById(R.id.divider_v2_tpms),
+            v.findViewById(R.id.divider_v2_12v),
+            v.findViewById(R.id.divider_v2_out_temp),
             v.findViewById(R.id.divider_v2_odo),
             v.findViewById(R.id.divider_v2_7)
         )
@@ -531,13 +531,13 @@ class OverlayService : Service() {
                 Pair(containerRealRange, allDividers.getOrNull(2)),
                 Pair(containerDashRange, allDividers.getOrNull(3)),
                 Pair(containerHvTemp, allDividers.getOrNull(4)),
-                Pair(containerCellVolt, allDividers.getOrNull(5)),
+                Pair(containerSoh, allDividers.getOrNull(5)),
                 Pair(containerConsumption, allDividers.getOrNull(6)),
-                Pair(containerInstPower, allDividers.getOrNull(7)),
-                Pair(containerOutTemp, allDividers.getOrNull(8)),
-                Pair(containerSoh, allDividers.getOrNull(9)),
+                Pair(containerCellVolt, allDividers.getOrNull(7)),
+                Pair(containerInstPower, allDividers.getOrNull(8)),
+                Pair(containerTpms, allDividers.getOrNull(9)),
                 Pair(container12v, allDividers.getOrNull(10)),
-                Pair(containerTpms, allDividers.getOrNull(11)),
+                Pair(containerOutTemp, allDividers.getOrNull(11)),
                 Pair(containerOdo, allDividers.getOrNull(12))
             )
             val allContainersAfter = orderedPairs.map { it.first } + listOf(containerGearSpeed)
