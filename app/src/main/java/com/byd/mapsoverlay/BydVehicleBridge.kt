@@ -36,7 +36,7 @@ class BydVehicleBridge(
         private set
     var elecRangeKm: Int = 0 // ระยะทางบนหน้าปัดรถ (km)
         private set
-    var sohPercent: Int = 100
+    var sohPercent: Int = 0 // สุขภาพแบตเตอรี่จริงจาก CAN bus (0 = ยังไม่มีข้อมูลสด)
         private set
     var nominalCapacityKwh: Double = 0.0
         private set
@@ -480,11 +480,12 @@ class BydVehicleBridge(
 
     private fun recalculateRealTelemetry() {
         try {
-            val effCapacity = if (estimatedCapacityKwh > 0.0) estimatedCapacityKwh else 48.7
-            val effKwh = if (remainEnergyKwh > 0.5) remainEnergyKwh else (currentSoc / 100.0) * effCapacity
-            val effConsumption = if (currentConsumption > 0.0) currentConsumption else 12.0
-            if (effConsumption > 0.0) {
-                realRangeKm = ((effKwh / effConsumption) * 100.0 * 10.0).roundToInt() / 10.0
+            // Strictly real data: if remainEnergyKwh and currentConsumption are available from CAN bus, calculate.
+            // Otherwise use vehicle's real cluster electric range directly without any fabricated constants.
+            if (remainEnergyKwh > 0.0 && currentConsumption > 0.0) {
+                realRangeKm = ((remainEnergyKwh / currentConsumption) * 100.0 * 10.0).roundToInt() / 10.0
+            } else if (elecRangeKm > 0) {
+                realRangeKm = elecRangeKm.toDouble()
             }
         } catch (_: Throwable) {}
     }

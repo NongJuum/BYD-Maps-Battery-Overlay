@@ -679,27 +679,33 @@ class OverlayService : Service() {
     }
 
     private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
-        if (soc > 0.0) tvSoc?.text = "${soc.toInt()}%"
+        if (soc > 0.0) {
+            tvSoc?.text = "${soc.toInt()}%"
+        } else {
+            tvSoc?.text = "--%"
+        }
 
         val kwh = bydBridge.remainEnergyKwh
         if (kwh > 0.0) {
             tvKwh?.text = String.format("%.1f kWh", kwh)
-        } else if (soc > 0.0 && bydBridge.estimatedCapacityKwh > 0.0) {
-            val calcKwh = (soc / 100.0) * bydBridge.estimatedCapacityKwh
-            tvKwh?.text = String.format("%.1f kWh", calcKwh)
+        } else {
+            tvKwh?.text = "-- kWh"
         }
 
+        // Real range from live consumption or cluster driving range (Strictly real data only)
         val realRange = bydBridge.realRangeKm
-        if (realRange > 0) {
+        if (realRange > 0.0) {
             tvRealRange?.text = "${realRange.toInt()} km"
-        } else if (soc > 0.0 && consumption > 0.0) {
-            val effCapacity = if (bydBridge.estimatedCapacityKwh > 0.0) bydBridge.estimatedCapacityKwh else 48.7
-            val calcRange = ((soc / 100.0) * effCapacity / consumption) * 100.0
-            tvRealRange?.text = "${calcRange.toInt()} km"
+        } else if (bydBridge.elecRangeKm > 0) {
+            tvRealRange?.text = "${bydBridge.elecRangeKm} km"
+        } else {
+            tvRealRange?.text = "-- km"
         }
 
         if (bydBridge.elecRangeKm > 0) {
             tvDashRange?.text = "${bydBridge.elecRangeKm} km"
+        } else {
+            tvDashRange?.text = "-- km"
         }
 
         // HV Main Battery Temperature (Configurable: Max/Min, Avg, Max, Min) & Cell Voltage
@@ -714,16 +720,25 @@ class OverlayService : Service() {
 
         if (consumption > 0.0) {
             tvConsumption?.text = String.format("%.1f", consumption)
+        } else {
+            tvConsumption?.text = "--"
         }
 
-        tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
+        if (bydBridge.instantPowerKw in -200.0..300.0 && bydBridge.instantPowerKw != 0.0) {
+            tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
+        } else {
+            tvInstPower?.text = "-- kW"
+        }
+
         tvOutTemp?.text = if (bydBridge.outsideTemperatureC != 0) "${bydBridge.outsideTemperatureC}°C" else "--°C"
-        tvSoh?.text = if (bydBridge.sohPercent > 0) "${bydBridge.sohPercent}%" else "--%"
+        tvSoh?.text = if (bydBridge.sohPercent in 1..100) "${bydBridge.sohPercent}%" else "--%"
         tv12v?.text = if (bydBridge.aux12vVoltage > 0.0) String.format("%.1fV", bydBridge.aux12vVoltage) else "--V"
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
         tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
         if (bydBridge.totalMileageKm > 0) {
             tvOdo?.text = String.format("%.0f km", bydBridge.totalMileageKm)
+        } else {
+            tvOdo?.text = "-- km"
         }
         tvGear?.text = bydBridge.currentGear
         tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
