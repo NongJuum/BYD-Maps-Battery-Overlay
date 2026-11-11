@@ -91,8 +91,7 @@ class BydVehicleBridge(
             if (kpa <= 0) return "--"
             return if (isPsi) "${(kpa * 0.1450377).roundToInt()}" else "$kpa"
         }
-        val unitLabel = if (isPsi) "psi" else "kPa"
-        return "FL:${fmt(tpmsFlKpa)} FR:${fmt(tpmsFrKpa)} | RL:${fmt(tpmsRlKpa)} RR:${fmt(tpmsRrKpa)} $unitLabel"
+        return "↖${fmt(tpmsFlKpa)} ↗${fmt(tpmsFrKpa)} | ↙${fmt(tpmsRlKpa)} ↘${fmt(tpmsRrKpa)}"
     }
 
     fun getDisplayAcTemp(): Int {
@@ -107,8 +106,8 @@ class BydVehicleBridge(
 
     fun getFormattedHvBattTemp(mode: String): String {
         return when (mode.lowercase()) {
-            "max" -> String.format("%.0f°C (Max)", hvBattTempMaxC)
-            "min" -> String.format("%.0f°C (Min)", hvBattTempMinC)
+            "max" -> String.format("%.0f°C", hvBattTempMaxC)
+            "min" -> String.format("%.0f°C", hvBattTempMinC)
             "avg" -> String.format("%.0f°C", hvBattTempAvgC)
             else -> String.format("%.0f/%.0f°C", hvBattTempMaxC, hvBattTempMinC)
         }

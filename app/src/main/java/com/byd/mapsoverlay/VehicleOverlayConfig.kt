@@ -35,6 +35,7 @@ object VehicleOverlayConfig {
     const val KEY_TPMS_UNIT = "pref_tpms_unit" // "kpa" or "psi"
 
     // การปรับแต่งหน้าต่าง Overlay
+    const val KEY_DISPLAY_MODE = "pref_overlay_display_mode" // "floating" or "stock_bar"
     const val KEY_OVERLAY_OPACITY = "pref_overlay_opacity" // 0 - 100%
     const val KEY_OVERLAY_SCALE = "pref_overlay_scale" // 70 - 150% (Default 100)
     const val KEY_OVERLAY_ORIENTATION = "pref_overlay_orientation" // "horizontal" or "vertical"
@@ -88,8 +89,10 @@ object VehicleOverlayConfig {
     fun setShowOdo(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_ODO, value).apply()
 
     // หมวด 3: อุณหภูมิและยาง
-    fun isShowCabinTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_CABIN_TEMP, false)
-    fun setShowCabinTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CABIN_TEMP, value).apply()
+    @Deprecated("Cabin temp is permanently removed from overlay")
+    fun isShowCabinTemp(context: Context): Boolean = false
+    @Deprecated("Cabin temp is permanently removed from overlay")
+    fun setShowCabinTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_CABIN_TEMP, false).apply()
 
     fun isShowOutsideTemp(context: Context): Boolean = prefs(context).getBoolean(KEY_SHOW_OUTSIDE_TEMP, true)
     fun setShowOutsideTemp(context: Context, value: Boolean) = prefs(context).edit().putBoolean(KEY_SHOW_OUTSIDE_TEMP, value).apply()
@@ -99,6 +102,10 @@ object VehicleOverlayConfig {
 
     fun getTpmsUnit(context: Context): String = prefs(context).getString(KEY_TPMS_UNIT, "psi") ?: "psi"
     fun setTpmsUnit(context: Context, unit: String) = prefs(context).edit().putString(KEY_TPMS_UNIT, unit).apply()
+
+    // โหมดการแสดงผล (Stock Bar vs Floating Pill)
+    fun isStockBarMode(context: Context): Boolean = prefs(context).getString(KEY_DISPLAY_MODE, "floating") == "stock_bar"
+    fun setStockBarMode(context: Context, isStockBar: Boolean) = prefs(context).edit().putString(KEY_DISPLAY_MODE, if (isStockBar) "stock_bar" else "floating").apply()
 
     // การปรับแต่งทั่วไป
     fun getOpacity(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_OPACITY, 85)

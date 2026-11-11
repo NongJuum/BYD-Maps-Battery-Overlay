@@ -562,16 +562,6 @@
                         android:showText="false" />
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_show_cabin_temp"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="❄️ อุณหภูมิแอร์ตั้งไว้ (AC Setpoint °C)"
-                        android:textColor="#ECEFF1"
-                        android:showText="false"
-                        android:checked="false"
-                        android:visibility="gone" />
-
-                    <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_show_out_temp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -614,7 +604,7 @@
                                 android:id="@+id/rb_tpms_psi"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="PSI (FL:39 FR:39 | RL:39 RR:39)"
+                                android:text="PSI (↖40 ↗39 | ↙39 ↘39)"
                                 android:textColor="#80CBC4"
                                 android:textSize="11sp"
                                 android:checked="true" />
@@ -624,7 +614,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="10dp"
-                                android:text="kPa (FL:270 FR:266 | RL:269 RR:266)"
+                                android:text="kPa (↖274 ↗270 | ↙270 ↘268)"
                                 android:textColor="#ECEFF1"
                                 android:textSize="11sp" />
                         </RadioGroup>
@@ -671,6 +661,56 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="14dp">
+
+                    <!-- ตัวเลือกโหมดการแสดงผล (Display Mode: Stock Bar vs Floating Pill) -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚘 โหมดการแสดงผล (Display Mode)"
+                        android:textColor="#00E676"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="เลือกเป็นวิดเจ็ตลอยอิสระ หรือแทนที่แถบสถานะด้านบนของรถ (Stock Bar)"
+                        android:textColor="#90A4AE"
+                        android:textSize="11sp" />
+
+                    <RadioGroup
+                        android:id="@+id/rg_display_mode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginBottom="12dp">
+
+                        <RadioButton
+                            android:id="@+id/rb_mode_floating"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="วิดเจ็ตลอย (Overlay Pill)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp"
+                            android:checked="true" />
+
+                        <RadioButton
+                            android:id="@+id/rb_mode_stock_bar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:text="ติดแถบบนจอรถ (Stock Bar)"
+                            android:textColor="#ECEFF1"
+                            android:textSize="12sp" />
+                    </RadioGroup>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#1E2A38"
+                        android:layout_marginBottom="12dp" />
 
                     <TextView
                         android:layout_width="wrap_content"

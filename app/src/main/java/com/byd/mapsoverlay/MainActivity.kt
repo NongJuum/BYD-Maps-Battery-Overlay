@@ -55,12 +55,15 @@ class MainActivity : AppCompatActivity() {
     // Selection Switches - Group 2 (Driving, Temps, TPMS)
     private lateinit var switchConsume50km: SwitchCompat
     private lateinit var switchInstPower: SwitchCompat
-    private lateinit var switchCabinTemp: SwitchCompat
     private lateinit var switchOutTemp: SwitchCompat
     private lateinit var switchTpms: SwitchCompat
     private lateinit var switchOdo: SwitchCompat
     private lateinit var switchSpeed: SwitchCompat
     private lateinit var switchGear: SwitchCompat
+
+    private lateinit var rgDisplayMode: android.widget.RadioGroup
+    private lateinit var rbModeFloating: android.widget.RadioButton
+    private lateinit var rbModeStockBar: android.widget.RadioButton
 
     private lateinit var seekOpacity: android.widget.SeekBar
     private lateinit var tvOpacityValue: TextView
@@ -161,12 +164,15 @@ class MainActivity : AppCompatActivity() {
 
         switchConsume50km = findViewById(R.id.switch_show_consume_50km)
         switchInstPower = findViewById(R.id.switch_show_inst_power)
-        switchCabinTemp = findViewById(R.id.switch_show_cabin_temp)
         switchOutTemp = findViewById(R.id.switch_show_out_temp)
         switchTpms = findViewById(R.id.switch_show_tpms)
         switchOdo = findViewById(R.id.switch_show_odo)
         switchSpeed = findViewById(R.id.switch_show_speed)
         switchGear = findViewById(R.id.switch_show_gear)
+
+        rgDisplayMode = findViewById(R.id.rg_display_mode)
+        rbModeFloating = findViewById(R.id.rb_mode_floating)
+        rbModeStockBar = findViewById(R.id.rb_mode_stock_bar)
 
         seekOpacity = findViewById(R.id.seek_overlay_opacity)
         tvOpacityValue = findViewById(R.id.tv_opacity_value)
@@ -220,12 +226,17 @@ class MainActivity : AppCompatActivity() {
 
         switchConsume50km.isChecked = VehicleOverlayConfig.isShowConsumption50km(this)
         switchInstPower.isChecked = VehicleOverlayConfig.isShowInstantPower(this)
-        switchCabinTemp.isChecked = VehicleOverlayConfig.isShowCabinTemp(this)
         switchOutTemp.isChecked = VehicleOverlayConfig.isShowOutsideTemp(this)
         switchTpms.isChecked = VehicleOverlayConfig.isShowTpmsPressure(this)
         switchOdo.isChecked = VehicleOverlayConfig.isShowOdo(this)
         switchSpeed.isChecked = VehicleOverlayConfig.isShowSpeed(this)
         switchGear.isChecked = VehicleOverlayConfig.isShowGear(this)
+
+        if (VehicleOverlayConfig.isStockBarMode(this)) {
+            rbModeStockBar.isChecked = true
+        } else {
+            rbModeFloating.isChecked = true
+        }
 
         val currentOpacity = VehicleOverlayConfig.getOpacity(this)
         seekOpacity.progress = currentOpacity.coerceIn(0, 100)
@@ -317,11 +328,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Instant toggle listeners for all 16 vehicle telemetry fields
+        // Instant toggle listeners for all 15 vehicle telemetry fields
         val allFieldSwitches = listOf(
             switchSoc, switchKwh, switchRealRange, switchDashRange,
             switchHvBattTemp, switchCellVolt, switchSoh, switch12v,
-            switchConsume50km, switchInstPower, switchCabinTemp, switchOutTemp,
+            switchConsume50km, switchInstPower, switchOutTemp,
             switchTpms, switchOdo, switchSpeed, switchGear
         )
         for (sw in allFieldSwitches) {
@@ -329,6 +340,12 @@ class MainActivity : AppCompatActivity() {
                 saveFieldPreferences()
                 notifyOverlayServiceConfigChanged()
             }
+        }
+
+        rgDisplayMode.setOnCheckedChangeListener { _, checkedId ->
+            val isStockBar = checkedId == R.id.rb_mode_stock_bar
+            VehicleOverlayConfig.setStockBarMode(this, isStockBar)
+            notifyOverlayServiceConfigChanged()
         }
 
         seekOpacity.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
@@ -423,13 +440,13 @@ class MainActivity : AppCompatActivity() {
 
         VehicleOverlayConfig.setShowConsumption50km(this, switchConsume50km.isChecked)
         VehicleOverlayConfig.setShowInstantPower(this, switchInstPower.isChecked)
-        VehicleOverlayConfig.setShowCabinTemp(this, switchCabinTemp.isChecked)
         VehicleOverlayConfig.setShowOutsideTemp(this, switchOutTemp.isChecked)
         VehicleOverlayConfig.setShowTpmsPressure(this, switchTpms.isChecked)
         VehicleOverlayConfig.setShowOdo(this, switchOdo.isChecked)
         VehicleOverlayConfig.setShowSpeed(this, switchSpeed.isChecked)
         VehicleOverlayConfig.setShowGear(this, switchGear.isChecked)
 
+        VehicleOverlayConfig.setStockBarMode(this, rbModeStockBar.isChecked)
         VehicleOverlayConfig.setOpacity(this, seekOpacity.progress.coerceIn(0, 100))
         VehicleOverlayConfig.setScale(this, seekScale.progress.coerceIn(70, 150))
         VehicleOverlayConfig.setVerticalLayout(this, rbVertical.isChecked)
@@ -455,7 +472,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 tvHvTemp.text = String.format("%.0f / %.0f °C", bydBridge.hvBattTempMaxC, bydBridge.hvBattTempMinC)
                 tvCellVolt.text = String.format("%.3f / %.3f V", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
-                tvCabinTemp.text = "${bydBridge.getDisplayAcTemp()}°C"
+                tvCabinTemp.text = "${bydBridge.outsideTemperatureC}°C"
                 tv12v.text = String.format("%.1f V", bydBridge.aux12vVoltage)
                 tvVehicleModelBadge.text = bydBridge.detectedVehicleModel
                 updatePermissionStatusBadge()

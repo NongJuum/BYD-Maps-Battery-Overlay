@@ -43,7 +43,6 @@ class OverlayService : Service() {
     private var tvCellVolt: TextView? = null
     private var tvConsumption: TextView? = null
     private var tvInstPower: TextView? = null
-    private var tvCabinTemp: TextView? = null
     private var tvOutTemp: TextView? = null
     private var tvSoh: TextView? = null
     private var tv12v: TextView? = null
@@ -61,7 +60,6 @@ class OverlayService : Service() {
     private var containerCellVolt: View? = null
     private var containerConsumption: View? = null
     private var containerInstPower: View? = null
-    private var containerCabinTemp: View? = null
     private var containerOutTemp: View? = null
     private var containerSoh: View? = null
     private var container12v: View? = null
@@ -158,6 +156,14 @@ class OverlayService : Service() {
 
     private fun clampOverlayToScreenBounds() {
         val params = windowParams ?: return
+        if (VehicleOverlayConfig.isStockBarMode(this)) {
+            params.x = 245
+            params.y = 0
+            try {
+                windowManager?.updateViewLayout(overlayView, params)
+            } catch (_: Throwable) {}
+            return
+        }
         val view = overlayView ?: return
         val dm = resources.displayMetrics
         val screenW = dm.widthPixels
@@ -210,7 +216,6 @@ class OverlayService : Service() {
         tvCellVolt = v.findViewById(R.id.tv_v2_cell_volt)
         tvConsumption = v.findViewById(R.id.tv_v2_consumption)
         tvInstPower = v.findViewById(R.id.tv_v2_inst_power)
-        tvCabinTemp = v.findViewById(R.id.tv_v2_cabin_temp)
         tvOutTemp = v.findViewById(R.id.tv_v2_out_temp)
         tvSoh = v.findViewById(R.id.tv_v2_soh)
         tv12v = v.findViewById(R.id.tv_v2_12v)
@@ -228,7 +233,6 @@ class OverlayService : Service() {
         containerCellVolt = v.findViewById(R.id.container_v2_cell_volt)
         containerConsumption = v.findViewById(R.id.container_v2_consumption)
         containerInstPower = v.findViewById(R.id.container_v2_inst_power)
-        containerCabinTemp = v.findViewById(R.id.container_v2_cabin_temp)
         containerOutTemp = v.findViewById(R.id.container_v2_out_temp)
         containerSoh = v.findViewById(R.id.container_v2_soh)
         container12v = v.findViewById(R.id.container_v2_12v)
@@ -245,7 +249,6 @@ class OverlayService : Service() {
             v.findViewById(R.id.divider_v2_cell_volt),
             v.findViewById(R.id.divider_v2_3),
             v.findViewById(R.id.divider_v2_inst_power),
-            v.findViewById(R.id.divider_v2_4),
             v.findViewById(R.id.divider_v2_out_temp),
             v.findViewById(R.id.divider_v2_5),
             v.findViewById(R.id.divider_v2_6),
@@ -269,8 +272,9 @@ class OverlayService : Service() {
             )
         }
 
-        val savedX = sharedPreferences.getInt("overlay_x", 245)
-        val savedY = sharedPreferences.getInt("overlay_y", 32)
+        val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
+        val savedX = if (isStockBar) 245 else sharedPreferences.getInt("overlay_x", 245)
+        val savedY = if (isStockBar) 0 else sharedPreferences.getInt("overlay_y", 32)
 
         for (layoutType in candidateTypes) {
             val params = WindowManager.LayoutParams(
@@ -297,7 +301,7 @@ class OverlayService : Service() {
             }
         }
 
-        // Allow dragging from anywhere on the floating pill
+        // Allow dragging from anywhere on the floating pill (only in floating mode)
         v.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -306,6 +310,7 @@ class OverlayService : Service() {
             private var isDragging = false
 
             override fun onTouch(view: View?, event: MotionEvent): Boolean {
+                if (VehicleOverlayConfig.isStockBarMode(this@OverlayService)) return false
                 val currentParams = windowParams ?: return false
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
@@ -349,8 +354,9 @@ class OverlayService : Service() {
         })
 
         // Auto Boundary Enforcer: if the overlay expands or is near the right screen edge,
-        // automatically shift it so that the tail end is NEVER cut off!
+        // automatically shift it so that the tail end is NEVER cut off! (only for floating mode)
         v.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            if (VehicleOverlayConfig.isStockBarMode(this)) return@addOnLayoutChangeListener
             val cp = windowParams ?: return@addOnLayoutChangeListener
             val w = v.width
             if (w <= 0) return@addOnLayoutChangeListener
@@ -368,6 +374,15 @@ class OverlayService : Service() {
 
     private fun resetPosition() {
         val params = windowParams ?: return
+        if (VehicleOverlayConfig.isStockBarMode(this)) {
+            params.x = 245
+            params.y = 0
+            sharedPreferences.edit().putInt("overlay_x", 245).putInt("overlay_y", 0).apply()
+            try {
+                windowManager?.updateViewLayout(overlayView, params)
+            } catch (_: Exception) {}
+            return
+        }
         val view = overlayView ?: return
         val dm = resources.displayMetrics
         val screenW = dm.widthPixels
@@ -396,7 +411,6 @@ class OverlayService : Service() {
         val showCellVolt = VehicleOverlayConfig.isShowCellVoltage(this)
         val showConsumption = VehicleOverlayConfig.isShowConsumption50km(this)
         val showInstPower = VehicleOverlayConfig.isShowInstantPower(this)
-        val showCabinTemp = VehicleOverlayConfig.isShowCabinTemp(this)
         val showOutTemp = VehicleOverlayConfig.isShowOutsideTemp(this)
         val showSoh = VehicleOverlayConfig.isShowBatterySoh(this)
         val show12v = VehicleOverlayConfig.isShow12v(this)
@@ -414,7 +428,6 @@ class OverlayService : Service() {
         containerCellVolt?.visibility = if (showCellVolt) View.VISIBLE else View.GONE
         containerConsumption?.visibility = if (showConsumption) View.VISIBLE else View.GONE
         containerInstPower?.visibility = if (showInstPower) View.VISIBLE else View.GONE
-        containerCabinTemp?.visibility = if (showCabinTemp) View.VISIBLE else View.GONE
         containerOutTemp?.visibility = if (showOutTemp) View.VISIBLE else View.GONE
         containerSoh?.visibility = if (showSoh) View.VISIBLE else View.GONE
         container12v?.visibility = if (show12v) View.VISIBLE else View.GONE
@@ -455,12 +468,11 @@ class OverlayService : Service() {
                 Pair(containerCellVolt, allDividers.getOrNull(5)),
                 Pair(containerConsumption, allDividers.getOrNull(6)),
                 Pair(containerInstPower, allDividers.getOrNull(7)),
-                Pair(containerCabinTemp, allDividers.getOrNull(8)),
-                Pair(containerOutTemp, allDividers.getOrNull(9)),
-                Pair(containerSoh, allDividers.getOrNull(10)),
-                Pair(container12v, allDividers.getOrNull(11)),
-                Pair(containerTpms, allDividers.getOrNull(12)),
-                Pair(containerOdo, allDividers.getOrNull(13))
+                Pair(containerOutTemp, allDividers.getOrNull(8)),
+                Pair(containerSoh, allDividers.getOrNull(9)),
+                Pair(container12v, allDividers.getOrNull(10)),
+                Pair(containerTpms, allDividers.getOrNull(11)),
+                Pair(containerOdo, allDividers.getOrNull(12))
             )
             val allContainersAfter = orderedPairs.map { it.first } + listOf(containerGearSpeed)
             for (idx in orderedPairs.indices) {
@@ -471,10 +483,35 @@ class OverlayService : Service() {
             }
         }
 
-        // แยกปรับความโปร่งใสเฉพาะพื้นหลัง (Background Only) ตัวหนังสือและไอคอนคงความชัด 100% ไม่ดรอป
-        val opacityPercent = VehicleOverlayConfig.getOpacity(this).coerceIn(0, 100)
-        val bgAlpha255 = (opacityPercent * 255 / 100).coerceIn(0, 255)
-        overlayView?.background?.mutate()?.alpha = bgAlpha255
+        // จัดการโหมดการแสดงผล (Stock Bar Mode vs Floating Pill)
+        val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
+        val dragHandle = overlayView?.findViewById<View>(R.id.tv_drag_handle)
+        if (isStockBar) {
+            dragHandle?.visibility = View.GONE
+            overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_mode)
+            overlayView?.elevation = 0f
+            windowParams?.let { lp ->
+                lp.x = 245
+                lp.y = 0
+                try {
+                    windowManager?.updateViewLayout(overlayView, lp)
+                } catch (_: Throwable) {}
+            }
+        } else {
+            dragHandle?.visibility = View.VISIBLE
+            overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
+            overlayView?.elevation = 8 * resources.displayMetrics.density
+            val opacityPercent = VehicleOverlayConfig.getOpacity(this).coerceIn(0, 100)
+            val bgAlpha255 = (opacityPercent * 255 / 100).coerceIn(0, 255)
+            overlayView?.background?.mutate()?.alpha = bgAlpha255
+            windowParams?.let { lp ->
+                lp.x = sharedPreferences.getInt("overlay_x", 245)
+                lp.y = sharedPreferences.getInt("overlay_y", 32)
+                try {
+                    windowManager?.updateViewLayout(overlayView, lp)
+                } catch (_: Throwable) {}
+            }
+        }
         overlayView?.alpha = 1.0f
 
         // Native typography & padding scale (NEVER clips Surface boundary!)
@@ -485,14 +522,14 @@ class OverlayService : Service() {
         val baseSp = 11.5f * scale
         val allTv = listOf(
             tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
-            tvConsumption, tvInstPower, tvCabinTemp, tvOutTemp, tvSoh,
+            tvConsumption, tvInstPower, tvOutTemp, tvSoh,
             tv12v, tvTpms, tvOdo, tvGear, tvSpeed
         )
         for (tv in allTv) {
             tv?.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
         }
-        val padH = (8 * resources.displayMetrics.density * scale).toInt()
-        val padV = (3 * resources.displayMetrics.density * scale).toInt()
+        val padH = if (isStockBar) (4 * resources.displayMetrics.density * scale).toInt() else (8 * resources.displayMetrics.density * scale).toInt()
+        val padV = if (isStockBar) (2 * resources.displayMetrics.density * scale).toInt() else (3 * resources.displayMetrics.density * scale).toInt()
         rootLayout?.setPadding(padH, padV, padH, padV)
     }
 
@@ -531,9 +568,8 @@ class OverlayService : Service() {
         }
 
         tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
-        tvCabinTemp?.text = "${bydBridge.getDisplayAcTemp()}°C"
         tvOutTemp?.text = "${bydBridge.outsideTemperatureC}°C"
-        tvSoh?.text = "${bydBridge.sohPercent}% SOH"
+        tvSoh?.text = "${bydBridge.sohPercent}%"
         tv12v?.text = String.format("%.1fV", bydBridge.aux12vVoltage)
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
         tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)

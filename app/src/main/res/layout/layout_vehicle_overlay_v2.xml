@@ -167,9 +167,8 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🌡️แบต"
-            android:textColor="#FFAB40"
-            android:textSize="10sp"
+            android:text="🌡️"
+            android:textSize="11sp"
             android:paddingEnd="2dp" />
 
         <TextView
@@ -271,51 +270,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="⚡สด"
-            android:textColor="#FFD740"
-            android:textSize="10sp"
+            android:text="⚡"
+            android:textSize="11sp"
             android:paddingEnd="2dp" />
-
         <TextView
             android:id="@+id/tv_v2_inst_power"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="0.0 kW"
             android:textColor="#FFD740"
-            android:textSize="11.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider_v2_4"
-        android:layout_width="1dp"
-        android:layout_height="11dp"
-        android:layout_marginStart="3dp"
-        android:layout_marginEnd="3dp"
-        android:background="#26FFFFFF" />
-
-    <!-- 5. อุณหภูมิห้องโดยสาร (ปิดการแสดงผล) -->
-    <LinearLayout
-        android:id="@+id/container_v2_cabin_temp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="❄️"
-            android:textSize="11sp"
-            android:paddingEnd="2dp" />
-
-        <TextView
-            android:id="@+id/tv_v2_cabin_temp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="25°C"
-            android:textColor="#80D8FF"
             android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -405,9 +368,8 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="12V:"
-            android:textColor="#90A4AE"
-            android:textSize="10sp"
+            android:text="🔋"
+            android:textSize="11sp"
             android:paddingEnd="2dp" />
 
         <TextView
