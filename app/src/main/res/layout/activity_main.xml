@@ -710,7 +710,7 @@
                         android:id="@+id/switch_show_camera_dvr"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🎥 กล้องบันทึกรอบคัน / กล้องหน้ารถ (Dashcam / Panoramic Camera)"
+                        android:text="🎥 กล้องบันทึกหน้ารถ DASHCAM (🔴 REC ขณะกำลังบันทึกภาพ)"
                         android:textColor="#ECEFF1"
                         android:showText="false"
                         android:checked="true" />
@@ -719,7 +719,7 @@
                         android:id="@+id/switch_show_bluetooth"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ᛒ บลูทูธที่เชื่อมต่อ (Bluetooth Connected)"
+                        android:text="📶 บลูทูธ (Bluetooth Connected Indicator)"
                         android:textColor="#ECEFF1"
                         android:showText="false"
                         android:checked="true" />

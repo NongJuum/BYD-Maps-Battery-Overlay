@@ -746,26 +746,33 @@ class OverlayService : Service() {
 
     private fun updateSystemStatusUi(status: SystemStatusManager.StatusData) {
         tvStatusSim?.text = status.simText
-        tvStatusWifi?.text = status.wifiText
-        
-        if (status.isGpsActive) {
-            tvStatusGps?.text = "📍 GPS"
-            tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#40C4FF"))
-        } else {
-            tvStatusGps?.text = "📍"
-            tvStatusGps?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
-        }
+        tvStatusSim?.setTextColor(if (status.isSimActive) android.graphics.Color.parseColor("#ECEFF1") else android.graphics.Color.parseColor("#90A4AE"))
 
+        tvStatusWifi?.text = status.wifiText
+        tvStatusWifi?.setTextColor(if (status.isWifiConnected) android.graphics.Color.parseColor("#ECEFF1") else android.graphics.Color.parseColor("#90A4AE"))
+        
+        tvStatusGps?.text = status.gpsText
+        tvStatusGps?.setTextColor(
+            if (status.isGpsActive) android.graphics.Color.parseColor("#40C4FF")
+            else android.graphics.Color.parseColor("#90A4AE")
+        )
+
+        tvStatusCamera?.text = status.cameraText
         if (status.isCameraActive) {
-            tvStatusCamera?.text = "🔴 REC"
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
-            tvStatusCamera?.text = "📷"
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
 
         val showBt = VehicleOverlayConfig.isShowBluetooth(this)
-        containerStatusBt?.visibility = if (showBt && status.isBluetoothConnected) View.VISIBLE else View.GONE
+        tvStatusBt?.text = status.btText
+        if (status.isBluetoothConnected) {
+            tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#80D8FF"))
+            containerStatusBt?.visibility = if (showBt) View.VISIBLE else View.GONE
+        } else {
+            tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#546E7A"))
+            containerStatusBt?.visibility = View.GONE
+        }
     }
 
     private fun createNotification(): Notification {

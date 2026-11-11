@@ -38,13 +38,18 @@ class SystemStatusManager(
     private val mainHandler = Handler(Looper.getMainLooper())
 
     data class StatusData(
-        val simText: String = "📶 4G",
+        val simText: String = "4G ▂▄▆█",
         val isSimActive: Boolean = true,
-        val wifiText: String = "📶 Wi-Fi",
+        val simLevel: Int = 4,
+        val wifiText: String = "Wi-Fi ▂▄▆█",
         val isWifiConnected: Boolean = false,
+        val wifiLevel: Int = 4,
         val isGpsActive: Boolean = false,
-        val isCameraActive: Boolean = false,
-        val isBluetoothConnected: Boolean = false
+        val gpsText: String = "📍 GPS",
+        val isCameraActive: Boolean = false, // DASHCAM / DVR recording active
+        val cameraText: String = "📷 DVR",
+        val isBluetoothConnected: Boolean = false,
+        val btText: String = "BT"
     )
 
     private var currentData = StatusData()
@@ -146,7 +151,7 @@ class SystemStatusManager(
             Log.w(tag, "Network callback error: ${e.message}")
         }
 
-        // 4. System Broadcasts (Wi-Fi, Bluetooth, Location)
+        // 4. System Broadcasts (Wi-Fi, Bluetooth, Location, BYD Dashcam/CDR)
         try {
             val filter = IntentFilter().apply {
                 addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
@@ -155,6 +160,8 @@ class SystemStatusManager(
                 addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
                 addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
                 addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+                addAction("android.cdr.action.STATE_CHANGED")
+                addAction("com.byd.action.CDR_STATE_CHANGED")
             }
             context.registerReceiver(systemReceiver, filter)
         } catch (e: Throwable) {
@@ -192,8 +199,9 @@ class SystemStatusManager(
 
     private fun updateCameraState() {
         val inUse = activeCameras.isNotEmpty()
-        if (currentData.isCameraActive != inUse) {
-            currentData = currentData.copy(isCameraActive = inUse)
+        val cameraText = if (inUse) "🔴 REC" else "📷 DVR"
+        if (currentData.isCameraActive != inUse || currentData.cameraText != cameraText) {
+            currentData = currentData.copy(isCameraActive = inUse, cameraText = cameraText)
             dispatchUpdate()
         }
     }
@@ -204,30 +212,31 @@ class SystemStatusManager(
         val simState = tm.simState
         val isSimReady = simState == TelephonyManager.SIM_STATE_READY
 
-        var simText = "📶 4G"
+        var simText = "4G"
         var isSimActive = isSimReady
+        var simLevel = 0
 
         if (simState == TelephonyManager.SIM_STATE_ABSENT) {
-            simText = "❌ SIM"
+            simText = "❌ 4G"
             isSimActive = false
         } else if (isSimReady) {
-            val level = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            simLevel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 signalStrength?.level ?: tm.signalStrength?.level ?: 3
             } else {
                 3
             }
-            val bars = when (level) {
-                4 -> "▮▮▮▮"
-                3 -> "▮▮▮▯"
-                2 -> "▮▮▯▯"
-                1 -> "▮▯▯▯"
-                else -> "▯▯▯▯"
+            val bars = when (simLevel) {
+                4 -> "▂▄▆█"
+                3 -> "▂▄▆_"
+                2 -> "▂▄__"
+                1 -> "▂___"
+                else -> "____"
             }
-            simText = "📶 4G"
+            simText = "4G $bars"
         }
 
-        if (currentData.simText != simText || currentData.isSimActive != isSimActive) {
-            currentData = currentData.copy(simText = simText, isSimActive = isSimActive)
+        if (currentData.simText != simText || currentData.isSimActive != isSimActive || currentData.simLevel != simLevel) {
+            currentData = currentData.copy(simText = simText, isSimActive = isSimActive, simLevel = simLevel)
             dispatchUpdate()
         }
     }
@@ -235,18 +244,29 @@ class SystemStatusManager(
     private fun updateNetworkState() {
         val wm = wifiManager
         var wifiConnected = false
-        var wifiText = "📶 Wi-Fi"
+        var wifiText = "Wi-Fi"
+        var wifiLevel = 0
 
         try {
             val info: WifiInfo? = wm?.connectionInfo
             if (info != null && info.networkId != -1) {
                 wifiConnected = true
-                wifiText = "📶 Wi-Fi"
+                wifiLevel = WifiManager.calculateSignalLevel(info.rssi, 5)
+                val bars = when (wifiLevel) {
+                    4 -> "▂▄▆█"
+                    3 -> "▂▄▆_"
+                    2 -> "▂▄__"
+                    1 -> "▂___"
+                    else -> "____"
+                }
+                wifiText = "Wi-Fi $bars"
+            } else {
+                wifiText = "Wi-Fi"
             }
         } catch (_: Throwable) {}
 
-        if (currentData.isWifiConnected != wifiConnected || currentData.wifiText != wifiText) {
-            currentData = currentData.copy(wifiText = wifiText, isWifiConnected = wifiConnected)
+        if (currentData.isWifiConnected != wifiConnected || currentData.wifiText != wifiText || currentData.wifiLevel != wifiLevel) {
+            currentData = currentData.copy(wifiText = wifiText, isWifiConnected = wifiConnected, wifiLevel = wifiLevel)
             dispatchUpdate()
         }
     }
@@ -266,8 +286,9 @@ class SystemStatusManager(
             }
         } catch (_: Throwable) {}
 
-        if (currentData.isGpsActive != gpsActive) {
-            currentData = currentData.copy(isGpsActive = gpsActive)
+        val gpsText = if (gpsActive) "📍 GPS" else "📍"
+        if (currentData.isGpsActive != gpsActive || currentData.gpsText != gpsText) {
+            currentData = currentData.copy(isGpsActive = gpsActive, gpsText = gpsText)
             dispatchUpdate()
         }
     }
@@ -284,8 +305,9 @@ class SystemStatusManager(
             }
         } catch (_: Throwable) {}
 
-        if (currentData.isBluetoothConnected != btConnected) {
-            currentData = currentData.copy(isBluetoothConnected = btConnected)
+        val btText = if (btConnected) "BT ●" else "BT"
+        if (currentData.isBluetoothConnected != btConnected || currentData.btText != btText) {
+            currentData = currentData.copy(isBluetoothConnected = btConnected, btText = btText)
             dispatchUpdate()
         }
     }
