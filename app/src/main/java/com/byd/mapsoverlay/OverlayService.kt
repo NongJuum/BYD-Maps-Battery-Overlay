@@ -318,6 +318,16 @@ class OverlayService : Service() {
         spacerStockRight = v.findViewById(R.id.spacer_stock_right)
         containerStatusCamera = v.findViewById(R.id.container_status_camera)
         tvStatusCamera = v.findViewById(R.id.tv_status_camera)
+        containerStatusCamera?.setOnClickListener {
+            try {
+                val launchIntent = packageManager.getLaunchIntentForPackage("com.byd.avc")
+                    ?: packageManager.getLaunchIntentForPackage("com.byd.panoramiccamera")
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(launchIntent)
+                }
+            } catch (_: Throwable) {}
+        }
         containerStatusGps = v.findViewById(R.id.container_status_gps)
         tvStatusGps = v.findViewById(R.id.tv_status_gps)
         containerStatusBt = v.findViewById(R.id.container_status_bt)
@@ -860,7 +870,11 @@ class OverlayService : Service() {
             containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
-            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+            if (VehicleOverlayConfig.isStockBarMode(this)) {
+                containerStatusCamera?.background = null
+            } else {
+                containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+            }
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
     }
