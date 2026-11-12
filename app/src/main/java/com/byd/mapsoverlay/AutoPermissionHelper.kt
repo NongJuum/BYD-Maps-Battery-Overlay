@@ -82,19 +82,7 @@ object AutoPermissionHelper {
     }
 
     private fun launchTelemetryDaemon(context: Context): Boolean {
-        val privateKey = File(context.filesDir, "adbkey")
-        val publicKey = File(context.filesDir, "adbkey.pub")
-        val keyPair = try {
-            if (privateKey.exists() && publicKey.exists()) {
-                AdbKeyPair.read(privateKey, publicKey)
-            } else {
-                AdbKeyPair.generate(privateKey, publicKey)
-                AdbKeyPair.read(privateKey, publicKey)
-            }
-        } catch (t: Throwable) {
-            Log.e(TAG, "Could not create/read persistent ADB key pair", t)
-            return false
-        }
+        val keyPair = loadOrCreateAdbKeyPair(context)
 
         return try {
             val targetPkg = context.packageName
@@ -282,10 +270,41 @@ object AutoPermissionHelper {
     private fun loadOrCreateAdbKeyPair(context: Context): AdbKeyPair {
         val privateKey = File(context.filesDir, "adbkey")
         val publicKey = File(context.filesDir, "adbkey.pub")
-        return if (privateKey.exists() && publicKey.exists()) {
-            AdbKeyPair.read(privateKey, publicKey)
-        } else {
+        
+        // Priority 1: Check if key exists in app internal storage
+        if (privateKey.exists() && publicKey.exists()) {
+            try {
+                return AdbKeyPair.read(privateKey, publicKey)
+            } catch (_: Throwable) {}
+        }
+
+        // Priority 2: Check if authorized adb keys exist on external storage (/sdcard/.android/ or /data/local/tmp/)
+        val fallbackLocations = listOf(
+            File("/sdcard/.android"),
+            File("/sdcard"),
+            File("/data/local/tmp")
+        )
+        for (dir in fallbackLocations) {
+            val fPriv = File(dir, "adbkey")
+            val fPub = File(dir, "adbkey.pub")
+            if (fPriv.exists() && fPub.exists()) {
+                try {
+                    val pair = AdbKeyPair.read(fPriv, fPub)
+                    // Cache to app internal filesDir
+                    fPriv.copyTo(privateKey, overwrite = true)
+                    fPub.copyTo(publicKey, overwrite = true)
+                    Log.i(TAG, "Loaded authorized ADB key pair from ${dir.absolutePath}")
+                    return pair
+                } catch (_: Throwable) {}
+            }
+        }
+
+        // Priority 3: Generate fresh key pair and persist
+        return try {
             AdbKeyPair.generate(privateKey, publicKey)
+            AdbKeyPair.read(privateKey, publicKey)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to generate ADB key pair", t)
             AdbKeyPair.read(privateKey, publicKey)
         }
     }
@@ -370,15 +389,11 @@ object AutoPermissionHelper {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
                     adb.shell("settings put global policy_control $value")
-                    if (enabled) {
-                        // ป้องกัน Kinex ยืดตัวขึ้นไปขอบบนจนถูก Status Bar ทับ
-                        // บังคับให้ขอบหน้าจอแอปเริ่มต้นที่ y=84px พอดีใต้ Stock Bar
-                        adb.shell("wm overscan 0,84,0,0")
-                    } else {
-                        adb.shell("wm overscan reset")
-                    }
+                    // Reset overscan completely so Kinex/Maps naturally align to status bar height (84px)
+                    // without any artificial gap or double inset.
+                    adb.shell("wm overscan reset")
                 }
-                Log.i(TAG, "Stock Bar immersive set to: $value with overscanSync")
+                Log.i(TAG, "Stock Bar immersive set to: $value with overscan reset")
             } catch (t: Throwable) {
                 Log.w(TAG, "setStockBarImmersive ADB error: ${t.message}")
             } finally {
