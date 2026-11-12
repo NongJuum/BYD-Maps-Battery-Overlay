@@ -16,6 +16,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -360,11 +361,20 @@ class OverlayService : Service() {
 
         val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
         val dm = resources.displayMetrics
-        val statusBarHeightPx = (56 * dm.density).toInt().coerceAtLeast(84)
+        val realDm = android.util.DisplayMetrics()
+        windowManager?.defaultDisplay?.getRealMetrics(realDm)
+        val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
+        val statusBarHeightPx = ((50 + 14 * (scale - 1.0f).coerceAtLeast(0f)) * dm.density).toInt().coerceAtLeast(84)
+        val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= (statusBarHeightPx - 10)
+
         val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
         val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
         val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
-        val savedY = if (isStockBar) 0 else sharedPreferences.getInt("overlay_y", 32)
+        val savedY = if (isStockBar) {
+            if (hasOverscan) -statusBarHeightPx else 0
+        } else {
+            sharedPreferences.getInt("overlay_y", 32)
+        }
 
         for (layoutType in candidateTypes) {
             val params = WindowManager.LayoutParams(
@@ -656,12 +666,16 @@ class OverlayService : Service() {
                 overlayView?.background = bgDrawable
             }
             overlayView?.elevation = 0f
+            val realDm = android.util.DisplayMetrics()
+            windowManager?.defaultDisplay?.getRealMetrics(realDm)
+            val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= (statusBarHeightPx - 10)
+
             windowParams?.let { lp ->
                 lp.width = WindowManager.LayoutParams.MATCH_PARENT
                 lp.height = statusBarHeightPx
                 lp.gravity = Gravity.TOP or Gravity.START
                 lp.x = 0
-                lp.y = 0
+                lp.y = if (hasOverscan) -statusBarHeightPx else 0
                 try {
                     windowManager?.updateViewLayout(overlayView, lp)
                 } catch (_: Throwable) {}
@@ -704,19 +718,46 @@ class OverlayService : Service() {
         overlayView?.alpha = 1.0f
 
         // Native typography & padding scale (NEVER clips Surface boundary!)
-        val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 1.5f)
+        val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
         overlayView?.scaleX = 1.0f
         overlayView?.scaleY = 1.0f
 
-        val baseSp = if (isStockBar) 12.0f else 11.5f * scale
+        // Base font sizes with scale support
+        val baseSp = (if (isStockBar) 16.0f else 12.0f) * scale
+        val labelSp = baseSp * 0.85f
+        val statusSp = (if (isStockBar) 13.5f else 11.0f) * scale
+        val clockSp = (if (isStockBar) 17.5f else 13.0f) * scale
+        val dateSp = (if (isStockBar) 13.5f else 11.0f) * scale
+
         val allTv = listOf(
             tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
             tvConsumption, tvInstPower, tvOutTemp, tvSoh,
             tv12v, tvTpms, tvOdo, tvGear, tvSpeed
         )
-        for (tv in allTv) {
-            tv?.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
+        val statusTv = listOf(
+            tvStatusCamera, tvStatusGps, tvStatusBt, tvStatusWifi, tvStatusSim
+        )
+
+        fun scaleViewsRecursively(v: View) {
+            when (v) {
+                is TextView -> {
+                    when {
+                        allTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
+                        statusTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, statusSp)
+                        v.id == R.id.tc_stock_clock -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, clockSp)
+                        v.id == R.id.tc_stock_date || v.id == R.id.tc_stock_date_left -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, dateSp)
+                        else -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelSp)
+                    }
+                }
+                is ViewGroup -> {
+                    for (i in 0 until v.childCount) {
+                        scaleViewsRecursively(v.getChildAt(i))
+                    }
+                }
+            }
         }
+        rootLayout?.let { scaleViewsRecursively(it) }
+
         val padH = if (isStockBar) (14 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * scale).toInt()
         val padV = if (isStockBar) (0).toInt() else (3 * resources.displayMetrics.density * scale).toInt()
         rootLayout?.setPadding(padH, padV, padH, padV)
@@ -786,6 +827,16 @@ class OverlayService : Service() {
         }
         tvGear?.text = bydBridge.currentGear
         tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
+
+        val isDashcamActive = bydBridge.isDashcamRecording || (systemStatusManager?.currentData?.isCameraActive == true)
+        tvStatusCamera?.text = if (isDashcamActive) "● REC" else "📷 DVR"
+        if (isDashcamActive) {
+            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
+            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
+        } else {
+            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
+        }
     }
 
     private fun updateSystemStatusUi(status: SystemStatusManager.StatusData) {
@@ -801,8 +852,9 @@ class OverlayService : Service() {
             else android.graphics.Color.parseColor("#90A4AE")
         )
 
-        tvStatusCamera?.text = status.cameraText
-        if (status.isCameraActive) {
+        val isDashcamActive = bydBridge.isDashcamRecording || status.isCameraActive
+        tvStatusCamera?.text = if (isDashcamActive) "● REC" else "📷 DVR"
+        if (isDashcamActive) {
             containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
@@ -812,11 +864,20 @@ class OverlayService : Service() {
 
         val showBt = VehicleOverlayConfig.isShowBluetooth(this)
         tvStatusBt?.text = status.btText
-        if (status.isBluetoothConnected) {
-            tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#80D8FF"))
-            containerStatusBt?.visibility = if (showBt) View.VISIBLE else View.GONE
+        if (showBt) {
+            containerStatusBt?.visibility = View.VISIBLE
+            when {
+                status.isBluetoothConnected -> {
+                    tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#80D8FF"))
+                }
+                status.btText == "BT ✕" -> {
+                    tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#546E7A"))
+                }
+                else -> {
+                    tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
+                }
+            }
         } else {
-            tvStatusBt?.setTextColor(android.graphics.Color.parseColor("#546E7A"))
             containerStatusBt?.visibility = View.GONE
         }
     }

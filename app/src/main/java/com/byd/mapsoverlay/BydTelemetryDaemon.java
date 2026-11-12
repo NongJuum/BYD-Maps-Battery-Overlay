@@ -588,6 +588,33 @@ public final class BydTelemetryDaemon {
                 data.put("isRightDanger", fastRightDanger);
                 data.put("bsdAlertActive", fastBsdAlertActive);
 
+                // Check Overdrive and Dashcam recording state (Read-only observation)
+                boolean isDashcamRecording = false;
+                try {
+                    String recLog = readTail("/data/local/tmp/recordingmodemanager.log", 2048);
+                    if (recLog != null) {
+                        int idx = recLog.lastIndexOf("Camera profile:");
+                        if (idx >= 0) {
+                            String profileLine = recLog.substring(idx);
+                            int eol = profileLine.indexOf('\n');
+                            if (eol > 0) profileLine = profileLine.substring(0, eol);
+                            if (profileLine.contains("recording:")) {
+                                isDashcamRecording = true;
+                            }
+                        }
+                    }
+                    if (!isDashcamRecording) {
+                        File lockFile = new File("/data/local/tmp/camera_daemon.lock");
+                        if (lockFile.exists()) {
+                            String camLog = readTail("/data/local/tmp/cameradaemon.log", 2048);
+                            if (camLog != null && (camLog.contains("recordingDesired=true") || camLog.contains("panoRecording=true"))) {
+                                isDashcamRecording = true;
+                            }
+                        }
+                    }
+                } catch (Throwable ignored) {}
+                data.put("isDashcamRecording", isDashcamRecording);
+
                 boolean validSoc = soc != null && soc >= 0.0 && soc <= 100.0;
                 data.put("status", validSoc ? "OK" : "WAITING_FOR_SOC");
 

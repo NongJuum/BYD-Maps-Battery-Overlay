@@ -52,7 +52,8 @@ class SystemStatusManager(
         val btText: String = "BT"
     )
 
-    private var currentData = StatusData()
+    var currentData = StatusData()
+        private set
     private var isMonitoring = false
 
     private val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
@@ -198,8 +199,33 @@ class SystemStatusManager(
     }
 
     private fun updateCameraState() {
-        val inUse = activeCameras.isNotEmpty()
-        val cameraText = if (inUse) "🔴 REC" else "📷 DVR"
+        var inUse = activeCameras.isNotEmpty()
+        if (!inUse) {
+            try {
+                // Check recent file writes in Overdrive / DVR directories
+                val candidateDirs = listOf(
+                    java.io.File("/sdcard/Overdrive/trips"),
+                    java.io.File("/sdcard/Overdrive/recordings"),
+                    java.io.File("/sdcard/DVR")
+                )
+                val now = System.currentTimeMillis()
+                for (dir in candidateDirs) {
+                    if (dir.exists() && dir.isDirectory) {
+                        val files = dir.listFiles()
+                        if (files != null) {
+                            for (f in files) {
+                                if (now - f.lastModified() < 45_000L) {
+                                    inUse = true
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if (inUse) break
+                }
+            } catch (_: Throwable) {}
+        }
+        val cameraText = if (inUse) "● REC" else "📷 DVR"
         if (currentData.isCameraActive != inUse || currentData.cameraText != cameraText) {
             currentData = currentData.copy(isCameraActive = inUse, cameraText = cameraText)
             dispatchUpdate()
@@ -296,16 +322,46 @@ class SystemStatusManager(
     @SuppressLint("MissingPermission")
     private fun updateBluetoothState() {
         var btConnected = false
+        var btEnabled = false
         try {
             val adapter = BluetoothAdapter.getDefaultAdapter()
-            if (adapter != null && adapter.isEnabled) {
-                val a2dpState = adapter.getProfileConnectionState(BluetoothProfile.A2DP)
-                val headsetState = adapter.getProfileConnectionState(BluetoothProfile.HEADSET)
-                btConnected = a2dpState == BluetoothProfile.STATE_CONNECTED || headsetState == BluetoothProfile.STATE_CONNECTED
+            if (adapter != null) {
+                btEnabled = adapter.isEnabled
+                if (btEnabled) {
+                    // 1. Check bonded devices for any active connection via reflection
+                    val bonded = adapter.bondedDevices
+                    if (bonded != null) {
+                        for (device in bonded) {
+                            try {
+                                val isConnectedMethod = device.javaClass.getMethod("isConnected")
+                                if (isConnectedMethod.invoke(device) == true) {
+                                    btConnected = true
+                                    break
+                                }
+                            } catch (_: Throwable) {}
+                        }
+                    }
+                    // 2. Check automotive profiles: 11 (A2DP_SINK), 16 (HEADSET_CLIENT), 2 (A2DP), 1 (HEADSET), 17 (PBAP_CLIENT)
+                    if (!btConnected) {
+                        val profiles = intArrayOf(11, 16, BluetoothProfile.A2DP, BluetoothProfile.HEADSET, 17)
+                        for (prof in profiles) {
+                            try {
+                                if (adapter.getProfileConnectionState(prof) == BluetoothProfile.STATE_CONNECTED) {
+                                    btConnected = true
+                                    break
+                                }
+                            } catch (_: Throwable) {}
+                        }
+                    }
+                }
             }
         } catch (_: Throwable) {}
 
-        val btText = if (btConnected) "BT ●" else "BT"
+        val btText = when {
+            btConnected -> "BT ●"
+            btEnabled -> "BT"
+            else -> "BT ✕"
+        }
         if (currentData.isBluetoothConnected != btConnected || currentData.btText != btText) {
             currentData = currentData.copy(isBluetoothConnected = btConnected, btText = btText)
             dispatchUpdate()

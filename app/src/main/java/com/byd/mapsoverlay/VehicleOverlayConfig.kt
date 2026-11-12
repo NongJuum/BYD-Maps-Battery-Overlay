@@ -137,7 +137,7 @@ object VehicleOverlayConfig {
     fun setOpacity(context: Context, value: Int) = prefs(context).edit().putInt(KEY_OVERLAY_OPACITY, value.coerceIn(0, 100)).apply()
 
     fun getScale(context: Context): Int = prefs(context).getInt(KEY_OVERLAY_SCALE, 100)
-    fun setScale(context: Context, value: Int) = prefs(context).edit().putInt(KEY_OVERLAY_SCALE, value.coerceIn(70, 150)).apply()
+    fun setScale(context: Context, value: Int) = prefs(context).edit().putInt(KEY_OVERLAY_SCALE, value.coerceIn(70, 200)).apply()
 
     fun isVerticalLayout(context: Context): Boolean = prefs(context).getString(KEY_OVERLAY_ORIENTATION, "horizontal") == "vertical"
     fun setVerticalLayout(context: Context, isVertical: Boolean) = prefs(context).edit().putString(KEY_OVERLAY_ORIENTATION, if (isVertical) "vertical" else "horizontal").apply()

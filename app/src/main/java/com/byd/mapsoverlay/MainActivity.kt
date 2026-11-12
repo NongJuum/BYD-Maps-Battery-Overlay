@@ -286,7 +286,7 @@ class MainActivity : AppCompatActivity() {
         tvOpacityValue.text = "${currentOpacity}%"
 
         val currentScale = VehicleOverlayConfig.getScale(this)
-        seekScale.progress = currentScale.coerceIn(70, 150)
+        seekScale.progress = currentScale.coerceIn(70, 200)
         tvScaleValue.text = "${currentScale}%"
 
         val isVertical = VehicleOverlayConfig.isVerticalLayout(this)
@@ -422,7 +422,7 @@ class MainActivity : AppCompatActivity() {
 
         seekScale.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                val clamped = progress.coerceIn(70, 150)
+                val clamped = progress.coerceIn(70, 200)
                 tvScaleValue.text = "${clamped}%"
                 if (fromUser) {
                     VehicleOverlayConfig.setScale(this@MainActivity, clamped)

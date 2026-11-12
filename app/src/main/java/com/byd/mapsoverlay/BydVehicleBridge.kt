@@ -82,6 +82,8 @@ class BydVehicleBridge(
         private set
     var tpmsRrKpa: Int = 0
         private set
+    var isDashcamRecording: Boolean = false
+        private set
     var tpmsSummary: String = "-- kPa"
         private set
 
@@ -437,6 +439,11 @@ class BydVehicleBridge(
                 }
                 if (instKw > -200.0) {
                     instantPowerKw = instKw
+                    changed = true
+                }
+                val rec = json.optBoolean("isDashcamRecording", false)
+                if (rec != isDashcamRecording) {
+                    isDashcamRecording = rec
                     changed = true
                 }
 

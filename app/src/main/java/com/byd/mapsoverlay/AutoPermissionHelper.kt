@@ -370,8 +370,15 @@ object AutoPermissionHelper {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
                     adb.shell("settings put global policy_control $value")
+                    if (enabled) {
+                        // ป้องกัน Kinex ยืดตัวขึ้นไปขอบบนจนถูก Status Bar ทับ
+                        // บังคับให้ขอบหน้าจอแอปเริ่มต้นที่ y=84px พอดีใต้ Stock Bar
+                        adb.shell("wm overscan 0,84,0,0")
+                    } else {
+                        adb.shell("wm overscan reset")
+                    }
                 }
-                Log.i(TAG, "Stock Bar immersive set to: $value")
+                Log.i(TAG, "Stock Bar immersive set to: $value with overscanSync")
             } catch (t: Throwable) {
                 Log.w(TAG, "setStockBarImmersive ADB error: ${t.message}")
             } finally {
