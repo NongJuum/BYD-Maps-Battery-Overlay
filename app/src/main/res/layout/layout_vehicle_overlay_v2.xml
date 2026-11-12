@@ -22,44 +22,114 @@
         android:textSize="11sp"
         android:paddingEnd="6dp" />
 
-    <!-- Left Section in Stock Bar Mode: Clock & Date -->
+    <!-- Left Section in Stock Bar Mode: System Status Indicators (OEM 1:1) -->
     <LinearLayout
-        android:id="@+id/container_stock_clock"
+        android:id="@+id/container_system_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingEnd="8dp"
-        android:visibility="gone">
+        android:orientation="horizontal">
 
-        <TextClock
-            android:id="@+id/tc_stock_clock"
+        <!-- 1. DASHCAM / DVR REC -->
+        <LinearLayout
+            android:id="@+id/container_status_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:format12Hour="HH:mm"
-            android:format24Hour="HH:mm"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone">
 
-        <TextClock
-            android:id="@+id/tc_stock_date_left"
+            <TextView
+                android:id="@+id/tv_status_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📷 DVR"
+                android:textColor="#90A4AE"
+                android:textSize="13.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 2. GPS -->
+        <LinearLayout
+            android:id="@+id/container_status_gps"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:format12Hour="E, d MMM"
-            android:format24Hour="E, d MMM"
-            android:textColor="#90A4AE"
-            android:textSize="11.5sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_gps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📍 GPS"
+                android:textColor="#40C4FF"
+                android:textSize="13.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 3. Bluetooth -->
+        <LinearLayout
+            android:id="@+id/container_status_bt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_bt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BT"
+                android:textColor="#80D8FF"
+                android:textSize="13.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 4. Wi-Fi -->
+        <LinearLayout
+            android:id="@+id/container_status_wifi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_wifi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wi-Fi"
+                android:textColor="#ECEFF1"
+                android:textSize="13.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 5. 4G / SIM -->
+        <LinearLayout
+            android:id="@+id/container_status_sim"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginEnd="6dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_status_sim"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4G"
+                android:textColor="#ECEFF1"
+                android:textSize="13.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
-
-    <View
-        android:id="@+id/divider_stock_clock"
-        android:layout_width="1dp"
-        android:layout_height="12dp"
-        android:layout_marginEnd="6dp"
-        android:background="#33FFFFFF"
-        android:visibility="gone" />
 
     <!-- Left spacer: pushes telemetry to center in Stock Bar Mode -->
     <View
@@ -563,167 +633,34 @@
         android:layout_weight="1"
         android:visibility="gone" />
 
-    <!-- Right Section: System Status Indicators & Date -->
+    <!-- Right Section in Stock Bar Mode: Clock & Date (OEM 1:1) -->
     <LinearLayout
-        android:id="@+id/container_system_status"
+        android:id="@+id/container_stock_clock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingEnd="8dp">
+        android:visibility="gone">
 
-        <!-- 1. กล้องบันทึกรอบคัน / กล้องหน้ารถ (DASHCAM / DVR REC) -->
-        <LinearLayout
-            android:id="@+id/container_status_camera"
+        <TextClock
+            android:id="@+id/tc_stock_clock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_badge_dvr"
-            android:paddingStart="6dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="2dp"
-            android:layout_marginEnd="6dp"
-            android:visibility="gone">
+            android:format12Hour="HH:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tv_status_camera"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📷 DVR"
-                android:textColor="#90A4AE"
-                android:textSize="10.5sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- 2. การเข้าถึงตำแหน่ง (GPS / Location Access Indicator) -->
-        <LinearLayout
-            android:id="@+id/container_status_gps"
+        <TextClock
+            android:id="@+id/tc_stock_date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_status_capsule"
-            android:paddingStart="6dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="2dp"
-            android:layout_marginEnd="6dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tv_status_gps"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📍 GPS"
-                android:textColor="#40C4FF"
-                android:textSize="10.5sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- 3. บลูทูธ (Bluetooth Connected) -->
-        <LinearLayout
-            android:id="@+id/container_status_bt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_status_capsule"
-            android:paddingStart="6dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="2dp"
-            android:layout_marginEnd="6dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tv_status_bt"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="BT"
-                android:textColor="#80D8FF"
-                android:textSize="10.5sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- 4. ไวไฟ (Wi-Fi Status & Signal) -->
-        <LinearLayout
-            android:id="@+id/container_status_wifi"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_status_capsule"
-            android:paddingStart="6dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="2dp"
-            android:layout_marginEnd="6dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tv_status_wifi"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Wi-Fi"
-                android:textColor="#ECEFF1"
-                android:textSize="10.5sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- 5. สัญญาณซิม 4G / มือถือ (Cellular Signal / SIM) -->
-        <LinearLayout
-            android:id="@+id/container_status_sim"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_status_capsule"
-            android:paddingStart="6dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="2dp"
-            android:layout_marginEnd="6dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/tv_status_sim"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="4G"
-                android:textColor="#ECEFF1"
-                android:textSize="10.5sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <View
-            android:id="@+id/divider_stock_date"
-            android:layout_width="1dp"
-            android:layout_height="12dp"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="6dp"
-            android:background="#33FFFFFF"
-            android:visibility="gone" />
-
-        <!-- วันที่ (Date) -->
-        <LinearLayout
-            android:id="@+id/container_stock_date"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <TextClock
-                android:id="@+id/tc_stock_date"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:format12Hour="E d MMM"
-                android:format24Hour="E d MMM"
-                android:textColor="#90A4AE"
-                android:textSize="11.5sp" />
-        </LinearLayout>
+            android:layout_marginStart="8dp"
+            android:format12Hour="E, d MMM"
+            android:format24Hour="E, d MMM"
+            android:textColor="#90A4AE"
+            android:textSize="12sp" />
     </LinearLayout>
 
 </LinearLayout>

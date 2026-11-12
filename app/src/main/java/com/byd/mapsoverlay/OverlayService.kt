@@ -599,7 +599,16 @@ class OverlayService : Service() {
                 val (cont, div) = orderedPairs[idx]
                 val contVis = cont?.visibility == View.VISIBLE
                 val anyLaterVis = allContainersAfter.drop(idx + 1).any { it?.visibility == View.VISIBLE }
-                div?.visibility = if (contVis && anyLaterVis) View.VISIBLE else View.GONE
+                if (isStockBar) {
+                    div?.visibility = View.GONE
+                    val contLp = cont?.layoutParams as? LinearLayout.LayoutParams
+                    if (contLp != null) {
+                        contLp.setMargins(0, 0, (16 * resources.displayMetrics.density).toInt(), 0)
+                        cont.layoutParams = contLp
+                    }
+                } else {
+                    div?.visibility = if (contVis && anyLaterVis) View.VISIBLE else View.GONE
+                }
             }
         }
 
@@ -608,9 +617,6 @@ class OverlayService : Service() {
 
         val dragHandle = overlayView?.findViewById<View>(R.id.tv_drag_handle)
         val containerStockClock = overlayView?.findViewById<View>(R.id.container_stock_clock)
-        val dividerStockClock = overlayView?.findViewById<View>(R.id.divider_stock_clock)
-        val containerStockDate = overlayView?.findViewById<View>(R.id.container_stock_date)
-        val dividerStockDate = overlayView?.findViewById<View>(R.id.divider_stock_date)
 
         val dm = resources.displayMetrics
         val statusBarHeightPx = if (isStockBar) 84 else (56 * dm.density).toInt().coerceAtLeast(84)
@@ -643,12 +649,17 @@ class OverlayService : Service() {
         if (isStockBar) {
             dragHandle?.visibility = View.GONE
             containerStockClock?.visibility = View.VISIBLE
-            dividerStockClock?.visibility = View.VISIBLE
-            // Show date on left next to clock, hide right duplicate to prevent horizontal clutter
-            containerStockDate?.visibility = View.GONE
-            dividerStockDate?.visibility = View.GONE
             spacerStockLeft?.visibility = View.VISIBLE
             spacerStockRight?.visibility = View.VISIBLE
+
+            // Clean borderless OEM spacing for status icons on left
+            val statusMargin = (12 * resources.displayMetrics.density).toInt()
+            listOf(containerStatusCamera, containerStatusGps, containerStatusBt, containerStatusWifi, containerStatusSim).forEach { c ->
+                if (c != containerStatusCamera) c?.background = null
+                val lp = c?.layoutParams as? LinearLayout.LayoutParams
+                lp?.setMargins(0, 0, statusMargin, 0)
+                c?.layoutParams = lp
+            }
 
             if (bgColorTheme == "black") {
                 overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_full)
@@ -674,9 +685,6 @@ class OverlayService : Service() {
         } else {
             dragHandle?.visibility = View.VISIBLE
             containerStockClock?.visibility = View.GONE
-            dividerStockClock?.visibility = View.GONE
-            containerStockDate?.visibility = View.GONE
-            dividerStockDate?.visibility = View.GONE
             spacerStockLeft?.visibility = View.GONE
             spacerStockRight?.visibility = View.GONE
 
@@ -723,11 +731,11 @@ class OverlayService : Service() {
         )
 
         fun applyFontSizes(effectiveScale: Float) {
-            val baseSp = (if (isStockBar) 16.0f else 12.0f) * effectiveScale
-            val labelSp = baseSp * 0.85f
+            val baseSp = (if (isStockBar) 14.5f else 12.0f) * effectiveScale
+            val labelSp = (if (isStockBar) 11.0f else 10.0f) * effectiveScale
             val statusSp = (if (isStockBar) 13.5f else 11.0f) * effectiveScale
-            val clockSp = (if (isStockBar) 17.5f else 13.0f) * effectiveScale
-            val dateSp = (if (isStockBar) 13.5f else 11.0f) * effectiveScale
+            val clockSp = (if (isStockBar) 15.0f else 13.0f) * effectiveScale
+            val dateSp = (if (isStockBar) 12.0f else 11.0f) * effectiveScale
 
             fun scaleViewsRecursively(v: View) {
                 when (v) {
@@ -736,7 +744,7 @@ class OverlayService : Service() {
                             allTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
                             statusTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, statusSp)
                             v.id == R.id.tc_stock_clock -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, clockSp)
-                            v.id == R.id.tc_stock_date || v.id == R.id.tc_stock_date_left -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, dateSp)
+                            v.id == R.id.tc_stock_date -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, dateSp)
                             else -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelSp)
                         }
                     }
@@ -749,7 +757,7 @@ class OverlayService : Service() {
             }
             rootLayout?.let { scaleViewsRecursively(it) }
 
-            val padH = if (isStockBar) (14 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * effectiveScale).toInt()
+            val padH = if (isStockBar) (20 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * effectiveScale).toInt()
             val padV = if (isStockBar) 0 else (3 * resources.displayMetrics.density * effectiveScale).toInt()
             rootLayout?.setPadding(padH, padV, padH, padV)
         }
@@ -876,7 +884,11 @@ class OverlayService : Service() {
             containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
-            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+            if (VehicleOverlayConfig.isStockBarMode(this)) {
+                containerStatusCamera?.background = null
+            } else {
+                containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+            }
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
 
