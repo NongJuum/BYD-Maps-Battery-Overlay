@@ -364,14 +364,14 @@ class OverlayService : Service() {
         val realDm = android.util.DisplayMetrics()
         windowManager?.defaultDisplay?.getRealMetrics(realDm)
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
-        val statusBarHeightPx = ((50 + 14 * (scale - 1.0f).coerceAtLeast(0f)) * dm.density).toInt().coerceAtLeast(84)
-        val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= (statusBarHeightPx - 10)
+        val statusBarHeightPx = if (isStockBar) 84 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
+        val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= (84 - 10)
 
         val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
-        val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
+        val initialH = if (isStockBar) 84 else WindowManager.LayoutParams.WRAP_CONTENT
         val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
         val savedY = if (isStockBar) {
-            if (hasOverscan) -statusBarHeightPx else 0
+            if (hasOverscan) -84 else 0
         } else {
             sharedPreferences.getInt("overlay_y", 32)
         }
@@ -619,7 +619,7 @@ class OverlayService : Service() {
         val dividerStockDate = overlayView?.findViewById<View>(R.id.divider_stock_date)
 
         val dm = resources.displayMetrics
-        val statusBarHeightPx = (56 * dm.density).toInt().coerceAtLeast(84)
+        val statusBarHeightPx = if (isStockBar) 84 else (56 * dm.density).toInt().coerceAtLeast(84)
 
         // Custom Theme Colors (Text Color and Background Color)
         val textColorTheme = VehicleOverlayConfig.getTextColorTheme(this)
@@ -650,8 +650,9 @@ class OverlayService : Service() {
             dragHandle?.visibility = View.GONE
             containerStockClock?.visibility = View.VISIBLE
             dividerStockClock?.visibility = View.VISIBLE
-            containerStockDate?.visibility = View.VISIBLE
-            dividerStockDate?.visibility = View.VISIBLE
+            // Show date on left next to clock, hide right duplicate to prevent horizontal clutter
+            containerStockDate?.visibility = View.GONE
+            dividerStockDate?.visibility = View.GONE
             spacerStockLeft?.visibility = View.VISIBLE
             spacerStockRight?.visibility = View.VISIBLE
 
@@ -718,16 +719,9 @@ class OverlayService : Service() {
         overlayView?.alpha = 1.0f
 
         // Native typography & padding scale (NEVER clips Surface boundary!)
-        val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
+        val userScale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
         overlayView?.scaleX = 1.0f
         overlayView?.scaleY = 1.0f
-
-        // Base font sizes with scale support
-        val baseSp = (if (isStockBar) 16.0f else 12.0f) * scale
-        val labelSp = baseSp * 0.85f
-        val statusSp = (if (isStockBar) 13.5f else 11.0f) * scale
-        val clockSp = (if (isStockBar) 17.5f else 13.0f) * scale
-        val dateSp = (if (isStockBar) 13.5f else 11.0f) * scale
 
         val allTv = listOf(
             tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
@@ -738,29 +732,63 @@ class OverlayService : Service() {
             tvStatusCamera, tvStatusGps, tvStatusBt, tvStatusWifi, tvStatusSim
         )
 
-        fun scaleViewsRecursively(v: View) {
-            when (v) {
-                is TextView -> {
-                    when {
-                        allTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
-                        statusTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, statusSp)
-                        v.id == R.id.tc_stock_clock -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, clockSp)
-                        v.id == R.id.tc_stock_date || v.id == R.id.tc_stock_date_left -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, dateSp)
-                        else -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelSp)
+        fun applyFontSizes(effectiveScale: Float) {
+            val baseSp = (if (isStockBar) 16.0f else 12.0f) * effectiveScale
+            val labelSp = baseSp * 0.85f
+            val statusSp = (if (isStockBar) 13.5f else 11.0f) * effectiveScale
+            val clockSp = (if (isStockBar) 17.5f else 13.0f) * effectiveScale
+            val dateSp = (if (isStockBar) 13.5f else 11.0f) * effectiveScale
+
+            fun scaleViewsRecursively(v: View) {
+                when (v) {
+                    is TextView -> {
+                        when {
+                            allTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, baseSp)
+                            statusTv.contains(v) -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, statusSp)
+                            v.id == R.id.tc_stock_clock -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, clockSp)
+                            v.id == R.id.tc_stock_date || v.id == R.id.tc_stock_date_left -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, dateSp)
+                            else -> v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelSp)
+                        }
                     }
-                }
-                is ViewGroup -> {
-                    for (i in 0 until v.childCount) {
-                        scaleViewsRecursively(v.getChildAt(i))
+                    is ViewGroup -> {
+                        for (i in 0 until v.childCount) {
+                            scaleViewsRecursively(v.getChildAt(i))
+                        }
                     }
                 }
             }
-        }
-        rootLayout?.let { scaleViewsRecursively(it) }
+            rootLayout?.let { scaleViewsRecursively(it) }
 
-        val padH = if (isStockBar) (14 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * scale).toInt()
-        val padV = if (isStockBar) (0).toInt() else (3 * resources.displayMetrics.density * scale).toInt()
-        rootLayout?.setPadding(padH, padV, padH, padV)
+            val padH = if (isStockBar) (14 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * effectiveScale).toInt()
+            val padV = if (isStockBar) 0 else (3 * resources.displayMetrics.density * effectiveScale).toInt()
+            rootLayout?.setPadding(padH, padV, padH, padV)
+        }
+
+        // Initial application with user's requested scale
+        applyFontSizes(userScale)
+
+        // Adaptive Font Clamping & Auto-Fit for Stock Bar:
+        // Measure total width of all visible children inside the horizontal bar.
+        // If content exceeds usable width (1860px), smoothly adjust font scale down so content is NEVER truncated!
+        if (isStockBar && rootLayout != null) {
+            rootLayout.post {
+                val availableWidth = (resources.displayMetrics.widthPixels - 40).coerceAtLeast(1000)
+                var measuredContentWidth = 0
+                for (i in 0 until rootLayout.childCount) {
+                    val child = rootLayout.getChildAt(i)
+                    if (child.visibility == View.VISIBLE && child.id != R.id.spacer_stock_left && child.id != R.id.spacer_stock_right) {
+                        val lp = child.layoutParams as? ViewGroup.MarginLayoutParams
+                        measuredContentWidth += child.width + (lp?.leftMargin ?: 0) + (lp?.rightMargin ?: 0)
+                    }
+                }
+                if (measuredContentWidth > availableWidth && measuredContentWidth > 0) {
+                    val fitRatio = (availableWidth.toFloat() / measuredContentWidth.toFloat()).coerceIn(0.6f, 1.0f)
+                    val clampedScale = (userScale * fitRatio).coerceAtLeast(0.75f)
+                    android.util.Log.d("OverlayService", "Stock Bar auto-clamped scale from $userScale to $clampedScale (measured: ${measuredContentWidth}px > max: ${availableWidth}px)")
+                    applyFontSizes(clampedScale)
+                }
+            }
+        }
     }
 
     private fun updateTelemetryDisplay(soc: Double, consumption: Double) {
