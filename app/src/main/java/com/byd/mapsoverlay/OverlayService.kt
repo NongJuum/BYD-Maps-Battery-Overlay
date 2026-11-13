@@ -628,6 +628,43 @@ class OverlayService : Service() {
             }
         }
 
+        // เรียงลำดับข้อมูลตามที่ผู้ใช้ตั้งค่า (Field Order)
+        val fieldContainerMap = mapOf(
+            "soc" to containerSoc,
+            "kwh" to containerKwh,
+            "real_range" to containerRealRange,
+            "dash_range" to containerDashRange,
+            "hv_temp" to containerHvTemp,
+            "cell_volt" to containerCellVolt,
+            "consumption" to containerConsumption,
+            "inst_power" to containerInstPower,
+            "out_temp" to containerOutTemp,
+            "soh" to containerSoh,
+            "12v" to container12v,
+            "tpms" to containerTpms,
+            "odo" to containerOdo
+        )
+        val orderedContainers = VehicleOverlayConfig.getFieldOrder(this).mapNotNull { fieldContainerMap[it] }
+        val parentGroup = orderedContainers.firstOrNull()?.parent as? android.view.ViewGroup
+        if (parentGroup != null && orderedContainers.isNotEmpty()) {
+            val firstIdx = orderedContainers.mapNotNull { c ->
+                val idx = parentGroup.indexOfChild(c)
+                if (idx >= 0) idx else null
+            }.minOrNull() ?: 0
+            var removedBefore = 0
+            for (c in orderedContainers) {
+                val idx = parentGroup.indexOfChild(c)
+                if (idx >= 0) {
+                    if (idx < firstIdx) removedBefore++
+                    parentGroup.removeView(c)
+                }
+            }
+            var insertIdx = (firstIdx - removedBefore).coerceIn(0, parentGroup.childCount)
+            for (c in orderedContainers) {
+                parentGroup.addView(c, insertIdx++)
+            }
+        }
+
         // จัดการโหมดการแสดงผล (Stock Bar Mode vs Floating Pill)
         AutoPermissionHelper.setStockBarImmersive(isStockBar, this)
 

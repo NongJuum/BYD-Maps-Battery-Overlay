@@ -148,4 +148,44 @@ object VehicleOverlayConfig {
 
     fun getBgColorTheme(context: Context): String = prefs(context).getString(KEY_BG_COLOR_THEME, "black") ?: "black"
     fun setBgColorTheme(context: Context, value: String) = prefs(context).edit().putString(KEY_BG_COLOR_THEME, value).apply()
+
+    private const val KEY_FIELD_ORDER = "field_order"
+
+    val DEFAULT_FIELD_ORDER = listOf(
+        "soc", "kwh", "real_range", "dash_range", "hv_temp", "cell_volt",
+        "consumption", "inst_power", "out_temp", "soh", "12v", "tpms", "odo", "speed", "gear"
+    )
+
+    fun getFieldOrder(context: Context): List<String> {
+        val raw = prefs(context).getString(KEY_FIELD_ORDER, null)
+        if (raw.isNullOrBlank()) return DEFAULT_FIELD_ORDER
+        val parsed = raw.split(",").map { it.trim() }.filter { it in DEFAULT_FIELD_ORDER }
+        val missing = DEFAULT_FIELD_ORDER.filter { it !in parsed }
+        return parsed + missing
+    }
+
+    fun setFieldOrder(context: Context, order: List<String>) {
+        val valid = order.filter { it in DEFAULT_FIELD_ORDER }.distinct()
+        val missing = DEFAULT_FIELD_ORDER.filter { it !in valid }
+        prefs(context).edit().putString(KEY_FIELD_ORDER, (valid + missing).joinToString(",")).apply()
+    }
+
+    fun getFieldLabel(key: String): String = when (key) {
+        "soc" -> "แบตเตอรี่ (%)"
+        "kwh" -> "พลังงานคงเหลือ (kWh)"
+        "real_range" -> "ระยะทางวิ่งจริง (km)"
+        "dash_range" -> "ระยะทางหน้าปัด (km)"
+        "hv_temp" -> "อุณหภูมิแบต (BATT °C)"
+        "cell_volt" -> "แรงดันเซลล์ (V)"
+        "consumption" -> "อัตราสิ้นเปลือง (50km)"
+        "inst_power" -> "กำลังไฟขณะขับ (kW)"
+        "out_temp" -> "อุณหภูมิภายนอก (OUT °C)"
+        "soh" -> "สุขภาพแบต (SOH %)"
+        "12v" -> "แบต 12V (V)"
+        "tpms" -> "ลมยาง (TPMS)"
+        "odo" -> "เลขไมล์ (ODO)"
+        "speed" -> "ความเร็ว (km/h)"
+        "gear" -> "ตำแหน่งเกียร์ (GEAR)"
+        else -> key
+    }
 }

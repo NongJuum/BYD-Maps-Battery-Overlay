@@ -230,6 +230,83 @@ class MainActivity : AppCompatActivity() {
 
         btnResetPos = findViewById(R.id.btn_reset_pos)
         btnSaveConfig = findViewById(R.id.btn_save_config)
+        findViewById<android.view.View>(R.id.btn_field_order)?.setOnClickListener {
+            showFieldOrderDialog()
+        }
+    }
+
+    private fun showFieldOrderDialog() {
+        val currentOrder = VehicleOverlayConfig.getFieldOrder(this).toMutableList()
+        val scrollView = android.widget.ScrollView(this)
+        val listLayout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, pad / 2)
+        }
+        scrollView.addView(listLayout)
+
+        fun rebuildRows() {
+            listLayout.removeAllViews()
+            currentOrder.forEachIndexed { idx, key ->
+                val row = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    val vp = (6 * resources.displayMetrics.density).toInt()
+                    setPadding(0, vp, 0, vp)
+                }
+                val tvLabel = android.widget.TextView(this).apply {
+                    text = "${idx + 1}. ${VehicleOverlayConfig.getFieldLabel(key)}"
+                    textSize = 15f
+                    setTextColor(Color.WHITE)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                val btnUp = android.widget.Button(this).apply {
+                    text = "▲"
+                    isEnabled = idx > 0
+                    setOnClickListener {
+                        if (idx > 0) {
+                            val tmp = currentOrder[idx - 1]
+                            currentOrder[idx - 1] = currentOrder[idx]
+                            currentOrder[idx] = tmp
+                            rebuildRows()
+                        }
+                    }
+                }
+                val btnDown = android.widget.Button(this).apply {
+                    text = "▼"
+                    isEnabled = idx < currentOrder.size - 1
+                    setOnClickListener {
+                        if (idx < currentOrder.size - 1) {
+                            val tmp = currentOrder[idx + 1]
+                            currentOrder[idx + 1] = currentOrder[idx]
+                            currentOrder[idx] = tmp
+                            rebuildRows()
+                        }
+                    }
+                }
+                row.addView(tvLabel)
+                row.addView(btnUp)
+                row.addView(btnDown)
+                listLayout.addView(row)
+            }
+        }
+        rebuildRows()
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("เรียงลำดับข้อมูลบนแถบ (Field Order)")
+            .setView(scrollView)
+            .setPositiveButton("บันทึก") { _, _ ->
+                VehicleOverlayConfig.setFieldOrder(this, currentOrder)
+                startService(Intent(this, OverlayService::class.java).apply { action = "com.byd.mapsoverlay.START_OVERLAY" })
+                Toast.makeText(this, "บันทึกลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("รีเซ็ตค่าเริ่มต้น") { _, _ ->
+                VehicleOverlayConfig.setFieldOrder(this, VehicleOverlayConfig.DEFAULT_FIELD_ORDER)
+                startService(Intent(this, OverlayService::class.java).apply { action = "com.byd.mapsoverlay.START_OVERLAY" })
+                Toast.makeText(this, "รีเซ็ตลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("ยกเลิก", null)
+            .show()
     }
 
     private fun updatePermissionStatusBadge() {
