@@ -83,6 +83,7 @@ class OverlayService : Service() {
     private var tvStatusSim: TextView? = null
 
     private var systemStatusManager: SystemStatusManager? = null
+    private var currentThemeTextColor: Int = android.graphics.Color.parseColor("#ECEFF1")
 
     // Dividers
     private var allDividers: List<View?> = emptyList()
@@ -374,11 +375,16 @@ class OverlayService : Service() {
         val realDm = android.util.DisplayMetrics()
         windowManager?.defaultDisplay?.getRealMetrics(realDm)
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
-        val statusBarHeightPx = if (isStockBar) 84 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
+        val statusBarHeightPx = if (isStockBar) 54 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
+        val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= 44
         val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
-        val initialH = if (isStockBar) 84 else WindowManager.LayoutParams.WRAP_CONTENT
+        val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
         val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
-        val savedY = if (isStockBar) 0 else sharedPreferences.getInt("overlay_y", 32)
+        val savedY = if (isStockBar) {
+            if (hasOverscan) -statusBarHeightPx else 0
+        } else {
+            sharedPreferences.getInt("overlay_y", 32)
+        }
 
         for (layoutType in candidateTypes) {
             val params = WindowManager.LayoutParams(
@@ -629,7 +635,7 @@ class OverlayService : Service() {
         val containerStockClock = overlayView?.findViewById<View>(R.id.container_stock_clock)
 
         val dm = resources.displayMetrics
-        val statusBarHeightPx = if (isStockBar) 84 else (56 * dm.density).toInt().coerceAtLeast(84)
+        val statusBarHeightPx = if (isStockBar) 54 else (56 * dm.density).toInt().coerceAtLeast(84)
 
         // Custom Theme Colors (Text Color and Background Color)
         val textColorTheme = VehicleOverlayConfig.getTextColorTheme(this)
@@ -642,8 +648,13 @@ class OverlayService : Service() {
             "violet" -> android.graphics.Color.parseColor("#E1BEE7")
             else -> android.graphics.Color.parseColor("#ECEFF1") // "white"
         }
+        currentThemeTextColor = primaryTextColor
 
-        val textValueViews = listOf(tvKwh, tvDashRange, tvRealRange, tvConsumption, tv12v, tvOdo, tvSpeed, tvGear)
+        val textValueViews = listOf(
+            tvSoc, tvKwh, tvDashRange, tvRealRange, tvHvTemp, tvCellVolt,
+            tvConsumption, tvInstPower, tvOutTemp, tvSoh, tv12v, tvTpms,
+            tvOdo, tvSpeed, tvGear
+        )
         for (tv in textValueViews) {
             tv?.setTextColor(primaryTextColor)
         }
@@ -682,12 +693,15 @@ class OverlayService : Service() {
                 overlayView?.background = bgDrawable
             }
             overlayView?.elevation = 0f
+            val realDm = android.util.DisplayMetrics()
+            windowManager?.defaultDisplay?.getRealMetrics(realDm)
+            val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= 44
             windowParams?.let { lp ->
                 lp.width = WindowManager.LayoutParams.MATCH_PARENT
                 lp.height = statusBarHeightPx
                 lp.gravity = Gravity.TOP or Gravity.START
                 lp.x = 0
-                lp.y = 0
+                lp.y = if (hasOverscan) -statusBarHeightPx else 0
                 try {
                     windowManager?.updateViewLayout(overlayView, lp)
                 } catch (_: Throwable) {}
@@ -832,6 +846,14 @@ class OverlayService : Service() {
         // HV Main Battery Temperature (Configurable: Max/Min, Avg, Max, Min) & Cell Voltage
         val hvTempMode = VehicleOverlayConfig.getHvBattTempMode(this)
         tvHvTemp?.text = bydBridge.getFormattedHvBattTemp(hvTempMode)
+        val hvTempVal = if (bydBridge.hvBattTempMaxC > -40.0) bydBridge.hvBattTempMaxC else bydBridge.hvBattTempAvgC
+        val hvTempColor = when {
+            hvTempVal > 45.0 -> android.graphics.Color.parseColor("#FF5252")
+            hvTempVal > 42.5 -> android.graphics.Color.parseColor("#FF9100")
+            hvTempVal > 40.0 -> android.graphics.Color.parseColor("#FFD54F")
+            else -> currentThemeTextColor
+        }
+        tvHvTemp?.setTextColor(hvTempColor)
 
         if (bydBridge.cellVoltMaxV > 0.0) {
             tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
@@ -853,9 +875,20 @@ class OverlayService : Service() {
 
         tvOutTemp?.text = if (bydBridge.outsideTemperatureC != 0) "${bydBridge.outsideTemperatureC}°C" else "--°C"
         tvSoh?.text = if (bydBridge.sohPercent in 1..100) "${bydBridge.sohPercent}%" else "--%"
-        tv12v?.text = if (bydBridge.aux12vVoltage > 0.0) String.format("%.1fV", bydBridge.aux12vVoltage) else "--V"
+        val v12 = bydBridge.aux12vVoltage
+        if (v12 > 0.0 && v12 < 9.0) {
+            tv12v?.text = String.format("⚠️ %.1fV แบตเสื่อม", v12)
+            tv12v?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
+        } else {
+            tv12v?.text = if (v12 > 0.0) String.format("%.1fV", v12) else "--V"
+            tv12v?.setTextColor(currentThemeTextColor)
+        }
+
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
         tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
+        val tpmsListKpa = listOf(bydBridge.tpmsFlKpa, bydBridge.tpmsFrKpa, bydBridge.tpmsRlKpa, bydBridge.tpmsRrKpa)
+        val hasLowTire = tpmsListKpa.any { it > 0 && (it * 0.145038) < 35.0 }
+        tvTpms?.setTextColor(if (hasLowTire) android.graphics.Color.parseColor("#FF5252") else currentThemeTextColor)
         if (bydBridge.totalMileageKm > 0) {
             tvOdo?.text = String.format("%.0f km", bydBridge.totalMileageKm)
         } else {
