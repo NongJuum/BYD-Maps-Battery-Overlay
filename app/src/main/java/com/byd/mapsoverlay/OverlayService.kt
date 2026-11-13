@@ -377,7 +377,7 @@ class OverlayService : Service() {
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
         val statusBarHeightPx = if (isStockBar) 84 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
         val hasOverscan = false
-        val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
+        val initialW = WindowManager.LayoutParams.WRAP_CONTENT
         val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
         val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
         val savedY = if (isStockBar) {
@@ -669,13 +669,17 @@ class OverlayService : Service() {
 
         if (isStockBar) {
             dragHandle?.visibility = View.GONE
-            containerStockClock?.visibility = View.VISIBLE
-            spacerStockLeft?.visibility = View.VISIBLE
-            spacerStockRight?.visibility = View.VISIBLE
+            // เว้นซ้ายขวาให้แถบเดิมของรถ: ซ่อนนาฬิกาและไอคอนที่ซ้ำกับของเดิม (BT/Wi-Fi/4G)
+            containerStockClock?.visibility = View.GONE
+            spacerStockLeft?.visibility = View.GONE
+            spacerStockRight?.visibility = View.GONE
+            containerStatusBt?.visibility = View.GONE
+            containerStatusWifi?.visibility = View.GONE
+            containerStatusSim?.visibility = View.GONE
 
-            // Clean borderless OEM spacing for status icons on left
+            // Clean borderless OEM spacing for DVR & GPS
             val statusMargin = (12 * resources.displayMetrics.density).toInt()
-            listOf(containerStatusCamera, containerStatusGps, containerStatusBt, containerStatusWifi, containerStatusSim).forEach { c ->
+            listOf(containerStatusCamera, containerStatusGps).forEach { c ->
                 if (c != containerStatusCamera) c?.background = null
                 val lp = c?.layoutParams as? LinearLayout.LayoutParams
                 lp?.setMargins(0, 0, statusMargin, 0)
@@ -687,21 +691,19 @@ class OverlayService : Service() {
             } else {
                 val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    setColor(bgColorInt)
+                    setColor(bgColorInt or 0xFF000000.toInt())
                     setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), hairlineColorInt)
                 }
                 overlayView?.background = bgDrawable
             }
             overlayView?.elevation = 0f
-            val realDm = android.util.DisplayMetrics()
-            windowManager?.defaultDisplay?.getRealMetrics(realDm)
-            val hasOverscan = false
+            overlayView?.background?.mutate()?.alpha = 255
             windowParams?.let { lp ->
-                lp.width = WindowManager.LayoutParams.MATCH_PARENT
+                lp.width = WindowManager.LayoutParams.WRAP_CONTENT
                 lp.height = statusBarHeightPx
-                lp.gravity = Gravity.TOP or Gravity.START
+                lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                 lp.x = 0
-                lp.y = if (hasOverscan) -statusBarHeightPx else 0
+                lp.y = 0
                 try {
                     windowManager?.updateViewLayout(overlayView, lp)
                 } catch (_: Throwable) {}
@@ -718,7 +720,7 @@ class OverlayService : Service() {
                 val pillDrawable = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = 16 * resources.displayMetrics.density
-                    setColor(bgColorInt)
+                    setColor(bgColorInt or 0xFF000000.toInt())
                     setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), hairlineColorInt)
                 }
                 overlayView?.background = pillDrawable
