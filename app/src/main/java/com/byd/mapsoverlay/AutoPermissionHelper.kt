@@ -389,12 +389,8 @@ object AutoPermissionHelper {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
                     adb.shell("settings put global policy_control $value")
-                    if (enabled) {
-                        // กัน Kinex / Google Maps มุดเข้าไปใต้ Stock Bar โดยตั้ง overscan เท่ากับความสูงบาร์ (54px)
-                        adb.shell("wm overscan 0,54,0,0")
-                    } else {
-                        adb.shell("wm overscan reset")
-                    }
+                    // ห้ามใช้ overscan: ทำให้จอทั้งหมดเลื่อนลงและกดเมนูล่างไม่ได้ -> reset เสมอ
+                    adb.shell("wm overscan reset")
                 }
                 Log.i(TAG, "Stock Bar immersive set to: $value with overscan=${if (enabled) "54" else "reset"}")
             } catch (t: Throwable) {

@@ -376,7 +376,7 @@ class OverlayService : Service() {
         windowManager?.defaultDisplay?.getRealMetrics(realDm)
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
         val statusBarHeightPx = if (isStockBar) 54 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
-        val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= 44
+        val hasOverscan = false
         val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
         val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
         val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
@@ -695,7 +695,7 @@ class OverlayService : Service() {
             overlayView?.elevation = 0f
             val realDm = android.util.DisplayMetrics()
             windowManager?.defaultDisplay?.getRealMetrics(realDm)
-            val hasOverscan = (realDm.heightPixels - dm.heightPixels) >= 44
+            val hasOverscan = false
             windowParams?.let { lp ->
                 lp.width = WindowManager.LayoutParams.MATCH_PARENT
                 lp.height = statusBarHeightPx
