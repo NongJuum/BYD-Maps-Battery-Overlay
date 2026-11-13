@@ -476,6 +476,8 @@
             android:id="@+id/tv_v2_tpms"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:singleLine="true"
             android:text="250 kPa"
             android:textColor="#80CBC4"
             android:textSize="11sp"
