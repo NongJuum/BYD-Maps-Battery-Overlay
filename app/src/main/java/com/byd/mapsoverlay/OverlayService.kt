@@ -375,7 +375,7 @@ class OverlayService : Service() {
         val realDm = android.util.DisplayMetrics()
         windowManager?.defaultDisplay?.getRealMetrics(realDm)
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 2.0f)
-        val statusBarHeightPx = if (isStockBar) 54 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
+        val statusBarHeightPx = if (isStockBar) 84 else ((42 * scale) * dm.density).toInt().coerceAtLeast(60)
         val hasOverscan = false
         val initialW = if (isStockBar) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
         val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
@@ -635,7 +635,7 @@ class OverlayService : Service() {
         val containerStockClock = overlayView?.findViewById<View>(R.id.container_stock_clock)
 
         val dm = resources.displayMetrics
-        val statusBarHeightPx = if (isStockBar) 54 else (56 * dm.density).toInt().coerceAtLeast(84)
+        val statusBarHeightPx = if (isStockBar) 84 else (56 * dm.density).toInt().coerceAtLeast(84)
 
         // Custom Theme Colors (Text Color and Background Color)
         val textColorTheme = VehicleOverlayConfig.getTextColorTheme(this)
