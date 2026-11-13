@@ -686,18 +686,8 @@ class OverlayService : Service() {
                 c?.layoutParams = lp
             }
 
-            if (bgColorTheme == "black") {
-                overlayView?.setBackgroundResource(R.drawable.bg_stock_bar_full)
-            } else {
-                val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    setColor(bgColorInt or 0xFF000000.toInt())
-                    setStroke((1 * resources.displayMetrics.density).toInt().coerceAtLeast(1), hairlineColorInt)
-                }
-                overlayView?.background = bgDrawable
-            }
+            overlayView?.background = null
             overlayView?.elevation = 0f
-            overlayView?.background?.mutate()?.alpha = 255
             windowParams?.let { lp ->
                 lp.width = WindowManager.LayoutParams.WRAP_CONTENT
                 lp.height = statusBarHeightPx
