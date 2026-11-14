@@ -297,12 +297,12 @@ class MainActivity : AppCompatActivity() {
             .setView(scrollView)
             .setPositiveButton("บันทึก") { _, _ ->
                 VehicleOverlayConfig.setFieldOrder(this, currentOrder)
-                startService(Intent(this, OverlayService::class.java).apply { action = "com.byd.mapsoverlay.START_OVERLAY" })
+                startService(Intent(this, OverlayService::class.java).apply { action = OverlayService.ACTION_UPDATE_CONFIG })
                 Toast.makeText(this, "บันทึกลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
             }
             .setNeutralButton("รีเซ็ตค่าเริ่มต้น") { _, _ ->
                 VehicleOverlayConfig.setFieldOrder(this, VehicleOverlayConfig.DEFAULT_FIELD_ORDER)
-                startService(Intent(this, OverlayService::class.java).apply { action = "com.byd.mapsoverlay.START_OVERLAY" })
+                startService(Intent(this, OverlayService::class.java).apply { action = OverlayService.ACTION_UPDATE_CONFIG })
                 Toast.makeText(this, "รีเซ็ตลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("ยกเลิก", null)

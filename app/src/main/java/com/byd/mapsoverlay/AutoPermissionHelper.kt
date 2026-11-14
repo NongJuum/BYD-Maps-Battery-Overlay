@@ -372,11 +372,20 @@ object AutoPermissionHelper {
      * ซ่อนหรือแสดง System Status Bar เดิมของรถ (Android Policy Control)
      * เพื่อให้แถบของแอปเราเข้าแทนที่ Stock Bar ได้อย่างสมบูรณ์แบบเสมือน DUDU / Kinex
      */
-    fun setStockBarImmersive(enabled: Boolean, context: Context) {
+    fun setStockBarImmersive(requested: Boolean, context: Context) {
         val appContext = context.applicationContext ?: context
-        val value = if (enabled) "immersive.status=*" else "null"
+        val currentPolicy = try {
+            Settings.Global.getString(appContext.contentResolver, "policy_control")
+        } catch (_: Throwable) {
+            null
+        }
+        if (currentPolicy.isNullOrBlank() || currentPolicy == "null") {
+            return
+        }
         try {
-            Settings.Global.putString(appContext.contentResolver, "policy_control", if (enabled) "immersive.status=*" else null)
+            Settings.Global.putString(appContext.contentResolver, "policy_control", null)
+            val afterPolicy = Settings.Global.getString(appContext.contentResolver, "policy_control")
+            if (afterPolicy.isNullOrBlank() || afterPolicy == "null") return
         } catch (_: Throwable) {}
 
         val now = SystemClock.elapsedRealtime()
@@ -388,11 +397,10 @@ object AutoPermissionHelper {
             try {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
                 Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
-                    adb.shell("settings put global policy_control $value")
-                    // ห้ามใช้ overscan: ทำให้จอทั้งหมดเลื่อนลงและกดเมนูล่างไม่ได้ -> reset เสมอ
+                    adb.shell("settings put global policy_control null")
                     adb.shell("wm overscan reset")
                 }
-                Log.i(TAG, "Stock Bar immersive set to: $value with overscan=${if (enabled) "54" else "reset"}")
+                Log.i(TAG, "Stock Bar policy_control reset via ADB")
             } catch (t: Throwable) {
                 Log.w(TAG, "setStockBarImmersive ADB error: ${t.message}")
             } finally {

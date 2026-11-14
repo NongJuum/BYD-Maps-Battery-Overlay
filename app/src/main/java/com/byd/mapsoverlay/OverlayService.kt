@@ -553,7 +553,7 @@ class OverlayService : Service() {
         val showWifi = VehicleOverlayConfig.isShowWifi(this)
         val showGps = VehicleOverlayConfig.isShowGps(this)
         val showCamera = VehicleOverlayConfig.isShowCameraDvr(this)
-        val showBt = VehicleOverlayConfig.isShowBluetooth(this)
+        val showBt = VehicleOverlayConfig.isShowBluetooth(this) && !VehicleOverlayConfig.isStockBarMode(this)
 
         containerStatusSim?.visibility = if (showSim) View.VISIBLE else View.GONE
         containerStatusWifi?.visibility = if (showWifi) View.VISIBLE else View.GONE
@@ -594,23 +594,52 @@ class OverlayService : Service() {
                 div.layoutParams = lp
             }
 
-            // Compute clean divider visibility dynamically
-            val orderedPairs = listOf(
-                Pair(containerSoc, allDividers.getOrNull(0)),
-                Pair(containerKwh, allDividers.getOrNull(1)),
-                Pair(containerRealRange, allDividers.getOrNull(2)),
-                Pair(containerDashRange, allDividers.getOrNull(3)),
-                Pair(containerHvTemp, allDividers.getOrNull(4)),
-                Pair(containerSoh, allDividers.getOrNull(5)),
-                Pair(containerConsumption, allDividers.getOrNull(6)),
-                Pair(containerCellVolt, allDividers.getOrNull(7)),
-                Pair(containerInstPower, allDividers.getOrNull(8)),
-                Pair(containerTpms, allDividers.getOrNull(9)),
-                Pair(container12v, allDividers.getOrNull(10)),
-                Pair(containerOutTemp, allDividers.getOrNull(11)),
-                Pair(containerOdo, allDividers.getOrNull(12))
+            // เรียงลำดับข้อมูลและเส้นคั่นตามที่ผู้ใช้ตั้งค่า (Field Order)
+            val fieldPairMap = mapOf(
+                "soc" to Pair(containerSoc, allDividers.getOrNull(0)),
+                "kwh" to Pair(containerKwh, allDividers.getOrNull(1)),
+                "real_range" to Pair(containerRealRange, allDividers.getOrNull(2)),
+                "dash_range" to Pair(containerDashRange, allDividers.getOrNull(3)),
+                "hv_temp" to Pair(containerHvTemp, allDividers.getOrNull(4)),
+                "soh" to Pair(containerSoh, allDividers.getOrNull(5)),
+                "consumption" to Pair(containerConsumption, allDividers.getOrNull(6)),
+                "cell_volt" to Pair(containerCellVolt, allDividers.getOrNull(7)),
+                "inst_power" to Pair(containerInstPower, allDividers.getOrNull(8)),
+                "tpms" to Pair(containerTpms, allDividers.getOrNull(9)),
+                "12v" to Pair(container12v, allDividers.getOrNull(10)),
+                "out_temp" to Pair(containerOutTemp, allDividers.getOrNull(11)),
+                "odo" to Pair(containerOdo, allDividers.getOrNull(12)),
+                "speed" to Pair(containerGearSpeed, null),
+                "gear" to Pair(containerGearSpeed, null)
             )
-            val allContainersAfter = orderedPairs.map { it.first } + listOf(containerGearSpeed)
+            val orderedPairs = mutableListOf<Pair<View?, View?>>()
+            val seenContainers = mutableSetOf<View?>()
+            for (key in VehicleOverlayConfig.getFieldOrder(this)) {
+                val pair = fieldPairMap[key] ?: continue
+                if (pair.first != null && seenContainers.add(pair.first)) {
+                    orderedPairs.add(pair)
+                }
+            }
+            val viewsToReorder = orderedPairs.flatMap { listOfNotNull(it.first, it.second) }
+            val firstIdx = viewsToReorder.mapNotNull { v ->
+                val idx = rootLayout.indexOfChild(v)
+                if (idx >= 0) idx else null
+            }.minOrNull() ?: 0
+            var removedBefore = 0
+            for (v in viewsToReorder) {
+                val idx = rootLayout.indexOfChild(v)
+                if (idx >= 0) {
+                    if (idx < firstIdx) removedBefore++
+                    rootLayout.removeView(v)
+                }
+            }
+            var insertIdx = (firstIdx - removedBefore).coerceIn(0, rootLayout.childCount)
+            for (v in viewsToReorder) {
+                rootLayout.addView(v, insertIdx++)
+            }
+
+            // Compute clean divider visibility dynamically in the reordered sequence
+            val allContainersAfter = orderedPairs.map { it.first }
             for (idx in orderedPairs.indices) {
                 val (cont, div) = orderedPairs[idx]
                 val contVis = cont?.visibility == View.VISIBLE
@@ -625,43 +654,6 @@ class OverlayService : Service() {
                 } else {
                     div?.visibility = if (contVis && anyLaterVis) View.VISIBLE else View.GONE
                 }
-            }
-        }
-
-        // เรียงลำดับข้อมูลตามที่ผู้ใช้ตั้งค่า (Field Order)
-        val fieldContainerMap = mapOf(
-            "soc" to containerSoc,
-            "kwh" to containerKwh,
-            "real_range" to containerRealRange,
-            "dash_range" to containerDashRange,
-            "hv_temp" to containerHvTemp,
-            "cell_volt" to containerCellVolt,
-            "consumption" to containerConsumption,
-            "inst_power" to containerInstPower,
-            "out_temp" to containerOutTemp,
-            "soh" to containerSoh,
-            "12v" to container12v,
-            "tpms" to containerTpms,
-            "odo" to containerOdo
-        )
-        val orderedContainers = VehicleOverlayConfig.getFieldOrder(this).mapNotNull { fieldContainerMap[it] }
-        val parentGroup = orderedContainers.firstOrNull()?.parent as? android.view.ViewGroup
-        if (parentGroup != null && orderedContainers.isNotEmpty()) {
-            val firstIdx = orderedContainers.mapNotNull { c ->
-                val idx = parentGroup.indexOfChild(c)
-                if (idx >= 0) idx else null
-            }.minOrNull() ?: 0
-            var removedBefore = 0
-            for (c in orderedContainers) {
-                val idx = parentGroup.indexOfChild(c)
-                if (idx >= 0) {
-                    if (idx < firstIdx) removedBefore++
-                    parentGroup.removeView(c)
-                }
-            }
-            var insertIdx = (firstIdx - removedBefore).coerceIn(0, parentGroup.childCount)
-            for (c in orderedContainers) {
-                parentGroup.addView(c, insertIdx++)
             }
         }
 
@@ -968,7 +960,7 @@ class OverlayService : Service() {
             tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
 
-        val showBt = VehicleOverlayConfig.isShowBluetooth(this)
+        val showBt = VehicleOverlayConfig.isShowBluetooth(this) && !VehicleOverlayConfig.isStockBarMode(this)
         tvStatusBt?.text = status.btText
         if (showBt) {
             containerStatusBt?.visibility = View.VISIBLE
