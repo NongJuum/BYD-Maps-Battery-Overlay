@@ -115,6 +115,7 @@ class OverlayService : Service() {
                 "com.byd.intent.action.ACC_ON" -> {
                     android.util.Log.i("OverlayService", "Car wake event received: $act -> Restoring telemetry and overlay")
                     mainHandler.post {
+                        bydBridge.resetDipVoltage()
                         bydBridge.startListening()
                         systemStatusManager?.startMonitoring()
                         val isStockBar = VehicleOverlayConfig.isStockBarMode(this@OverlayService)
@@ -897,11 +898,14 @@ class OverlayService : Service() {
         tvOutTemp?.text = if (bydBridge.outsideTemperatureC != 0) "${bydBridge.outsideTemperatureC}°C" else "--°C"
         tvSoh?.text = if (bydBridge.sohPercent in 1..100) "${bydBridge.sohPercent}%" else "--%"
         val v12 = bydBridge.aux12vVoltage
-        if (v12 > 0.0 && v12 < 9.0) {
-            tv12v?.text = String.format("⚠️ %.1fV แบตเสื่อม", v12)
+        val minDip = bydBridge.aux12vMinDipV
+        val dipStr = if (minDip > 0.0) String.format(" [%.1fV]", minDip) else ""
+        val isDegraded = (minDip > 0.0 && minDip < 9.5) || (v12 in 1.0..9.0)
+        if (isDegraded) {
+            tv12v?.text = if (v12 > 0.0) String.format("⚠️ %.1fV%s", v12, dipStr) else "⚠️ --V$dipStr"
             tv12v?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
         } else {
-            tv12v?.text = if (v12 > 0.0) String.format("%.1fV", v12) else "--V"
+            tv12v?.text = if (v12 > 0.0) String.format("%.1fV%s", v12, dipStr) else "--V"
             tv12v?.setTextColor(currentThemeTextColor)
         }
 

@@ -637,7 +637,10 @@ class MainActivity : AppCompatActivity() {
                 tvHvTemp.text = String.format("%.0f / %.0f °C", bydBridge.hvBattTempMaxC, bydBridge.hvBattTempMinC)
                 tvCellVolt.text = String.format("%.3f / %.3f V", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
                 tvCabinTemp.text = "${bydBridge.outsideTemperatureC}°C"
-                tv12v.text = String.format("%.1f V", bydBridge.aux12vVoltage)
+                val v12 = bydBridge.aux12vVoltage
+                val minDip = bydBridge.aux12vMinDipV
+                val dipStr = if (minDip > 0.0) String.format(" [%.1fV]", minDip) else ""
+                tv12v.text = if (v12 > 0.0) String.format("%.1f V%s", v12, dipStr) else "-- V"
                 tvVehicleModelBadge.text = bydBridge.detectedVehicleModel
                 updatePermissionStatusBadge()
             }

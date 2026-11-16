@@ -66,6 +66,8 @@ class BydVehicleBridge(
         private set
     var aux12vVoltage: Double = 0.0
         private set
+    var aux12vMinDipV: Double = 0.0
+        private set
     var currentGear: String = "--"
         private set
     var vehicleSpeedKmH: Int = 0
@@ -126,6 +128,10 @@ class BydVehicleBridge(
     private var executor: ScheduledExecutorService? = null
     private val deviceCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Any, Long>>()
     private val cacheTtlMs = 60_000L
+
+    fun resetDipVoltage() {
+        aux12vMinDipV = 0.0
+    }
 
     fun startListening() {
         HiddenApiBypass.exemptAll()
@@ -406,8 +412,12 @@ class BydVehicleBridge(
                     if (cMin in 2.0..4.5) cellVoltMinV = cMin
                     changed = true
                 }
-                if (aux12 in 8.0..18.0) {
-                    aux12vVoltage = (aux12 * 10.0).roundToInt() / 10.0
+                if (aux12 in 6.0..18.0) {
+                    val rounded12v = (aux12 * 10.0).roundToInt() / 10.0
+                    aux12vVoltage = rounded12v
+                    if (aux12vMinDipV <= 0.0 || rounded12v < aux12vMinDipV) {
+                        aux12vMinDipV = rounded12v
+                    }
                     changed = true
                 }
                 if (realCabinT in 1.0..70.0) {
