@@ -323,8 +323,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 "hv_temp" -> if (VehicleOverlayConfig.isShowHvBattTemp(this)) {
                     val mode = VehicleOverlayConfig.getHvBattTempMode(this)
+                    val hvVal = if (hasBridge && bydBridge.hvBattTempMaxC > -40.0) bydBridge.hvBattTempMaxC else 27.0
                     val v = if (hasBridge && bydBridge.hvBattTempMaxC > 0) bydBridge.getFormattedHvBattTemp(mode) else "27/26°C"
-                    items.add(Triple("HV", v, Color.parseColor("#FFAB40")))
+                    val hvCol = when {
+                        hvVal >= 55.0 -> Color.parseColor("#FF5252")
+                        hvVal >= 45.0 -> Color.parseColor("#FF9100")
+                        hvVal >= 40.0 -> Color.parseColor("#FFD54F")
+                        hvVal in -39.0..14.9 -> Color.parseColor("#40C4FF")
+                        else -> textColor
+                    }
+                    items.add(Triple("HV", v, hvCol))
                 }
                 "cell_volt" -> if (VehicleOverlayConfig.isShowCellVoltage(this)) {
                     val v = if (hasBridge && bydBridge.cellVoltMaxV > 0) String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV) else "3.330/3.325V"

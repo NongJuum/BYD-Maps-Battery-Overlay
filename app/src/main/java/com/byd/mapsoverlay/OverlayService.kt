@@ -873,10 +873,11 @@ class OverlayService : Service() {
         tvHvTemp?.text = bydBridge.getFormattedHvBattTemp(hvTempMode)
         val hvTempVal = if (bydBridge.hvBattTempMaxC > -40.0) bydBridge.hvBattTempMaxC else bydBridge.hvBattTempAvgC
         val hvTempColor = when {
-            hvTempVal > 45.0 -> android.graphics.Color.parseColor("#FF5252")
-            hvTempVal > 42.5 -> android.graphics.Color.parseColor("#FF9100")
-            hvTempVal > 40.0 -> android.graphics.Color.parseColor("#FFD54F")
-            else -> currentThemeTextColor
+            hvTempVal >= 55.0 -> android.graphics.Color.parseColor("#FF5252") // Critical LFP
+            hvTempVal >= 45.0 -> android.graphics.Color.parseColor("#FF9100") // High / Derating
+            hvTempVal >= 40.0 -> android.graphics.Color.parseColor("#FFD54F") // Warm / Active Cooling
+            hvTempVal in -39.0..14.9 -> android.graphics.Color.parseColor("#40C4FF") // Cold LFP
+            else -> currentThemeTextColor // Optimal (15-39°C)
         }
         tvHvTemp?.setTextColor(hvTempColor)
 
@@ -921,7 +922,7 @@ class OverlayService : Service() {
             tv12v?.setTextColor(currentThemeTextColor)
         }
         updatePulseAlert(tv12v, isDegraded)
-        updatePulseAlert(tvHvTemp, hvTempVal > 42.5)
+        updatePulseAlert(tvHvTemp, hvTempVal >= 55.0)
 
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
         tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
