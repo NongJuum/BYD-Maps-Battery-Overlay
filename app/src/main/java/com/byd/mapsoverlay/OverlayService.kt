@@ -238,7 +238,7 @@ class OverlayService : Service() {
         val params = windowParams ?: return
         if (VehicleOverlayConfig.isStockBarMode(this)) {
             params.x = 0
-            params.y = 0
+            params.y = 6
             try {
                 windowManager?.updateViewLayout(overlayView, params)
             } catch (_: Throwable) {}
@@ -827,10 +827,10 @@ class OverlayService : Service() {
         // Adaptive Font Clamping & Auto-Fit for Stock Bar:
         // Measure total width of all visible children inside the horizontal bar.
         // If content exceeds usable width (1860px), smoothly adjust font scale down so content is NEVER truncated!
-        if (isStockBar && rootLayout != null) {
+        if (rootLayout != null && rootLayout.orientation == LinearLayout.HORIZONTAL) {
             rootLayout.post {
-                val availableWidth = (resources.displayMetrics.widthPixels - 40).coerceAtLeast(1000)
-                var measuredContentWidth = 0
+                val availableWidth = (resources.displayMetrics.widthPixels - 32).coerceAtLeast(1000)
+                var measuredContentWidth = rootLayout.paddingLeft + rootLayout.paddingRight
                 for (i in 0 until rootLayout.childCount) {
                     val child = rootLayout.getChildAt(i)
                     if (child.visibility == View.VISIBLE && child.id != R.id.spacer_stock_left && child.id != R.id.spacer_stock_right) {
@@ -839,9 +839,9 @@ class OverlayService : Service() {
                     }
                 }
                 if (measuredContentWidth > availableWidth && measuredContentWidth > 0) {
-                    val fitRatio = (availableWidth.toFloat() / measuredContentWidth.toFloat()).coerceIn(0.6f, 1.0f)
-                    val clampedScale = (userScale * fitRatio).coerceAtLeast(0.75f)
-                    android.util.Log.d("OverlayService", "Stock Bar auto-clamped scale from $userScale to $clampedScale (measured: ${measuredContentWidth}px > max: ${availableWidth}px)")
+                    val fitRatio = (availableWidth.toFloat() / measuredContentWidth.toFloat()).coerceIn(0.45f, 1.0f)
+                    val clampedScale = (userScale * fitRatio).coerceAtLeast(0.55f)
+                    android.util.Log.d("OverlayService", "Overlay auto-fit scale $userScale -> $clampedScale (measured: ${measuredContentWidth}px > max: ${availableWidth}px)")
                     applyFontSizes(clampedScale)
                 }
             }
