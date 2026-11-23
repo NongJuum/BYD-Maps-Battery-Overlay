@@ -897,15 +897,32 @@ class OverlayService : Service() {
         viewRangeBar?.setPercent(soc.toInt())
 
         if (bydBridge.cellVoltMaxV > 0.0) {
-            tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
+            val deltaMv = ((bydBridge.cellVoltMaxV - bydBridge.cellVoltMinV) * 1000.0).toInt().coerceAtLeast(0)
+            tvCellVolt?.text = String.format("%.3f/%.3fV Δ%dmV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV, deltaMv)
+            tvCellVolt?.setTextColor(
+                when {
+                    deltaMv >= 50 -> android.graphics.Color.parseColor("#FF5252")
+                    deltaMv >= 30 -> android.graphics.Color.parseColor("#FFB74D")
+                    else -> currentThemeTextColor
+                }
+            )
         } else {
             tvCellVolt?.text = "--/--V"
+            tvCellVolt?.setTextColor(currentThemeTextColor)
         }
 
         if (consumption > 0.0) {
             tvConsumption?.text = String.format("%.1f", consumption)
+            tvConsumption?.setTextColor(
+                when {
+                    consumption < 12.0 -> android.graphics.Color.parseColor("#69F0AE") // Eco
+                    consumption > 16.0 -> android.graphics.Color.parseColor("#FFB74D") // Heavy
+                    else -> currentThemeTextColor
+                }
+            )
         } else {
             tvConsumption?.text = "--"
+            tvConsumption?.setTextColor(currentThemeTextColor)
         }
 
         if (bydBridge.instantPowerKw in -200.0..300.0 && bydBridge.instantPowerKw != 0.0) {
@@ -953,7 +970,27 @@ class OverlayService : Service() {
         } else {
             tvOdo?.text = "-- km"
         }
-        tvGear?.text = bydBridge.currentGear
+        val gearStr = bydBridge.currentGear
+        tvGear?.text = gearStr
+        val gearColor = when (gearStr.uppercase()) {
+            "P" -> android.graphics.Color.parseColor("#40C4FF")
+            "D" -> android.graphics.Color.parseColor("#69F0AE")
+            "R" -> android.graphics.Color.parseColor("#FF5252")
+            "N" -> android.graphics.Color.parseColor("#FFB74D")
+            else -> currentThemeTextColor
+        }
+        tvGear?.setTextColor(gearColor)
+        tvGear?.let { g ->
+            val d = resources.displayMetrics.density
+            val hp = (5f * d).toInt()
+            val vp = (1f * d).toInt()
+            g.setPadding(hp, vp, hp, vp)
+            g.background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 5f * d
+                setColor(android.graphics.Color.argb(38, android.graphics.Color.red(gearColor), android.graphics.Color.green(gearColor), android.graphics.Color.blue(gearColor)))
+                setStroke((1f * d).toInt().coerceAtLeast(1), gearColor)
+            }
+        }
         tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
 
         // Periodically re-assert overlay Z-order when placed over the status bar region
