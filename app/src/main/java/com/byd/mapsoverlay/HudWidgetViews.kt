@@ -66,9 +66,9 @@ class MiniBatteryView @JvmOverloads constructor(
         capRect.set(bodyRight + strokeW * 0.5f, capTop, w, capTop + capH)
         canvas.drawRoundRect(capRect, capW * 0.4f, capW * 0.4f, capPaint)
 
-        // Inner fill
+        // Inner fill (symmetric left/right padding inside stroke)
         val pad = strokeW + 1f
-        val availW = (bodyRight - strokeW / 2f - pad) - pad
+        val availW = (bodyRight - pad) - pad
         if (availW > 0f && percent > 0) {
             val fillW = (availW * (percent / 100f)).coerceAtLeast(2f)
             fillRect.set(pad, pad, pad + fillW, h - pad)
@@ -143,8 +143,9 @@ class MiniPowerBarView @JvmOverloads constructor(
     private val fillRect = RectF()
 
     fun setPowerKw(kw: Double) {
-        if (kw == powerKw) return
-        powerKw = kw
+        val normalized = if (kotlin.math.abs(kw) <= 0.2) 0.0 else kw
+        if (kotlin.math.abs(normalized - powerKw) < 0.1) return
+        powerKw = normalized
         fillPaint.color = when {
             kw < -0.5 -> Color.parseColor("#69F0AE")
             kw > 30.0 -> Color.parseColor("#FFB74D")

@@ -34,6 +34,7 @@ object AutoPermissionHelper {
 
     private val immersiveInFlight = AtomicBoolean(false)
     @Volatile private var lastImmersiveAttemptMs = 0L
+    private val adbLock = Any()
 
     /** Safe to call repeatedly on any thread. Retry failed starts with backoff. */
     fun ensureTelemetryDaemon(context: Context) {
@@ -50,7 +51,9 @@ object AutoPermissionHelper {
                 Thread.sleep(3_500L)
                 if (isTelemetryDaemonReachable()) return@Thread
                 Log.i(TAG, "Starting BYD telemetry daemon through local ADB")
-                val started = launchTelemetryDaemon(appContext)
+                val started = synchronized(adbLock) {
+                    if (isTelemetryDaemonReachable()) true else launchTelemetryDaemon(appContext)
+                }
                 Log.i(TAG, "BYD telemetry daemon launch result=$started")
             } catch (t: Throwable) {
                 Log.e(TAG, "BYD telemetry daemon bootstrap failed", t)
@@ -392,16 +395,18 @@ object AutoPermissionHelper {
         } catch (_: Throwable) {}
 
         val now = SystemClock.elapsedRealtime()
-        if (now - lastImmersiveAttemptMs < 1000L && immersiveInFlight.get()) return
+        if (now - lastImmersiveAttemptMs < 5_000L || immersiveInFlight.get()) return
         if (!immersiveInFlight.compareAndSet(false, true)) return
         lastImmersiveAttemptMs = now
 
         Thread({
             try {
-                val keyPair = loadOrCreateAdbKeyPair(appContext)
-                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
-                    adb.shell("settings put global policy_control null")
-                    adb.shell("wm overscan reset")
+                synchronized(adbLock) {
+                    val keyPair = loadOrCreateAdbKeyPair(appContext)
+                    Dadb.create(ADB_HOST, ADB_PORT, keyPair, 3000, 5000).use { adb ->
+                        adb.shell("settings put global policy_control null")
+                        adb.shell("wm overscan reset")
+                    }
                 }
                 Log.i(TAG, "Stock Bar policy_control reset via ADB")
             } catch (t: Throwable) {

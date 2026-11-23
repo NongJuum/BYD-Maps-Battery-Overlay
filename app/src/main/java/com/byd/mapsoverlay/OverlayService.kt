@@ -35,6 +35,8 @@ class OverlayService : Service() {
     private var overlayView: View? = null
     private var windowParams: WindowManager.LayoutParams? = null
     private var lastZOrderReassertMs: Long = 0L
+    private var lastGearStr: String? = null
+    private var lastDashcamActive: Boolean? = null
 
     // V2 UI Views
     private var tvSoc: TextView? = null
@@ -104,6 +106,7 @@ class OverlayService : Service() {
                 Intent.ACTION_SCREEN_OFF -> {
                     android.util.Log.i("OverlayService", "Car sleep event received: $act -> Entering dormant mode to protect 12V battery")
                     mainHandler.post {
+                        clearAllPulseAlerts()
                         systemStatusManager?.stopMonitoring()
                         bydBridge.stopListening()
                         overlayView?.visibility = View.GONE
@@ -119,8 +122,9 @@ class OverlayService : Service() {
                 "com.byd.intent.action.POWER_ON",
                 "com.byd.intent.action.ACC_ON" -> {
                     android.util.Log.i("OverlayService", "Car wake event received: $act -> Restoring telemetry and overlay")
+                    val isPowerWake = act != Intent.ACTION_SCREEN_ON && act != Intent.ACTION_USER_PRESENT && act != Intent.ACTION_USER_UNLOCKED
                     mainHandler.post {
-                        bydBridge.resetDipVoltage()
+                        if (isPowerWake) bydBridge.resetDipVoltage()
                         bydBridge.startListening()
                         systemStatusManager?.startMonitoring()
                         val isStockBar = VehicleOverlayConfig.isStockBarMode(this@OverlayService)
@@ -188,11 +192,13 @@ class OverlayService : Service() {
                 updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
             }
             ACTION_CAR_SLEEP, ACTION_HIDE_OVERLAY -> {
+                clearAllPulseAlerts()
                 systemStatusManager?.stopMonitoring()
                 bydBridge.stopListening()
                 overlayView?.visibility = View.GONE
             }
             ACTION_CAR_WAKE, ACTION_SHOW_OVERLAY -> {
+                if (intent?.action == ACTION_CAR_WAKE) bydBridge.resetDipVoltage()
                 bydBridge.startListening()
                 systemStatusManager?.startMonitoring()
                 val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
@@ -498,8 +504,8 @@ class OverlayService : Service() {
         val params = windowParams ?: return
         if (VehicleOverlayConfig.isStockBarMode(this)) {
             params.x = 0
-            params.y = 0
-            sharedPreferences.edit().putInt("overlay_x", 0).putInt("overlay_y", 0).apply()
+            params.y = 6
+            sharedPreferences.edit().putInt("overlay_x", 0).putInt("overlay_y", 6).apply()
             try {
                 windowManager?.updateViewLayout(overlayView, params)
             } catch (_: Exception) {}
@@ -749,6 +755,8 @@ class OverlayService : Service() {
                 overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
             } else if (bgColorTheme == "glass") {
                 overlayView?.setBackgroundResource(R.drawable.bg_pill_liquid_glass)
+            } else if (bgColorTheme == "transparent") {
+                overlayView?.background = null
             } else {
                 val pillDrawable = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
@@ -880,26 +888,29 @@ class OverlayService : Service() {
 
         // HV Main Battery Temperature (Configurable: Max/Min, Avg, Max, Min) & Cell Voltage
         val hvTempMode = VehicleOverlayConfig.getHvBattTempMode(this)
-        val hvTempVal = if (bydBridge.hvBattTempMaxC > -40.0) bydBridge.hvBattTempMaxC else bydBridge.hvBattTempAvgC
+        val hasHvTemp = bydBridge.hvBattTempMaxC > 0.0 || bydBridge.hvBattTempAvgC > 0.0
+        val hvTempVal = if (bydBridge.hvBattTempMaxC > 0.0) bydBridge.hvBattTempMaxC else bydBridge.hvBattTempAvgC
         val hvIcon = when {
+            !hasHvTemp -> "🌡️ "
             hvTempVal >= 45.0 -> "🔥 "
-            hvTempVal in -39.0..14.9 -> "❄️ "
+            hvTempVal < 15.0 -> "❄️ "
             else -> "🌡️ "
         }
         tvHvTemp?.text = "$hvIcon${bydBridge.getFormattedHvBattTemp(hvTempMode)}"
         val hvTempColor = when {
+            !hasHvTemp -> currentThemeTextColor
             hvTempVal >= 55.0 -> android.graphics.Color.parseColor("#FF5252") // Critical LFP
             hvTempVal >= 45.0 -> android.graphics.Color.parseColor("#FF9100") // High / Derating
             hvTempVal >= 40.0 -> android.graphics.Color.parseColor("#FFD54F") // Warm / Active Cooling
-            hvTempVal in -39.0..14.9 -> android.graphics.Color.parseColor("#40C4FF") // Cold LFP
+            hvTempVal < 15.0 -> android.graphics.Color.parseColor("#40C4FF") // Cold LFP
             else -> currentThemeTextColor // Optimal (15-39°C)
         }
         tvHvTemp?.setTextColor(hvTempColor)
         viewSocBar?.setPercent(soc.toInt())
         viewRangeBar?.setPercent(soc.toInt())
 
-        if (bydBridge.cellVoltMaxV > 0.0) {
-            val deltaMv = ((bydBridge.cellVoltMaxV - bydBridge.cellVoltMinV) * 1000.0).toInt().coerceAtLeast(0)
+        if (bydBridge.cellVoltMaxV > 0.0 && bydBridge.cellVoltMinV > 0.0) {
+            val deltaMv = Math.round((bydBridge.cellVoltMaxV - bydBridge.cellVoltMinV) * 1000.0).toInt().coerceAtLeast(0)
             tvCellVolt?.text = String.format("%.3f/%.3fV Δ%dmV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV, deltaMv)
             tvCellVolt?.setTextColor(
                 when {
@@ -973,24 +984,27 @@ class OverlayService : Service() {
             tvOdo?.text = "-- km"
         }
         val gearStr = bydBridge.currentGear
-        tvGear?.text = gearStr
-        val gearColor = when (gearStr.uppercase()) {
-            "P" -> android.graphics.Color.parseColor("#40C4FF")
-            "D" -> android.graphics.Color.parseColor("#69F0AE")
-            "R" -> android.graphics.Color.parseColor("#FF5252")
-            "N" -> android.graphics.Color.parseColor("#FFB74D")
-            else -> currentThemeTextColor
-        }
-        tvGear?.setTextColor(gearColor)
-        tvGear?.let { g ->
-            val d = resources.displayMetrics.density
-            val hp = (5f * d).toInt()
-            val vp = (1f * d).toInt()
-            g.setPadding(hp, vp, hp, vp)
-            g.background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 5f * d
-                setColor(android.graphics.Color.argb(38, android.graphics.Color.red(gearColor), android.graphics.Color.green(gearColor), android.graphics.Color.blue(gearColor)))
-                setStroke((1f * d).toInt().coerceAtLeast(1), gearColor)
+        if (gearStr != lastGearStr) {
+            lastGearStr = gearStr
+            tvGear?.text = gearStr
+            val gearColor = when (gearStr.uppercase()) {
+                "P" -> android.graphics.Color.parseColor("#40C4FF")
+                "D" -> android.graphics.Color.parseColor("#69F0AE")
+                "R" -> android.graphics.Color.parseColor("#FF5252")
+                "N" -> android.graphics.Color.parseColor("#FFB74D")
+                else -> currentThemeTextColor
+            }
+            tvGear?.setTextColor(gearColor)
+            tvGear?.let { g ->
+                val d = resources.displayMetrics.density
+                val hp = (5f * d).toInt()
+                val vp = (1f * d).toInt()
+                g.setPadding(hp, vp, hp, vp)
+                g.background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 5f * d
+                    setColor(android.graphics.Color.argb(38, android.graphics.Color.red(gearColor), android.graphics.Color.green(gearColor), android.graphics.Color.blue(gearColor)))
+                    setStroke((1f * d).toInt().coerceAtLeast(1), gearColor)
+                }
             }
         }
         tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
@@ -1092,6 +1106,8 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        clearAllPulseAlerts()
+        mainHandler.removeCallbacksAndMessages(null)
         AutoPermissionHelper.setStockBarImmersive(false, this)
         try {
             unregisterReceiver(carStateReceiver)
@@ -1107,6 +1123,12 @@ class OverlayService : Service() {
             }
             overlayView = null
         }
+    }
+
+    private fun clearAllPulseAlerts() {
+        tv12v?.clearAnimation()
+        tvHvTemp?.clearAnimation()
+        tvTpms?.clearAnimation()
     }
 
     private fun updatePulseAlert(view: View?, active: Boolean) {

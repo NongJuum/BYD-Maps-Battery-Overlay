@@ -66,7 +66,7 @@ class BydVehicleBridge(
         private set
     var aux12vVoltage: Double = 0.0
         private set
-    var aux12vMinDipV: Double = 0.0
+    @Volatile var aux12vMinDipV: Double = 0.0
         private set
     var currentGear: String = "--"
         private set
