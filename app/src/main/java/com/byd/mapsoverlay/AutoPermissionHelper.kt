@@ -46,6 +46,9 @@ object AutoPermissionHelper {
         Thread({
             try {
                 if (isTelemetryDaemonReachable()) return@Thread
+                // Wait briefly on wake/boot to avoid colliding with other local ADB clients (Kinex/Overdrive)
+                Thread.sleep(3_500L)
+                if (isTelemetryDaemonReachable()) return@Thread
                 Log.i(TAG, "Starting BYD telemetry daemon through local ADB")
                 val started = launchTelemetryDaemon(appContext)
                 Log.i(TAG, "BYD telemetry daemon launch result=$started")
@@ -73,7 +76,7 @@ object AutoPermissionHelper {
     private fun isTelemetryDaemonReachable(): Boolean {
         return try {
             Socket().use { socket ->
-                socket.connect(InetSocketAddress("127.0.0.1", DAEMON_PORT), 350)
+                socket.connect(InetSocketAddress("127.0.0.1", DAEMON_PORT), 1000)
             }
             true
         } catch (_: Exception) {
