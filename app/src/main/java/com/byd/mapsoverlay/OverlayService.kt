@@ -383,7 +383,7 @@ class OverlayService : Service() {
         val initialH = if (isStockBar) statusBarHeightPx else WindowManager.LayoutParams.WRAP_CONTENT
         val savedX = if (isStockBar) 0 else sharedPreferences.getInt("overlay_x", 245)
         val savedY = if (isStockBar) {
-            if (hasOverscan) -statusBarHeightPx else 0
+            if (hasOverscan) -statusBarHeightPx else 6
         } else {
             sharedPreferences.getInt("overlay_y", 32)
         }
@@ -726,7 +726,7 @@ class OverlayService : Service() {
                 lp.height = statusBarHeightPx
                 lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                 lp.x = 0
-                lp.y = 0
+                lp.y = 6
                 try {
                     windowManager?.updateViewLayout(overlayView, lp)
                 } catch (_: Throwable) {}
@@ -893,9 +893,18 @@ class OverlayService : Service() {
         }
 
         if (bydBridge.instantPowerKw in -200.0..300.0 && bydBridge.instantPowerKw != 0.0) {
-            tvInstPower?.text = String.format("%.1f kW", bydBridge.instantPowerKw)
+            val kw = bydBridge.instantPowerKw
+            tvInstPower?.text = String.format("%.1f kW", kw)
+            tvInstPower?.setTextColor(
+                when {
+                    kw < -0.5 -> android.graphics.Color.parseColor("#69F0AE") // Regen
+                    kw > 30.0 -> android.graphics.Color.parseColor("#FFB74D") // High Power
+                    else -> currentThemeTextColor
+                }
+            )
         } else {
             tvInstPower?.text = "-- kW"
+            tvInstPower?.setTextColor(currentThemeTextColor)
         }
 
         tvOutTemp?.text = if (bydBridge.outsideTemperatureC != 0) "${bydBridge.outsideTemperatureC}°C" else "--°C"
@@ -911,12 +920,15 @@ class OverlayService : Service() {
             tv12v?.text = if (v12 > 0.0) String.format("%.1fV%s", v12, dipStr) else "--V"
             tv12v?.setTextColor(currentThemeTextColor)
         }
+        updatePulseAlert(tv12v, isDegraded)
+        updatePulseAlert(tvHvTemp, hvTempVal > 42.5)
 
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
         tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
         val tpmsListKpa = listOf(bydBridge.tpmsFlKpa, bydBridge.tpmsFrKpa, bydBridge.tpmsRlKpa, bydBridge.tpmsRrKpa)
         val hasLowTire = tpmsListKpa.any { it > 0 && (it * 0.145038) < 35.0 }
         tvTpms?.setTextColor(if (hasLowTire) android.graphics.Color.parseColor("#FF5252") else currentThemeTextColor)
+        updatePulseAlert(tvTpms, hasLowTire)
         if (bydBridge.totalMileageKm > 0) {
             tvOdo?.text = String.format("%.0f km", bydBridge.totalMileageKm)
         } else {
@@ -1036,6 +1048,24 @@ class OverlayService : Service() {
                 android.util.Log.e("OverlayService", "Failed to remove overlay view: ${e.message}")
             }
             overlayView = null
+        }
+    }
+
+    private fun updatePulseAlert(view: View?, active: Boolean) {
+        if (view == null) return
+        if (active) {
+            if (view.animation == null) {
+                val anim = android.view.animation.AlphaAnimation(1.0f, 0.4f).apply {
+                    duration = 900L
+                    repeatMode = android.view.animation.Animation.REVERSE
+                    repeatCount = android.view.animation.Animation.INFINITE
+                }
+                view.startAnimation(anim)
+            }
+        } else {
+            if (view.animation != null) {
+                view.clearAnimation()
+            }
         }
     }
 
