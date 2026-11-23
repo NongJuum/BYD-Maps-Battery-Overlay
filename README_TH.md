@@ -1,17 +1,17 @@
-# ⚡ BYD Smart EV Route & Battery Overlay
+# ⚡ BYD Overlay — แถบลอยข้อมูลรถ EV แบบเรียลไทม์
 
 <p align="center">
-  <img src="assets/hero_banner.jpg" alt="BYD Smart EV Route &amp; Battery Overlay Hero Banner" width="100%" style="border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <img src="assets/hero_banner.jpg" alt="BYD Overlay Hero Banner" width="100%" style="border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
-    <img src="https://img.shields.io/badge/เวอร์ชันล่าสุด-v1.3.0--beta-0284C7?style=for-the-badge&logo=android&logoColor=white" />
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/v2-vehicle-overlay">
+    <img src="https://img.shields.io/badge/เวอร์ชันล่าสุด-v2.1--overlay-0284C7?style=for-the-badge&logo=android&logoColor=white" />
   </a>
-  <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk">
+  <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/v2-vehicle-overlay/BYD-Maps-Battery-Overlay-Beta.apk">
     <img src="https://img.shields.io/badge/ดาวน์โหลด-ไฟล์%20APK%20ตรง-00E676?style=for-the-badge&logo=googleplay&logoColor=black" />
   </a>
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/v2-vehicle-overlay">
     <img src="https://img.shields.io/badge/OTA-อัปเดตผ่านจอรถได้ทันที-FFD600?style=for-the-badge&logo=git&logoColor=black" />
   </a>
 </p>
@@ -21,8 +21,8 @@
 </p>
 
 <p align="center">
-  <b>แอปพลิเคชัน HUD แถบลอยอัจฉริยะ (Floating Overlay) ออกแบบพิเศษสำหรับรถยนต์ไฟฟ้า BYD (DiLink 3 / 4 / 5) โดยเฉพาะ</b><br>
-  คำนวณ <b>% แบตเตอรี่คงเหลือเมื่อถึงจุดหมายปลายทาง (SoC %)</b> และ <b>ระยะทางวิ่งได้จริง (Real Range)</b> แสดงควบคู่กับ Google Maps แบบ Real-time ดึงข้อมูลตรงจากกล่อง CAN-Bus และ BMS ของรถโดยไม่ต้องใช้อุปกรณ์ OBD ภายนอกเสริม!
+  <b>แอปพลิเคชัน HUD แถบลอย (Floating Overlay) ออกแบบพิเศษสำหรับรถยนต์ไฟฟ้า BYD (DiLink 3 / 4 / 5) โดยเฉพาะ</b><br>
+  แสดงค่า <b>SoC %, พลังงานคงเหลือ (kWh), ระยะทางวิ่งจริง, อุณหภูมิแบต HV, แรงดันเซลล์, แบต 12V พร้อมจับค่าไฟตกต่ำสุดตอนสตาร์ต (Dip Alert) และลมยาง TPMS</b> ลอยทับทุกแอปและแถบสถานะ — พร้อม <b>Live Preview ปักหมุดด้านบน</b>, <b>หน้าตั้งค่าแบบ 3 แท็บกระชับ</b> และ <b>ระบบคง Z-Order เหนือแถบสถานะอัตโนมัติ</b>!
 </p>
 
 ---

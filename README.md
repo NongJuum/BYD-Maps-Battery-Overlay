@@ -1,17 +1,17 @@
-# ⚡ BYD Smart EV Route & Battery Overlay
+# ⚡ BYD Overlay — Live EV Telemetry & HUD Bar
 
 <p align="center">
-  <img src="assets/hero_banner.jpg" alt="BYD Smart EV Route &amp; Battery Overlay Hero Banner" width="100%" style="border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <img src="assets/hero_banner.jpg" alt="BYD Overlay Hero Banner" width="100%" style="border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
-    <img src="https://img.shields.io/badge/Release-v1.3.0--beta%20(Latest)-0284C7?style=for-the-badge&logo=android&logoColor=white" />
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/v2-vehicle-overlay">
+    <img src="https://img.shields.io/badge/Release-v2.1--overlay%20(Latest)-0284C7?style=for-the-badge&logo=android&logoColor=white" />
   </a>
-  <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/beta/BYD-Maps-Battery-Overlay-Beta.apk">
+  <a href="https://raw.githubusercontent.com/NongJuum/BYD-Maps-Battery-Overlay/v2-vehicle-overlay/BYD-Maps-Battery-Overlay-Beta.apk">
     <img src="https://img.shields.io/badge/Download-APK%20Direct-00E676?style=for-the-badge&logo=googleplay&logoColor=black" />
   </a>
-  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/beta">
+  <a href="https://github.com/NongJuum/BYD-Maps-Battery-Overlay/tree/v2-vehicle-overlay">
     <img src="https://img.shields.io/badge/OTA-In--App%20Update%20Supported-FFD600?style=for-the-badge&logo=git&logoColor=black" />
   </a>
 </p>
@@ -21,8 +21,8 @@
 </p>
 
 <p align="center">
-  <b>An ultra-smart, floating telemetry HUD designed specifically for BYD electric vehicles (DiLink 3 / 4 / 5).</b><br>
-  Accurately predicts <b>Destination Battery % (SoC)</b> and <b>Real-world Remaining Range</b> alongside Google Maps in real-time — directly tapping into BYD CAN-Bus & BMS without requiring extra OBD dongles!
+  <b>An ultra-smart, floating telemetry HUD Overlay designed specifically for BYD electric vehicles (DiLink 3 / 4 / 5).</b><br>
+  Displays real-time <b>SoC %, Remain kWh, Real Range, HV Battery Temp, Cell Voltages, 12V Aux + Lowest Start Dip Alert, and TPMS</b> directly on top of any app or status bar — with a <b>Pinned Live Preview</b>, <b>3-Tab Settings UI</b>, and <b>Status-Bar Z-Order Keep-Alive</b>!
 </p>
 
 ---
