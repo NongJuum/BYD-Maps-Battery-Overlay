@@ -269,6 +269,25 @@ class MainActivity : AppCompatActivity() {
         updateLivePreviewBar()
     }
 
+    private fun isFieldEnabled(key: String): Boolean = when (key) {
+        "soc" -> switchSoc.isChecked
+        "kwh" -> switchKwh.isChecked
+        "real_range" -> switchRealRange.isChecked
+        "dash_range" -> switchDashRange.isChecked
+        "hv_temp" -> switchHvBattTemp.isChecked
+        "cell_volt" -> switchCellVolt.isChecked
+        "consume" -> switchConsume50km.isChecked
+        "inst_power" -> switchInstPower.isChecked
+        "soh" -> switchSoh.isChecked
+        "12v" -> switch12v.isChecked
+        "out_temp" -> switchOutTemp.isChecked
+        "tpms" -> switchTpms.isChecked
+        "odo" -> switchOdo.isChecked
+        "speed" -> switchSpeed.isChecked
+        "gear" -> switchGear.isChecked
+        else -> false
+    }
+
     private fun updateLivePreviewBar() {
         val pill = findViewById<android.widget.LinearLayout>(R.id.ll_live_preview_pill) ?: return
 
@@ -283,19 +302,23 @@ class MainActivity : AppCompatActivity() {
         val density = resources.displayMetrics.density
         if (bgTheme == "glass") {
             pill.setBackgroundResource(R.drawable.bg_pill_liquid_glass)
+        } else if (bgTheme == "transparent") {
+            pill.background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#22000000"))
+                cornerRadius = 18f * density
+                setStroke((1f * density).toInt().coerceAtLeast(1), Color.parseColor("#33FFFFFF"))
+            }
         } else {
             val bgColor = when (bgTheme) {
                 "carbon" -> Color.parseColor("#F2121212")
                 "midnight" -> Color.parseColor("#F20D1B2A")
-                "transparent" -> Color.parseColor("#22000000")
                 else -> Color.parseColor("#FF0B0E14")
             }
-            val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+            pill.background = android.graphics.drawable.GradientDrawable().apply {
                 setColor(bgColor)
                 cornerRadius = (if (VehicleOverlayConfig.isStockBarMode(this@MainActivity)) 6f else 18f) * density
                 setStroke((1f * density).toInt().coerceAtLeast(1), Color.parseColor("#33FFFFFF"))
             }
-            pill.background = bgDrawable
         }
 
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 1.8f)
@@ -304,99 +327,32 @@ class MainActivity : AppCompatActivity() {
         val labelColor = Color.parseColor("#90A4AE")
         val dividerColor = Color.parseColor("#33FFFFFF")
 
-        val items = mutableListOf<Triple<String, String, Int>>() // (label, value, valueColor)
-        val order = VehicleOverlayConfig.getFieldOrder(this)
+        val enabledOrder = VehicleOverlayConfig.getFieldOrder(this).filter { isFieldEnabled(it) }
         val hasBridge = ::bydBridge.isInitialized
-        for (key in order) {
-            when (key) {
-                "soc" -> if (VehicleOverlayConfig.isShowSoc(this)) {
-                    val v = if (hasBridge && bydBridge.currentSoc > 0) "${bydBridge.currentSoc.toInt()}%" else "80%"
-                    items.add(Triple("🔋", v, Color.parseColor("#69F0AE")))
-                }
-                "kwh" -> if (VehicleOverlayConfig.isShowRemainKwh(this)) {
-                    val v = if (hasBridge && bydBridge.remainEnergyKwh > 0) String.format("%.1f kWh", bydBridge.remainEnergyKwh) else "38.7 kWh"
-                    items.add(Triple("⚡", v, textColor))
-                }
-                "real_range" -> if (VehicleOverlayConfig.isShowRealRange(this)) {
-                    val v = if (hasBridge && bydBridge.realRangeKm > 0) "${bydBridge.realRangeKm} km" else "315 km"
-                    items.add(Triple("REAL", v, textColor))
-                }
-                "dash_range" -> if (VehicleOverlayConfig.isShowDashboardRange(this)) {
-                    val v = if (hasBridge && bydBridge.elecRangeKm > 0) "${bydBridge.elecRangeKm} km" else "349 km"
-                    items.add(Triple("STD", v, textColor))
-                }
-                "hv_temp" -> if (VehicleOverlayConfig.isShowHvBattTemp(this)) {
-                    val mode = VehicleOverlayConfig.getHvBattTempMode(this)
-                    val hasHv = hasBridge && bydBridge.hvBattTempMaxC > 0.0
-                    val hvVal = if (hasHv) bydBridge.hvBattTempMaxC else 27.0
-                    val v = if (hasHv) bydBridge.getFormattedHvBattTemp(mode) else "27/26°C"
-                    val hvIcon = when {
-                        hvVal >= 45.0 -> "🔥"
-                        hvVal < 15.0 -> "❄️"
-                        else -> "🌡️"
-                    }
-                    val hvCol = when {
-                        hvVal >= 55.0 -> Color.parseColor("#FF5252")
-                        hvVal >= 45.0 -> Color.parseColor("#FF9100")
-                        hvVal >= 40.0 -> Color.parseColor("#FFD54F")
-                        hvVal < 15.0 -> Color.parseColor("#40C4FF")
-                        else -> textColor
-                    }
-                    items.add(Triple(hvIcon, v, hvCol))
-                }
-                "cell_volt" -> if (VehicleOverlayConfig.isShowCellVoltage(this)) {
-                    val v = if (hasBridge && bydBridge.cellVoltMaxV > 0) String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV) else "3.330/3.325V"
-                    items.add(Triple("CELL", v, textColor))
-                }
-                "consume" -> if (switchConsume50km.isChecked) {
-                    val v = if (hasBridge && bydBridge.currentConsumption > 0) String.format("%.1f", bydBridge.currentConsumption) else "10.5"
-                    items.add(Triple("AVG", "$v kWh", textColor))
-                }
-                "inst_power" -> if (switchInstPower.isChecked) {
-                    items.add(Triple("PWR", "12.4 kW", textColor))
-                }
-                "soh" -> if (VehicleOverlayConfig.isShowBatterySoh(this)) {
-                    items.add(Triple("SOH", "99%", textColor))
-                }
-                "12v" -> if (VehicleOverlayConfig.isShow12v(this)) {
-                    val v12 = if (hasBridge && bydBridge.aux12vVoltage > 0) bydBridge.aux12vVoltage else 13.8
-                    val dip = if (hasBridge && bydBridge.aux12vMinDipV > 0) bydBridge.aux12vMinDipV else 12.0
-                    val isLow = dip < 9.5 || v12 < 9.0
-                    val str = if (isLow) String.format("⚠️ %.1fV [%.1fV]", v12, dip) else String.format("%.1fV [%.1fV]", v12, dip)
-                    items.add(Triple("12V", str, if (isLow) Color.parseColor("#FF5252") else textColor))
-                }
-                "out_temp" -> if (switchOutTemp.isChecked) {
-                    items.add(Triple("OUT", "29°C", textColor))
-                }
-                "tpms" -> if (switchTpms.isChecked) {
-                    items.add(Triple("TPMS", "↖36 ↗36 | ↙36 ↘36", textColor))
-                }
-                "odo" -> if (VehicleOverlayConfig.isShowOdo(this)) {
-                    items.add(Triple("ODO", "39647 km", textColor))
-                }
-                "speed" -> if (VehicleOverlayConfig.isShowSpeed(this)) {
-                    items.add(Triple("SPD", "0 km/h", textColor))
-                }
-                "gear" -> if (VehicleOverlayConfig.isShowGear(this)) {
-                    items.add(Triple("GEAR", "P", Color.parseColor("#40C4FF")))
-                }
-            }
-        }
 
         pill.removeAllViews()
-        if (items.isEmpty()) {
-            val emptyTv = TextView(this).apply {
+        if (enabledOrder.isEmpty()) {
+            pill.addView(TextView(this).apply {
                 text = "กรุณาเปิดอย่างน้อย 1 ข้อมูลเพื่อแสดงตัวอย่าง"
                 textSize = 12f
                 setTextColor(labelColor)
-            }
-            pill.addView(emptyTv)
+            })
             return
         }
 
-        items.forEachIndexed { idx, (lbl, value, valColor) ->
+        fun addText(txt: String, sp: Float, col: Int, padEndDp: Float = 0f) {
+            pill.addView(TextView(this).apply {
+                text = txt
+                textSize = sp
+                setTextColor(col)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 0, (padEndDp * density).toInt(), 0)
+            })
+        }
+
+        enabledOrder.forEachIndexed { idx, key ->
             if (idx > 0) {
-                val divider = android.view.View(this).apply {
+                pill.addView(android.view.View(this).apply {
                     setBackgroundColor(dividerColor)
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         (1f * density).toInt().coerceAtLeast(1),
@@ -405,29 +361,175 @@ class MainActivity : AppCompatActivity() {
                         marginStart = (8f * density).toInt()
                         marginEnd = (8f * density).toInt()
                     }
+                })
+            }
+            when (key) {
+                "soc" -> {
+                    val socVal = if (hasBridge && bydBridge.currentSoc > 0) bydBridge.currentSoc.toInt() else 80
+                    val socCol = when {
+                        socVal > 50 -> Color.parseColor("#69F0AE")
+                        socVal >= 20 -> Color.parseColor("#FFB74D")
+                        else -> Color.parseColor("#FF5252")
+                    }
+                    pill.addView(MiniBatteryView(this).apply {
+                        setPercent(socVal)
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (22f * density * scale).toInt(),
+                            (11f * density * scale).toInt()
+                        ).apply { marginEnd = (5f * density).toInt() }
+                    })
+                    addText("$socVal%", valueSp, socCol)
                 }
-                pill.addView(divider)
+                "kwh" -> {
+                    val v = if (hasBridge && bydBridge.remainEnergyKwh > 0) String.format("%.1f kWh", bydBridge.remainEnergyKwh) else "38.7 kWh"
+                    addText("KWH", labelSp, labelColor, 4f)
+                    addText(v, valueSp, textColor)
+                }
+                "real_range" -> {
+                    val socVal = if (hasBridge && bydBridge.currentSoc > 0) bydBridge.currentSoc.toInt() else 80
+                    val v = if (hasBridge && bydBridge.realRangeKm > 0) "${bydBridge.realRangeKm} km" else "315 km"
+                    pill.addView(MiniRangeBarView(this).apply {
+                        setPercent(socVal)
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (28f * density * scale).toInt(),
+                            (5f * density * scale).toInt()
+                        ).apply { marginEnd = (5f * density).toInt() }
+                    })
+                    addText(v, valueSp, textColor)
+                }
+                "dash_range" -> {
+                    val v = if (hasBridge && bydBridge.elecRangeKm > 0) "${bydBridge.elecRangeKm} km" else "349 km"
+                    addText("STD", labelSp, labelColor, 4f)
+                    addText(v, valueSp, textColor)
+                }
+                "hv_temp" -> {
+                    val mode = VehicleOverlayConfig.getHvBattTempMode(this)
+                    val hasHv = hasBridge && bydBridge.hvBattTempMaxC > 0.0
+                    val hvVal = if (hasHv) bydBridge.hvBattTempMaxC else 27.0
+                    val v = if (hasHv) bydBridge.getFormattedHvBattTemp(mode) else "27/26°C"
+                    val hvIcon = when {
+                        hvVal >= 45.0 -> "🔥 "
+                        hvVal < 15.0 -> "❄️ "
+                        else -> "🌡️ "
+                    }
+                    val hvCol = when {
+                        hvVal >= 55.0 -> Color.parseColor("#FF5252")
+                        hvVal >= 45.0 -> Color.parseColor("#FF9100")
+                        hvVal >= 40.0 -> Color.parseColor("#FFD54F")
+                        hvVal < 15.0 -> Color.parseColor("#40C4FF")
+                        else -> textColor
+                    }
+                    addText("$hvIcon$v", valueSp, hvCol)
+                }
+                "cell_volt" -> {
+                    val hasC = hasBridge && bydBridge.cellVoltMaxV > 0.0 && bydBridge.cellVoltMinV > 0.0
+                    val maxV = if (hasC) bydBridge.cellVoltMaxV else 3.330
+                    val minV = if (hasC) bydBridge.cellVoltMinV else 3.325
+                    val deltaMv = Math.round((maxV - minV) * 1000.0).toInt().coerceAtLeast(0)
+                    val cCol = when {
+                        deltaMv >= 50 -> Color.parseColor("#FF5252")
+                        deltaMv >= 30 -> Color.parseColor("#FFB74D")
+                        else -> textColor
+                    }
+                    addText("CELL", labelSp, labelColor, 4f)
+                    addText(String.format("%.3f/%.3fV Δ%dmV", maxV, minV, deltaMv), valueSp, cCol)
+                }
+                "consume" -> {
+                    val c = if (hasBridge && bydBridge.currentConsumption > 0) bydBridge.currentConsumption else 10.5
+                    val cCol = when {
+                        c < 12.0 -> Color.parseColor("#69F0AE")
+                        c > 16.0 -> Color.parseColor("#FFB74D")
+                        else -> textColor
+                    }
+                    addText("AVG", labelSp, labelColor, 4f)
+                    addText(String.format("%.1f", c), valueSp, cCol)
+                }
+                "inst_power" -> {
+                    val kw = if (hasBridge && bydBridge.instantPowerKw != 0.0) bydBridge.instantPowerKw else -14.2
+                    val pCol = when {
+                        kw < -0.5 -> Color.parseColor("#69F0AE")
+                        kw > 30.0 -> Color.parseColor("#FFB74D")
+                        else -> textColor
+                    }
+                    pill.addView(MiniPowerBarView(this).apply {
+                        setPowerKw(kw)
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (5f * density * scale).toInt(),
+                            (16f * density * scale).toInt()
+                        ).apply { marginEnd = (5f * density).toInt() }
+                    })
+                    addText(String.format("%.1f kW", kw), valueSp, pCol)
+                }
+                "soh" -> {
+                    addText("SOH", labelSp, labelColor, 4f)
+                    addText("99%", valueSp, textColor)
+                }
+                "12v" -> {
+                    val v12 = if (hasBridge && bydBridge.aux12vVoltage > 0) bydBridge.aux12vVoltage else 13.8
+                    val dip = if (hasBridge && bydBridge.aux12vMinDipV > 0) bydBridge.aux12vMinDipV else 12.0
+                    val isLow = (dip > 0.0 && dip < 9.5) || (v12 in 1.0..9.0)
+                    pill.addView(MiniStatusDotView(this).apply {
+                        setHealthy(!isLow)
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (7f * density * scale).toInt(),
+                            (7f * density * scale).toInt()
+                        ).apply { marginEnd = (4f * density).toInt() }
+                    })
+                    addText("12V", labelSp, labelColor, 4f)
+                    val str = if (isLow) String.format("⚠️ %.1fV [%.1fV]", v12, dip) else String.format("%.1fV [%.1fV]", v12, dip)
+                    addText(str, valueSp, if (isLow) Color.parseColor("#FF5252") else textColor)
+                }
+                "out_temp" -> {
+                    addText("OUT", labelSp, labelColor, 4f)
+                    addText("29°C", valueSp, textColor)
+                }
+                "tpms" -> {
+                    addText("TPMS", labelSp, labelColor, 4f)
+                    addText("↖36 ↗36 | ↙36 ↘36", valueSp, textColor)
+                }
+                "odo" -> {
+                    addText("ODO", labelSp, labelColor, 4f)
+                    addText("39647 km", valueSp, textColor)
+                }
+                "speed" -> {
+                    addText("0 km/h", valueSp, textColor)
+                }
+                "gear" -> {
+                    val gStr = if (hasBridge && bydBridge.currentGear != "--") bydBridge.currentGear else "D"
+                    val gCol = when (gStr.uppercase()) {
+                        "P" -> Color.parseColor("#40C4FF")
+                        "D" -> Color.parseColor("#69F0AE")
+                        "R" -> Color.parseColor("#FF5252")
+                        "N" -> Color.parseColor("#FFB74D")
+                        else -> textColor
+                    }
+                    pill.addView(TextView(this).apply {
+                        text = gStr
+                        textSize = valueSp
+                        setTextColor(gCol)
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        val hp = (5f * density).toInt()
+                        val vp = (1f * density).toInt()
+                        setPadding(hp, vp, hp, vp)
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            cornerRadius = 5f * density
+                            setColor(Color.argb(38, Color.red(gCol), Color.green(gCol), Color.blue(gCol)))
+                            setStroke((1f * density).toInt().coerceAtLeast(1), gCol)
+                        }
+                    })
+                }
             }
-            val tvLbl = TextView(this).apply {
-                text = lbl
-                textSize = labelSp
-                setTextColor(labelColor)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setPadding(0, 0, (4f * density).toInt(), 0)
-            }
-            val tvVal = TextView(this).apply {
-                text = value
-                textSize = valueSp
-                setTextColor(valColor)
-                setTypeface(null, android.graphics.Typeface.BOLD)
-            }
-            pill.addView(tvLbl)
-            pill.addView(tvVal)
         }
     }
 
     private fun showFieldOrderDialog() {
-        val currentOrder = VehicleOverlayConfig.getFieldOrder(this).toMutableList()
+        val fullOrder = VehicleOverlayConfig.getFieldOrder(this)
+        val currentOrder = fullOrder.filter { isFieldEnabled(it) }.toMutableList()
+        val disabledFields = fullOrder.filter { !isFieldEnabled(it) }
+        if (currentOrder.isEmpty()) {
+            Toast.makeText(this, "กรุณาเปิดข้อมูลอย่างน้อย 1 รายการก่อนจัดลำดับ", Toast.LENGTH_SHORT).show()
+            return
+        }
         val scrollView = android.widget.ScrollView(this)
         val listLayout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -487,7 +589,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("เรียงลำดับข้อมูลบนแถบ (Field Order)")
             .setView(scrollView)
             .setPositiveButton("บันทึก") { _, _ ->
-                VehicleOverlayConfig.setFieldOrder(this, currentOrder)
+                VehicleOverlayConfig.setFieldOrder(this, currentOrder + disabledFields)
                 updateLivePreviewBar()
                 startService(Intent(this, OverlayService::class.java).apply { action = OverlayService.ACTION_UPDATE_CONFIG })
                 Toast.makeText(this, "บันทึกลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
