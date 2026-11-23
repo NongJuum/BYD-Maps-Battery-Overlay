@@ -17,25 +17,129 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="🚗 BYD Vehicle Data Overlay 2.1"
+            android:layout_height="48dp"
+            app:title="BYD Overlay"
             app:titleTextColor="#FFFFFF"
-            app:subtitle="BYD Full Telemetry + HV Battery Temp Dashboard"
+            app:subtitle="Live EV Telemetry &amp; HUD Bar"
             app:subtitleTextColor="#80D8FF" />
+
+        <!-- Pinned Live Overlay Preview Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#090C12"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LIVE PREVIEW (ตัวอย่างแถบ Overlay จริง)"
+                android:textColor="#64B5F6"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.06"
+                android:layout_marginBottom="6dp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/ll_live_preview_pill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_pill_modern"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="7dp">
+
+                    <TextView
+                        android:id="@+id/tv_live_preview_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔋 80%  •  38.7 kWh  •  349 km  •  🌡 27/26°C  •  12V 13.8V [12.0V]"
+                        android:textColor="#ECEFF1"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </HorizontalScrollView>
+        </LinearLayout>
+
+        <!-- Compact 3-Tab Navigation Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:background="#121721"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_tab_fields"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="📊 ข้อมูล &amp; สวิตช์"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:cornerRadius="10dp"
+                app:backgroundTint="#1E88E5" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_tab_style"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="🎨 หน้าตา &amp; สี"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#B0BEC5"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:cornerRadius="10dp"
+                app:backgroundTint="#1C2433" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_tab_system"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="⚙️ ระบบ &amp; รถ"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#B0BEC5"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:cornerRadius="10dp"
+                app:backgroundTint="#1C2433" />
+        </LinearLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/main_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="40dp"
+        android:paddingBottom="24dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <!-- 1. MASTER TOGGLE BANNER CARD -->
             <com.google.android.material.card.MaterialCardView
@@ -97,6 +201,14 @@
                         android:checked="true" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- TAB 3: SYSTEM & LIVE TELEMETRY -->
+            <LinearLayout
+                android:id="@+id/tab_container_system"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
 
             <!-- 1B. PERMISSION & DAEMON CONTROL CARD (REAL PERMISSION GRANT) -->
             <com.google.android.material.card.MaterialCardView
@@ -352,6 +464,16 @@
                     </GridLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- TAB 1: FIELDS & SWITCHES -->
+            <LinearLayout
+                android:id="@+id/tab_container_fields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="visible">
 
             <!-- 3. PILL CAPSULE DISPLAY DATA CUSTOMIZATION -->
             <TextView
@@ -726,6 +848,16 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            </LinearLayout>
+
+            <!-- TAB 2: STYLE, COLORS & LAYOUT -->
+            <LinearLayout
+                android:id="@+id/tab_container_style"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
             <!-- หมวด 3: ความโปร่งใส & รูปแบบการแสดงผล (Transparency & Layout) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -1083,6 +1215,7 @@
                     app:backgroundTint="#00C853" />
             </LinearLayout>
 
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

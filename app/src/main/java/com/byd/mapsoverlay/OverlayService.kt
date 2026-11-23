@@ -34,6 +34,7 @@ class OverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private var windowParams: WindowManager.LayoutParams? = null
+    private var lastZOrderReassertMs: Long = 0L
 
     // V2 UI Views
     private var tvSoc: TextView? = null
@@ -388,6 +389,7 @@ class OverlayService : Service() {
         }
 
         for (layoutType in candidateTypes) {
+            @Suppress("DEPRECATION")
             val params = WindowManager.LayoutParams(
                 initialW,
                 initialH,
@@ -395,6 +397,7 @@ class OverlayService : Service() {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_OVERSCAN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
             ).apply {
@@ -921,6 +924,19 @@ class OverlayService : Service() {
         }
         tvGear?.text = bydBridge.currentGear
         tvSpeed?.text = "${bydBridge.vehicleSpeedKmH} km/h"
+
+        // Periodically re-assert overlay Z-order when placed over the status bar region
+        val nowMs = android.os.SystemClock.elapsedRealtime()
+        if (nowMs - lastZOrderReassertMs >= 6_000L && overlayView?.visibility == View.VISIBLE) {
+            val lp = windowParams
+            if (lp != null && (lp.y < 100 || VehicleOverlayConfig.isStockBarMode(this))) {
+                lastZOrderReassertMs = nowMs
+                try {
+                    overlayView?.bringToFront()
+                    windowManager?.updateViewLayout(overlayView, lp)
+                } catch (_: Throwable) {}
+            }
+        }
 
         val isDashcamActive = bydBridge.isDashcamRecording || (systemStatusManager?.currentData?.isCameraActive == true)
         tvStatusCamera?.text = if (isDashcamActive) "● REC" else "📷 DVR"

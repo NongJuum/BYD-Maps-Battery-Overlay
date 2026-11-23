@@ -6,32 +6,25 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- พื้นหลังไล่เฉดสี Dark Automotive Carbon -->
+    <!-- Deep Automotive Cockpit Background -->
     <path android:pathData="M0,0h108v108h-108z">
         <aapt:attr name="android:fillColor">
             <gradient
-                android:startX="0"
-                android:startY="0"
                 android:endX="108"
                 android:endY="108"
+                android:startX="0"
+                android:startY="0"
                 android:type="linear">
-                <item android:offset="0.0" android:color="#FF0D1520" />
-                <item android:offset="0.5" android:color="#FF111D2C" />
-                <item android:offset="1.0" android:color="#FF091018" />
+                <item android:color="#0F172A" android:offset="0.0" />
+                <item android:color="#082F49" android:offset="0.55" />
+                <item android:color="#020617" android:offset="1.0" />
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- วงแหวนเรืองแสงด้านหลัง (Subtle Tech Glow) -->
+    <!-- Subtle Cyan Ambient Glow -->
     <path
-        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"
-        android:strokeWidth="1.2"
-        android:strokeColor="#2200E676"
-        android:fillColor="#0800E5FF" />
-
-    <path
-        android:pathData="M54,54m-35,0a35,35 0,1 1,70 0a35,35 0,1 1,-70 0"
-        android:strokeWidth="0.8"
-        android:strokeColor="#1940C4FF"
-        android:fillColor="#00000000" />
+        android:fillAlpha="0.18"
+        android:fillColor="#38BDF8"
+        android:pathData="M54,18 A36,36 0 1,1 53.99,18 Z" />
 </vector>

@@ -233,6 +233,134 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.btn_field_order)?.setOnClickListener {
             showFieldOrderDialog()
         }
+        setupTabsAndLivePreview()
+    }
+
+    private fun setupTabsAndLivePreview() {
+        val btnFields = findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_tab_fields)
+        val btnStyle = findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_tab_style)
+        val btnSystem = findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_tab_system)
+        val tabFields = findViewById<android.view.View>(R.id.tab_container_fields)
+        val tabStyle = findViewById<android.view.View>(R.id.tab_container_style)
+        val tabSystem = findViewById<android.view.View>(R.id.tab_container_system)
+        val scroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.main_scroll_view)
+
+        fun selectTab(activeIdx: Int) {
+            tabFields?.visibility = if (activeIdx == 0) android.view.View.VISIBLE else android.view.View.GONE
+            tabStyle?.visibility = if (activeIdx == 1) android.view.View.VISIBLE else android.view.View.GONE
+            tabSystem?.visibility = if (activeIdx == 2) android.view.View.VISIBLE else android.view.View.GONE
+
+            val activeBg = android.content.res.ColorStateList.valueOf(Color.parseColor("#1E88E5"))
+            val inactiveBg = android.content.res.ColorStateList.valueOf(Color.parseColor("#1C2433"))
+            btnFields?.backgroundTintList = if (activeIdx == 0) activeBg else inactiveBg
+            btnStyle?.backgroundTintList = if (activeIdx == 1) activeBg else inactiveBg
+            btnSystem?.backgroundTintList = if (activeIdx == 2) activeBg else inactiveBg
+
+            btnFields?.setTextColor(if (activeIdx == 0) Color.WHITE else Color.parseColor("#B0BEC5"))
+            btnStyle?.setTextColor(if (activeIdx == 1) Color.WHITE else Color.parseColor("#B0BEC5"))
+            btnSystem?.setTextColor(if (activeIdx == 2) Color.WHITE else Color.parseColor("#B0BEC5"))
+            scroll?.smoothScrollTo(0, 0)
+        }
+
+        btnFields?.setOnClickListener { selectTab(0) }
+        btnStyle?.setOnClickListener { selectTab(1) }
+        btnSystem?.setOnClickListener { selectTab(2) }
+        selectTab(0)
+        updateLivePreviewBar()
+    }
+
+    private fun updateLivePreviewBar() {
+        val pill = findViewById<android.widget.LinearLayout>(R.id.ll_live_preview_pill) ?: return
+        val tv = findViewById<TextView>(R.id.tv_live_preview_content) ?: return
+
+        val textColor = when (VehicleOverlayConfig.getTextColorTheme(this)) {
+            "cyan" -> Color.parseColor("#40C4FF")
+            "emerald" -> Color.parseColor("#69F0AE")
+            "amber" -> Color.parseColor("#FFB74D")
+            "violet" -> Color.parseColor("#E1BEE7")
+            else -> Color.parseColor("#ECEFF1")
+        }
+        val bgColor = when (VehicleOverlayConfig.getBgColorTheme(this)) {
+            "glass" -> Color.parseColor("#E6181E26")
+            "carbon" -> Color.parseColor("#F2121212")
+            "midnight" -> Color.parseColor("#F20D1B2A")
+            "transparent" -> Color.parseColor("#22000000")
+            else -> Color.parseColor("#FF0B0E14")
+        }
+        val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+            setColor(bgColor)
+            cornerRadius = if (VehicleOverlayConfig.isStockBarMode(this@MainActivity)) 6f else 24f
+            setStroke(1, Color.parseColor("#33FFFFFF"))
+        }
+        pill.background = bgDrawable
+
+        val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 1.8f)
+        tv.textSize = (12.5f * scale).coerceIn(10f, 20f)
+        tv.setTextColor(textColor)
+
+        val parts = mutableListOf<String>()
+        val order = VehicleOverlayConfig.getFieldOrder(this)
+        val hasBridge = ::bydBridge.isInitialized
+        for (key in order) {
+            when (key) {
+                "soc" -> if (VehicleOverlayConfig.isShowSoc(this)) {
+                    val v = if (hasBridge && bydBridge.currentSoc > 0) "${bydBridge.currentSoc.toInt()}%" else "80%"
+                    parts.add("🔋 $v")
+                }
+                "kwh" -> if (VehicleOverlayConfig.isShowRemainKwh(this)) {
+                    val v = if (hasBridge && bydBridge.remainEnergyKwh > 0) String.format("%.1f kWh", bydBridge.remainEnergyKwh) else "38.7 kWh"
+                    parts.add(v)
+                }
+                "real_range" -> if (VehicleOverlayConfig.isShowRealRange(this)) {
+                    val v = if (hasBridge && bydBridge.realRangeKm > 0) "${bydBridge.realRangeKm} km" else "315 km"
+                    parts.add("⚡ $v")
+                }
+                "dash_range" -> if (VehicleOverlayConfig.isShowDashboardRange(this)) {
+                    val v = if (hasBridge && bydBridge.elecRangeKm > 0) "${bydBridge.elecRangeKm} km" else "349 km"
+                    parts.add("🛣 $v")
+                }
+                "hv_temp" -> if (VehicleOverlayConfig.isShowHvBattTemp(this)) {
+                    val mode = VehicleOverlayConfig.getHvBattTempMode(this)
+                    val v = if (hasBridge && bydBridge.hvBattTempMaxC > 0) bydBridge.getFormattedHvBattTemp(mode) else "27/26°C"
+                    parts.add("🌡 $v")
+                }
+                "cell_volt" -> if (VehicleOverlayConfig.isShowCellVoltage(this)) {
+                    val v = if (hasBridge && bydBridge.cellVoltMaxV > 0) String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV) else "3.330/3.325V"
+                    parts.add(v)
+                }
+                "consume" -> if (switchConsume50km.isChecked) {
+                    val v = if (hasBridge && bydBridge.currentConsumption > 0) String.format("%.1f", bydBridge.currentConsumption) else "10.5"
+                    parts.add("$v kWh/100")
+                }
+                "inst_power" -> if (switchInstPower.isChecked) {
+                    parts.add("⚡ 12.4 kW")
+                }
+                "soh" -> if (VehicleOverlayConfig.isShowBatterySoh(this)) {
+                    parts.add("SOH 99%")
+                }
+                "12v" -> if (VehicleOverlayConfig.isShow12v(this)) {
+                    val v12 = if (hasBridge && bydBridge.aux12vVoltage > 0) bydBridge.aux12vVoltage else 13.8
+                    val dip = if (hasBridge && bydBridge.aux12vMinDipV > 0) bydBridge.aux12vMinDipV else 12.0
+                    parts.add(String.format("12V %.1fV [%.1fV]", v12, dip))
+                }
+                "out_temp" -> if (switchOutTemp.isChecked) {
+                    parts.add("29°C")
+                }
+                "tpms" -> if (switchTpms.isChecked) {
+                    parts.add("TPMS 36|36")
+                }
+                "odo" -> if (VehicleOverlayConfig.isShowOdo(this)) {
+                    parts.add("39647 km")
+                }
+                "speed" -> if (VehicleOverlayConfig.isShowSpeed(this)) {
+                    parts.add("0 km/h")
+                }
+                "gear" -> if (VehicleOverlayConfig.isShowGear(this)) {
+                    parts.add("P")
+                }
+            }
+        }
+        tv.text = if (parts.isEmpty()) "กรุณาเปิดอย่างน้อย 1 ข้อมูลเพื่อแสดงตัวอย่าง" else parts.joinToString("  •  ")
     }
 
     private fun showFieldOrderDialog() {
@@ -297,11 +425,13 @@ class MainActivity : AppCompatActivity() {
             .setView(scrollView)
             .setPositiveButton("บันทึก") { _, _ ->
                 VehicleOverlayConfig.setFieldOrder(this, currentOrder)
+                updateLivePreviewBar()
                 startService(Intent(this, OverlayService::class.java).apply { action = OverlayService.ACTION_UPDATE_CONFIG })
                 Toast.makeText(this, "บันทึกลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
             }
             .setNeutralButton("รีเซ็ตค่าเริ่มต้น") { _, _ ->
                 VehicleOverlayConfig.setFieldOrder(this, VehicleOverlayConfig.DEFAULT_FIELD_ORDER)
+                updateLivePreviewBar()
                 startService(Intent(this, OverlayService::class.java).apply { action = OverlayService.ACTION_UPDATE_CONFIG })
                 Toast.makeText(this, "รีเซ็ตลำดับข้อมูลแล้ว", Toast.LENGTH_SHORT).show()
             }
@@ -578,6 +708,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun notifyOverlayServiceConfigChanged() {
+        updateLivePreviewBar()
         if (switchMaster.isChecked && checkOverlayPermission()) {
             val serviceIntent = Intent(this, OverlayService::class.java).apply {
                 action = OverlayService.ACTION_UPDATE_CONFIG
