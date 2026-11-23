@@ -491,7 +491,7 @@ class BydVehicleBridge(
             2 -> "R"
             3 -> "N"
             4 -> "D"
-            else -> "P"
+            else -> "--"
         }
     }
 

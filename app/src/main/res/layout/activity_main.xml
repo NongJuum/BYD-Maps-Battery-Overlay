@@ -971,7 +971,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:text="🔍 ขนาดของแถบ Overlay (Scale Size 70% - 150%)"
+                        android:text="🔍 ขนาดของแถบ Overlay (Scale Size 70% - 200%)"
                         android:textColor="#FFD54F"
                         android:textSize="14sp"
                         android:textStyle="bold" />

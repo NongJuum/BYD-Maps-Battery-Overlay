@@ -824,20 +824,35 @@ class OverlayService : Service() {
             }
             rootLayout?.let { scaleViewsRecursively(it) }
 
-            val padH = if (isStockBar) (20 * resources.displayMetrics.density).toInt() else (8 * resources.displayMetrics.density * effectiveScale).toInt()
-            val padV = if (isStockBar) 0 else (3 * resources.displayMetrics.density * effectiveScale).toInt()
+            val d = resources.displayMetrics.density
+            val widgetScale = effectiveScale * (if (isStockBar) 1.15f else 1.0f)
+            fun resizeWidget(v: View?, wDp: Float, hDp: Float) {
+                v?.layoutParams?.let { lp ->
+                    lp.width = (wDp * d * widgetScale).toInt().coerceAtLeast(4)
+                    lp.height = (hDp * d * widgetScale).toInt().coerceAtLeast(4)
+                    v.layoutParams = lp
+                }
+            }
+            resizeWidget(viewSocBar, 22f, 11f)
+            resizeWidget(viewRangeBar, 28f, 5f)
+            resizeWidget(viewPowerBar, 5f, 16f)
+            resizeWidget(view12vDot, 7f, 7f)
+
+            val padH = if (isStockBar) (20 * d).toInt() else (8 * d * effectiveScale).toInt()
+            val padV = if (isStockBar) 0 else (3 * d * effectiveScale).toInt()
             rootLayout?.setPadding(padH, padV, padH, padV)
         }
 
         // Initial application with user's requested scale
         applyFontSizes(userScale)
 
-        // Adaptive Font Clamping & Auto-Fit for Stock Bar:
+        // Adaptive Font Clamping & Auto-Fit:
         // Measure total width of all visible children inside the horizontal bar.
-        // If content exceeds usable width (1860px), smoothly adjust font scale down so content is NEVER truncated!
+        // In Stock Bar mode, reserve ~280px for BYD's left clock and right OEM status icons.
         if (rootLayout != null && rootLayout.orientation == LinearLayout.HORIZONTAL) {
             rootLayout.post {
-                val availableWidth = (resources.displayMetrics.widthPixels - 32).coerceAtLeast(1000)
+                val reservePx = if (isStockBar) 280 else 32
+                val availableWidth = (resources.displayMetrics.widthPixels - reservePx).coerceAtLeast(900)
                 var measuredContentWidth = rootLayout.paddingLeft + rootLayout.paddingRight
                 for (i in 0 until rootLayout.childCount) {
                     val child = rootLayout.getChildAt(i)
@@ -1023,17 +1038,20 @@ class OverlayService : Service() {
         }
 
         val isDashcamActive = bydBridge.isDashcamRecording || (systemStatusManager?.currentData?.isCameraActive == true)
-        tvStatusCamera?.text = if (isDashcamActive) "● REC" else "📷 DVR"
-        if (isDashcamActive) {
-            containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
-            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
-        } else {
-            if (VehicleOverlayConfig.isStockBarMode(this)) {
-                containerStatusCamera?.background = null
+        if (isDashcamActive != lastDashcamActive) {
+            lastDashcamActive = isDashcamActive
+            tvStatusCamera?.text = if (isDashcamActive) "● REC" else "📷 DVR"
+            if (isDashcamActive) {
+                containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_rec)
+                tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
             } else {
-                containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+                if (VehicleOverlayConfig.isStockBarMode(this)) {
+                    containerStatusCamera?.background = null
+                } else {
+                    containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
+                }
+                tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
             }
-            tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
         }
     }
 
