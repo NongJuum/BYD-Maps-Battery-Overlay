@@ -188,6 +188,15 @@ class OverlayService : Service() {
         when (intent?.action) {
             ACTION_RESET_POSITION -> resetPosition()
             ACTION_UPDATE_CONFIG -> {
+                if (OverlayAccessibilityService.instance != null &&
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 &&
+                    windowParams?.type != WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY &&
+                    overlayView != null
+                ) {
+                    try { windowManager?.removeView(overlayView) } catch (_: Throwable) {}
+                    overlayView = null
+                    createOverlayView()
+                }
                 applyUserFieldPreferences()
                 updateTelemetryDisplay(bydBridge.currentSoc, bydBridge.currentConsumption)
             }
@@ -373,17 +382,24 @@ class OverlayService : Service() {
 
         applyUserFieldPreferences()
 
-        val candidateTypes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            listOf(
-                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            )
+        val accService = OverlayAccessibilityService.instance
+        if (accService != null) {
+            windowManager = accService.getSystemService(WINDOW_SERVICE) as WindowManager
+        } else if (windowManager == null) {
+            windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        }
+
+        val candidateTypes = mutableListOf<Int>()
+        if (accService != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            candidateTypes.add(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            candidateTypes.add(@Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR)
+            candidateTypes.add(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
         } else {
-            listOf(
-                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR,
-                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ALERT,
-                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
-            )
+            candidateTypes.add(@Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR)
+            candidateTypes.add(@Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ALERT)
+            candidateTypes.add(@Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE)
         }
 
         val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
