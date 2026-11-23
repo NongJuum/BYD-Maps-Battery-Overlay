@@ -747,6 +747,8 @@ class OverlayService : Service() {
 
             if (bgColorTheme == "black") {
                 overlayView?.setBackgroundResource(R.drawable.bg_kinex_dock_bar)
+            } else if (bgColorTheme == "glass") {
+                overlayView?.setBackgroundResource(R.drawable.bg_pill_liquid_glass)
             } else {
                 val pillDrawable = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE

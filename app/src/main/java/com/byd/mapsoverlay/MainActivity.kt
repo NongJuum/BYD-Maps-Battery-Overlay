@@ -279,20 +279,24 @@ class MainActivity : AppCompatActivity() {
             "violet" -> Color.parseColor("#E1BEE7")
             else -> Color.parseColor("#ECEFF1")
         }
-        val bgColor = when (VehicleOverlayConfig.getBgColorTheme(this)) {
-            "glass" -> Color.parseColor("#E6181E26")
-            "carbon" -> Color.parseColor("#F2121212")
-            "midnight" -> Color.parseColor("#F20D1B2A")
-            "transparent" -> Color.parseColor("#22000000")
-            else -> Color.parseColor("#FF0B0E14")
-        }
+        val bgTheme = VehicleOverlayConfig.getBgColorTheme(this)
         val density = resources.displayMetrics.density
-        val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
-            setColor(bgColor)
-            cornerRadius = (if (VehicleOverlayConfig.isStockBarMode(this@MainActivity)) 6f else 18f) * density
-            setStroke((1f * density).toInt().coerceAtLeast(1), Color.parseColor("#33FFFFFF"))
+        if (bgTheme == "glass") {
+            pill.setBackgroundResource(R.drawable.bg_pill_liquid_glass)
+        } else {
+            val bgColor = when (bgTheme) {
+                "carbon" -> Color.parseColor("#F2121212")
+                "midnight" -> Color.parseColor("#F20D1B2A")
+                "transparent" -> Color.parseColor("#22000000")
+                else -> Color.parseColor("#FF0B0E14")
+            }
+            val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+                setColor(bgColor)
+                cornerRadius = (if (VehicleOverlayConfig.isStockBarMode(this@MainActivity)) 6f else 18f) * density
+                setStroke((1f * density).toInt().coerceAtLeast(1), Color.parseColor("#33FFFFFF"))
+            }
+            pill.background = bgDrawable
         }
-        pill.background = bgDrawable
 
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 1.8f)
         val labelSp = (10.0f * scale).coerceIn(8.5f, 15f)
