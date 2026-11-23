@@ -271,7 +271,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateLivePreviewBar() {
         val pill = findViewById<android.widget.LinearLayout>(R.id.ll_live_preview_pill) ?: return
-        val tv = findViewById<TextView>(R.id.tv_live_preview_content) ?: return
 
         val textColor = when (VehicleOverlayConfig.getTextColorTheme(this)) {
             "cyan" -> Color.parseColor("#40C4FF")
@@ -287,80 +286,126 @@ class MainActivity : AppCompatActivity() {
             "transparent" -> Color.parseColor("#22000000")
             else -> Color.parseColor("#FF0B0E14")
         }
+        val density = resources.displayMetrics.density
         val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
             setColor(bgColor)
-            cornerRadius = if (VehicleOverlayConfig.isStockBarMode(this@MainActivity)) 6f else 24f
-            setStroke(1, Color.parseColor("#33FFFFFF"))
+            cornerRadius = (if (VehicleOverlayConfig.isStockBarMode(this@MainActivity)) 6f else 18f) * density
+            setStroke((1f * density).toInt().coerceAtLeast(1), Color.parseColor("#33FFFFFF"))
         }
         pill.background = bgDrawable
 
         val scale = (VehicleOverlayConfig.getScale(this) / 100f).coerceIn(0.7f, 1.8f)
-        tv.textSize = (12.5f * scale).coerceIn(10f, 20f)
-        tv.setTextColor(textColor)
+        val labelSp = (10.0f * scale).coerceIn(8.5f, 15f)
+        val valueSp = (12.0f * scale).coerceIn(10f, 18f)
+        val labelColor = Color.parseColor("#90A4AE")
+        val dividerColor = Color.parseColor("#33FFFFFF")
 
-        val parts = mutableListOf<String>()
+        val items = mutableListOf<Triple<String, String, Int>>() // (label, value, valueColor)
         val order = VehicleOverlayConfig.getFieldOrder(this)
         val hasBridge = ::bydBridge.isInitialized
         for (key in order) {
             when (key) {
                 "soc" -> if (VehicleOverlayConfig.isShowSoc(this)) {
                     val v = if (hasBridge && bydBridge.currentSoc > 0) "${bydBridge.currentSoc.toInt()}%" else "80%"
-                    parts.add("🔋 $v")
+                    items.add(Triple("🔋", v, Color.parseColor("#69F0AE")))
                 }
                 "kwh" -> if (VehicleOverlayConfig.isShowRemainKwh(this)) {
                     val v = if (hasBridge && bydBridge.remainEnergyKwh > 0) String.format("%.1f kWh", bydBridge.remainEnergyKwh) else "38.7 kWh"
-                    parts.add(v)
+                    items.add(Triple("⚡", v, textColor))
                 }
                 "real_range" -> if (VehicleOverlayConfig.isShowRealRange(this)) {
                     val v = if (hasBridge && bydBridge.realRangeKm > 0) "${bydBridge.realRangeKm} km" else "315 km"
-                    parts.add("⚡ $v")
+                    items.add(Triple("REAL", v, textColor))
                 }
                 "dash_range" -> if (VehicleOverlayConfig.isShowDashboardRange(this)) {
                     val v = if (hasBridge && bydBridge.elecRangeKm > 0) "${bydBridge.elecRangeKm} km" else "349 km"
-                    parts.add("🛣 $v")
+                    items.add(Triple("STD", v, textColor))
                 }
                 "hv_temp" -> if (VehicleOverlayConfig.isShowHvBattTemp(this)) {
                     val mode = VehicleOverlayConfig.getHvBattTempMode(this)
                     val v = if (hasBridge && bydBridge.hvBattTempMaxC > 0) bydBridge.getFormattedHvBattTemp(mode) else "27/26°C"
-                    parts.add("🌡 $v")
+                    items.add(Triple("HV", v, Color.parseColor("#FFAB40")))
                 }
                 "cell_volt" -> if (VehicleOverlayConfig.isShowCellVoltage(this)) {
                     val v = if (hasBridge && bydBridge.cellVoltMaxV > 0) String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV) else "3.330/3.325V"
-                    parts.add(v)
+                    items.add(Triple("CELL", v, textColor))
                 }
                 "consume" -> if (switchConsume50km.isChecked) {
                     val v = if (hasBridge && bydBridge.currentConsumption > 0) String.format("%.1f", bydBridge.currentConsumption) else "10.5"
-                    parts.add("$v kWh/100")
+                    items.add(Triple("AVG", "$v kWh", textColor))
                 }
                 "inst_power" -> if (switchInstPower.isChecked) {
-                    parts.add("⚡ 12.4 kW")
+                    items.add(Triple("PWR", "12.4 kW", textColor))
                 }
                 "soh" -> if (VehicleOverlayConfig.isShowBatterySoh(this)) {
-                    parts.add("SOH 99%")
+                    items.add(Triple("SOH", "99%", textColor))
                 }
                 "12v" -> if (VehicleOverlayConfig.isShow12v(this)) {
                     val v12 = if (hasBridge && bydBridge.aux12vVoltage > 0) bydBridge.aux12vVoltage else 13.8
                     val dip = if (hasBridge && bydBridge.aux12vMinDipV > 0) bydBridge.aux12vMinDipV else 12.0
-                    parts.add(String.format("12V %.1fV [%.1fV]", v12, dip))
+                    val isLow = dip < 9.5 || v12 < 9.0
+                    val str = if (isLow) String.format("⚠️ %.1fV [%.1fV]", v12, dip) else String.format("%.1fV [%.1fV]", v12, dip)
+                    items.add(Triple("12V", str, if (isLow) Color.parseColor("#FF5252") else textColor))
                 }
                 "out_temp" -> if (switchOutTemp.isChecked) {
-                    parts.add("29°C")
+                    items.add(Triple("OUT", "29°C", textColor))
                 }
                 "tpms" -> if (switchTpms.isChecked) {
-                    parts.add("TPMS 36|36")
+                    items.add(Triple("TPMS", "↖36 ↗36 | ↙36 ↘36", textColor))
                 }
                 "odo" -> if (VehicleOverlayConfig.isShowOdo(this)) {
-                    parts.add("39647 km")
+                    items.add(Triple("ODO", "39647 km", textColor))
                 }
                 "speed" -> if (VehicleOverlayConfig.isShowSpeed(this)) {
-                    parts.add("0 km/h")
+                    items.add(Triple("SPD", "0 km/h", textColor))
                 }
                 "gear" -> if (VehicleOverlayConfig.isShowGear(this)) {
-                    parts.add("P")
+                    items.add(Triple("GEAR", "P", Color.parseColor("#40C4FF")))
                 }
             }
         }
-        tv.text = if (parts.isEmpty()) "กรุณาเปิดอย่างน้อย 1 ข้อมูลเพื่อแสดงตัวอย่าง" else parts.joinToString("  •  ")
+
+        pill.removeAllViews()
+        if (items.isEmpty()) {
+            val emptyTv = TextView(this).apply {
+                text = "กรุณาเปิดอย่างน้อย 1 ข้อมูลเพื่อแสดงตัวอย่าง"
+                textSize = 12f
+                setTextColor(labelColor)
+            }
+            pill.addView(emptyTv)
+            return
+        }
+
+        items.forEachIndexed { idx, (lbl, value, valColor) ->
+            if (idx > 0) {
+                val divider = android.view.View(this).apply {
+                    setBackgroundColor(dividerColor)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (1f * density).toInt().coerceAtLeast(1),
+                        (14f * density * scale.coerceAtMost(1.3f)).toInt()
+                    ).apply {
+                        marginStart = (8f * density).toInt()
+                        marginEnd = (8f * density).toInt()
+                    }
+                }
+                pill.addView(divider)
+            }
+            val tvLbl = TextView(this).apply {
+                text = lbl
+                textSize = labelSp
+                setTextColor(labelColor)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 0, (4f * density).toInt(), 0)
+            }
+            val tvVal = TextView(this).apply {
+                text = value
+                textSize = valueSp
+                setTextColor(valColor)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            pill.addView(tvLbl)
+            pill.addView(tvVal)
+        }
     }
 
     private fun showFieldOrderDialog() {
