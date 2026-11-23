@@ -276,20 +276,11 @@
         android:orientation="horizontal">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="BATT"
-            android:textColor="#90A4AE"
-            android:textSize="10.5sp"
-            android:textStyle="bold"
-            android:paddingEnd="3dp" />
-
-        <TextView
             android:id="@+id/tv_v2_hv_temp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="29°C"
-            android:textColor="#FFAB40"
+            android:text="🌡️ 29°C"
+            android:textColor="#ECEFF1"
             android:textSize="11.5sp"
             android:textStyle="bold" />
     </LinearLayout>

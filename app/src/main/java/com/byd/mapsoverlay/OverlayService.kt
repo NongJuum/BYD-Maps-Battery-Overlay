@@ -676,15 +676,21 @@ class OverlayService : Service() {
                 val (cont, div) = orderedPairs[idx]
                 val contVis = cont?.visibility == View.VISIBLE
                 val anyLaterVis = allContainersAfter.drop(idx + 1).any { it?.visibility == View.VISIBLE }
-                if (isStockBar) {
-                    div?.visibility = View.GONE
-                    val contLp = cont?.layoutParams as? LinearLayout.LayoutParams
-                    if (contLp != null) {
-                        contLp.setMargins(0, 0, (16 * resources.displayMetrics.density).toInt(), 0)
-                        cont.layoutParams = contLp
+                val showDiv = contVis && anyLaterVis
+                div?.visibility = if (showDiv) View.VISIBLE else View.GONE
+                if (showDiv && div != null) {
+                    div.setBackgroundColor(android.graphics.Color.parseColor("#45FFFFFF"))
+                    val dLp = div.layoutParams as? LinearLayout.LayoutParams
+                    if (dLp != null) {
+                        val m = ((if (isStockBar) 8 else 6) * resources.displayMetrics.density).toInt()
+                        dLp.setMargins(m, 0, m, 0)
+                        div.layoutParams = dLp
                     }
-                } else {
-                    div?.visibility = if (contVis && anyLaterVis) View.VISIBLE else View.GONE
+                }
+                val contLp = cont?.layoutParams as? LinearLayout.LayoutParams
+                if (contLp != null) {
+                    contLp.setMargins(0, 0, 0, 0)
+                    cont.layoutParams = contLp
                 }
             }
         }
