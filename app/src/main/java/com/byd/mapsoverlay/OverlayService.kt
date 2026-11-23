@@ -52,6 +52,10 @@ class OverlayService : Service() {
     private var tvOdo: TextView? = null
     private var tvGear: TextView? = null
     private var tvSpeed: TextView? = null
+    private var viewSocBar: MiniBatteryView? = null
+    private var viewRangeBar: MiniRangeBarView? = null
+    private var viewPowerBar: MiniPowerBarView? = null
+    private var view12vDot: MiniStatusDotView? = null
 
     // Containers
     private var containerSoc: View? = null
@@ -299,6 +303,10 @@ class OverlayService : Service() {
         tvOdo = v.findViewById(R.id.tv_v2_odo)
         tvGear = v.findViewById(R.id.tv_v2_gear)
         tvSpeed = v.findViewById(R.id.tv_v2_speed)
+        viewSocBar = v.findViewById(R.id.view_v2_soc_bar)
+        viewRangeBar = v.findViewById(R.id.view_v2_range_bar)
+        viewPowerBar = v.findViewById(R.id.view_v2_power_bar)
+        view12vDot = v.findViewById(R.id.view_v2_12v_dot)
 
         // Bind Containers
         containerSoc = v.findViewById(R.id.container_v2_soc)
@@ -870,8 +878,13 @@ class OverlayService : Service() {
 
         // HV Main Battery Temperature (Configurable: Max/Min, Avg, Max, Min) & Cell Voltage
         val hvTempMode = VehicleOverlayConfig.getHvBattTempMode(this)
-        tvHvTemp?.text = bydBridge.getFormattedHvBattTemp(hvTempMode)
         val hvTempVal = if (bydBridge.hvBattTempMaxC > -40.0) bydBridge.hvBattTempMaxC else bydBridge.hvBattTempAvgC
+        val hvIcon = when {
+            hvTempVal >= 45.0 -> "🔥 "
+            hvTempVal in -39.0..14.9 -> "❄️ "
+            else -> "🌡️ "
+        }
+        tvHvTemp?.text = "$hvIcon${bydBridge.getFormattedHvBattTemp(hvTempMode)}"
         val hvTempColor = when {
             hvTempVal >= 55.0 -> android.graphics.Color.parseColor("#FF5252") // Critical LFP
             hvTempVal >= 45.0 -> android.graphics.Color.parseColor("#FF9100") // High / Derating
@@ -880,6 +893,8 @@ class OverlayService : Service() {
             else -> currentThemeTextColor // Optimal (15-39°C)
         }
         tvHvTemp?.setTextColor(hvTempColor)
+        viewSocBar?.setPercent(soc.toInt())
+        viewRangeBar?.setPercent(soc.toInt())
 
         if (bydBridge.cellVoltMaxV > 0.0) {
             tvCellVolt?.text = String.format("%.3f/%.3fV", bydBridge.cellVoltMaxV, bydBridge.cellVoltMinV)
@@ -896,6 +911,7 @@ class OverlayService : Service() {
         if (bydBridge.instantPowerKw in -200.0..300.0 && bydBridge.instantPowerKw != 0.0) {
             val kw = bydBridge.instantPowerKw
             tvInstPower?.text = String.format("%.1f kW", kw)
+            viewPowerBar?.setPowerKw(kw)
             tvInstPower?.setTextColor(
                 when {
                     kw < -0.5 -> android.graphics.Color.parseColor("#69F0AE") // Regen
@@ -905,6 +921,7 @@ class OverlayService : Service() {
             )
         } else {
             tvInstPower?.text = "-- kW"
+            viewPowerBar?.setPowerKw(0.0)
             tvInstPower?.setTextColor(currentThemeTextColor)
         }
 
@@ -914,6 +931,7 @@ class OverlayService : Service() {
         val minDip = bydBridge.aux12vMinDipV
         val dipStr = if (minDip > 0.0) String.format(" [%.1fV]", minDip) else ""
         val isDegraded = (minDip > 0.0 && minDip < 9.5) || (v12 in 1.0..9.0)
+        view12vDot?.setHealthy(!isDegraded)
         if (isDegraded) {
             tv12v?.text = if (v12 > 0.0) String.format("⚠️ %.1fV%s", v12, dipStr) else "⚠️ --V$dipStr"
             tv12v?.setTextColor(android.graphics.Color.parseColor("#FF5252"))

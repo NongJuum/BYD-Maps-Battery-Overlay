@@ -147,14 +147,11 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SOC"
-            android:textColor="#90A4AE"
-            android:textSize="10.5sp"
-            android:textStyle="bold"
-            android:paddingEnd="3dp" />
+        <com.byd.mapsoverlay.MiniBatteryView
+            android:id="@+id/view_v2_soc_bar"
+            android:layout_width="22dp"
+            android:layout_height="11dp"
+            android:layout_marginEnd="5dp" />
 
         <TextView
             android:id="@+id/tv_v2_soc"
@@ -208,14 +205,11 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="RANGE"
-            android:textColor="#90A4AE"
-            android:textSize="10.5sp"
-            android:textStyle="bold"
-            android:paddingEnd="3dp" />
+        <com.byd.mapsoverlay.MiniRangeBarView
+            android:id="@+id/view_v2_range_bar"
+            android:layout_width="28dp"
+            android:layout_height="5dp"
+            android:layout_marginEnd="5dp" />
 
         <TextView
             android:id="@+id/tv_v2_real_range"
@@ -425,14 +419,11 @@
         android:orientation="horizontal"
         android:visibility="gone">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="PWR"
-            android:textColor="#90A4AE"
-            android:textSize="10.5sp"
-            android:textStyle="bold"
-            android:paddingEnd="3dp" />
+        <com.byd.mapsoverlay.MiniPowerBarView
+            android:id="@+id/view_v2_power_bar"
+            android:layout_width="5dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="5dp" />
 
         <TextView
             android:id="@+id/tv_v2_inst_power"
@@ -499,6 +490,12 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
+
+        <com.byd.mapsoverlay.MiniStatusDotView
+            android:id="@+id/view_v2_12v_dot"
+            android:layout_width="7dp"
+            android:layout_height="7dp"
+            android:layout_marginEnd="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
