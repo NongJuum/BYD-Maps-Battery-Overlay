@@ -194,6 +194,7 @@ class MainActivity : AppCompatActivity() {
         switchGps = findViewById(R.id.switch_show_gps)
         switchCameraDvr = findViewById(R.id.switch_show_camera_dvr)
         switchBluetooth = findViewById(R.id.switch_show_bluetooth)
+        setupSmartFeatureSwitches()
 
         rgDisplayMode = findViewById(R.id.rg_display_mode)
         rbModeFloating = findViewById(R.id.rb_mode_floating)
@@ -980,6 +981,50 @@ class MainActivity : AppCompatActivity() {
         stopService(serviceIntent)
         getSharedPreferences("byd_overlay_prefs", Context.MODE_PRIVATE)
             .edit().putBoolean("service_running", false).apply()
+    }
+
+    private fun setupSmartFeatureSwitches() {
+        val parent = switchBluetooth.parent as? android.widget.LinearLayout ?: return
+        val d = resources.displayMetrics.density
+        val header = TextView(this).apply {
+            text = "⚡ โหมดอัจฉริยะ & แจ้งเตือน (Smart Modes)"
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(android.graphics.Color.parseColor("#69F0AE"))
+            setPadding(0, (14f * d).toInt(), 0, (6f * d).toInt())
+        }
+        parent.addView(header)
+
+        fun addToggle(label: String, initial: Boolean, onSave: (Boolean) -> Unit) {
+            val sw = SwitchCompat(this).apply {
+                text = label
+                isChecked = initial
+                setTextColor(android.graphics.Color.parseColor("#ECEFF1"))
+                textSize = 14f
+                setPadding(0, (6f * d).toInt(), 0, (6f * d).toInt())
+                setOnCheckedChangeListener { _, isChecked ->
+                    onSave(isChecked)
+                    val intent = Intent(this@MainActivity, OverlayService::class.java).apply {
+                        action = OverlayService.ACTION_UPDATE_CONFIG
+                    }
+                    try { startService(intent) } catch (_: Throwable) {}
+                }
+            }
+            parent.addView(sw)
+        }
+
+        addToggle("⚡ โหมดชาร์จอัตโนมัติ (กำลังไฟ + เวลาถึง 80%/100%)", VehicleOverlayConfig.isShowChargingMode(this)) {
+            VehicleOverlayConfig.setShowChargingMode(this, it)
+        }
+        addToggle("🔴 เตือนระยะกันชนหน้า/หลัง (<= 30cm)", VehicleOverlayConfig.isShowRadarAlert(this)) {
+            VehicleOverlayConfig.setShowRadarAlert(this, it)
+        }
+        addToggle("🛞 เตือนลมยางต่างกันซ้าย-ขวา (TPMS Delta)", VehicleOverlayConfig.isShowTpmsDeltaAlert(this)) {
+            VehicleOverlayConfig.setShowTpmsDeltaAlert(this, it)
+        }
+        addToggle("🌡️ แสดงผลต่างอุณหภูมิแบต (HV ΔT)", VehicleOverlayConfig.isShowHvDeltaT(this)) {
+            VehicleOverlayConfig.setShowHvDeltaT(this, it)
+        }
     }
 
     override fun onDestroy() {

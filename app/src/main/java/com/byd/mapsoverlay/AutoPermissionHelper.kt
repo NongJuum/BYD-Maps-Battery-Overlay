@@ -30,10 +30,10 @@ object AutoPermissionHelper {
     private const val RETRY_INTERVAL_MS = 60_000L
 
     private val launchInFlight = AtomicBoolean(false)
-    @Volatile private var lastLaunchAttemptMs = 0L
+    @Volatile private var lastLaunchAttemptMs = -RETRY_INTERVAL_MS
 
     private val immersiveInFlight = AtomicBoolean(false)
-    @Volatile private var lastImmersiveAttemptMs = 0L
+    @Volatile private var lastImmersiveAttemptMs = -5_000L
     private val adbLock = Any()
 
     /** Safe to call repeatedly on any thread. Retry failed starts with backoff. */
@@ -190,7 +190,8 @@ object AutoPermissionHelper {
         Thread({
             val result = try {
                 val keyPair = loadOrCreateAdbKeyPair(appContext)
-                Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5_000, 15_000).use { adb ->
+                synchronized(adbLock) {
+                    Dadb.create(ADB_HOST, ADB_PORT, keyPair, 5_000, 15_000).use { adb ->
                     val component = "$targetPkg/com.byd.mapsoverlay.MapsNotificationListener"
                     val command = """
                         COMPONENT=$component
@@ -261,6 +262,7 @@ object AutoPermissionHelper {
                         listenerOk -> "เปิดสิทธิ์อ่านการนำทาง Google Maps แล้ว แต่ Overlay ยังไม่ได้รับอนุญาต: ${output}"
                         else -> "เปิดสิทธิ์ Notification Listener และ Overlay เรียบร้อยแล้ว"
                     }
+                }
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Could not configure IVI Maps permissions through local ADB", t)

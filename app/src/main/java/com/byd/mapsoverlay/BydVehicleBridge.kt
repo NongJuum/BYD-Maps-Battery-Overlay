@@ -89,6 +89,24 @@ class BydVehicleBridge(
     var tpmsSummary: String = "-- kPa"
         private set
 
+    // Charging Telemetry
+    @Volatile var isCharging: Boolean = false
+        private set
+    @Volatile var chargingPowerKw: Double = 0.0
+        private set
+    @Volatile var chargingRestMin: Int = 0
+        private set
+
+    // Proximity Radar distances (cm, 0 = no obstacle / inactive)
+    @Volatile var radarFlCm: Int = 0
+        private set
+    @Volatile var radarFrCm: Int = 0
+        private set
+    @Volatile var radarRlCm: Int = 0
+        private set
+    @Volatile var radarRrCm: Int = 0
+        private set
+
     fun getFormattedTpms(unit: String): String {
         val isPsi = unit.lowercase() == "psi"
         fun fmt(kpa: Int): String {
@@ -162,6 +180,7 @@ class BydVehicleBridge(
     fun stopListening() {
         executor?.shutdownNow()
         executor = null
+        mainHandler.removeCallbacksAndMessages(null)
         deviceCache.clear()
     }
 
@@ -181,17 +200,19 @@ class BydVehicleBridge(
         }
     }
 
+    private var rawEmaConsumption: Double = 0.0
+
     fun applyConsumptionUpdate(raw: Double): Boolean {
         if (raw !in 5.0..50.0) return false
         val newRaw = (raw * 10.0).roundToInt() / 10.0
         val changed = newRaw != currentConsumption
         currentConsumption = newRaw
-        if (smoothedConsumption <= 0.0) {
-            smoothedConsumption = kotlin.math.ceil(currentConsumption * 2.0) / 2.0
+        rawEmaConsumption = if (rawEmaConsumption <= 0.0) {
+            currentConsumption
         } else {
-            val filtered = (0.15 * currentConsumption) + (0.85 * smoothedConsumption)
-            smoothedConsumption = kotlin.math.ceil(filtered * 2.0) / 2.0
+            (0.15 * currentConsumption) + (0.85 * rawEmaConsumption)
         }
+        smoothedConsumption = (rawEmaConsumption * 10.0).roundToInt() / 10.0
         return changed
     }
 
@@ -307,7 +328,7 @@ class BydVehicleBridge(
                 val tCabin = (method.invoke(dev, 3) as? Number)?.toInt()
                 if (tCabin != null && tCabin in 10..55) {
                     cabinTemperatureC = tCabin
-                } else if (cabinTemperatureC == null && tSet != null) {
+                } else if (cabinTemperatureC <= 0 && tSet != null && tSet in 15..35) {
                     cabinTemperatureC = tSet
                 }
             }
@@ -471,6 +492,35 @@ class BydVehicleBridge(
                         tpmsSummary = getFormattedTpms(VehicleOverlayConfig.getTpmsUnit(context))
                         changed = true
                     }
+                }
+
+                // Charging Telemetry
+                val chg = json.optBoolean("isCharging", false)
+                val chgKw = json.optDouble("chargingPowerKw", 0.0)
+                val chgMin = json.optInt("chargingRestMin", 0)
+                if (chg != isCharging || chgKw != chargingPowerKw || chgMin != chargingRestMin) {
+                    isCharging = chg
+                    chargingPowerKw = if (chgKw > 0.0) (chgKw * 10.0).roundToInt() / 10.0 else 0.0
+                    chargingRestMin = chgMin
+                    changed = true
+                }
+
+                // Proximity Radar (cm)
+                val radarObj = json.optJSONObject("radar")
+                val rFl = radarObj?.optInt("fl", 0) ?: 0
+                val rFr = radarObj?.optInt("fr", 0) ?: 0
+                val rRlRaw = radarObj?.optInt("rl", 0) ?: 0
+                val rRrRaw = radarObj?.optInt("rr", 0) ?: 0
+                val rRcl = radarObj?.optInt("rcl", 0) ?: 0
+                val rRcr = radarObj?.optInt("rcr", 0) ?: 0
+                val rRl = listOf(rRlRaw, rRcl).filter { it > 0 }.minOrNull() ?: 0
+                val rRr = listOf(rRrRaw, rRcr).filter { it > 0 }.minOrNull() ?: 0
+                if (rFl != radarFlCm || rFr != radarFrCm || rRl != radarRlCm || rRr != radarRrCm) {
+                    radarFlCm = rFl
+                    radarFrCm = rFr
+                    radarRlCm = rRl
+                    radarRrCm = rRr
+                    changed = true
                 }
 
                 if (changed) {

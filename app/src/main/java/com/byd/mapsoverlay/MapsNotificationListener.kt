@@ -137,20 +137,6 @@ class MapsNotificationListener : NotificationListenerService() {
                     putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
                 }
                 sendBroadcast(broadcastIntent)
-
-                val serviceIntent = Intent(this, OverlayService::class.java).apply {
-                    action = OverlayService.ACTION_UPDATE_DISTANCE
-                    putExtra(OverlayService.EXTRA_DISTANCE_KM, distanceKm)
-                }
-                try {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        startForegroundService(serviceIntent)
-                    } else {
-                        startService(serviceIntent)
-                    }
-                } catch (e: Exception) {
-                    Log.w(tag, "startService fallback to broadcast", e)
-                }
             }
         }
     }
@@ -170,23 +156,7 @@ class MapsNotificationListener : NotificationListenerService() {
                 return
             }
 
-            Log.d(tag, "Maps navigation ended [${sbn.packageName}] -> hide overlay")
-            val broadcastIntent = Intent(OverlayService.ACTION_HIDE_OVERLAY).apply {
-                setPackage(packageName)
-            }
-            sendBroadcast(broadcastIntent)
-            val intent = Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_HIDE_OVERLAY
-            }
-            try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    startForegroundService(intent)
-                } else {
-                    startService(intent)
-                }
-            } catch (e: Exception) {
-                Log.w(tag, "startService hide fallback", e)
-            }
+            Log.d(tag, "Maps navigation ended [${sbn.packageName}] -> keeping standalone vehicle HUD visible")
         }
     }
 

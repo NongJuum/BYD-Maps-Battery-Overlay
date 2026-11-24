@@ -188,4 +188,16 @@ object VehicleOverlayConfig {
         "gear" -> "ตำแหน่งเกียร์ (GEAR)"
         else -> key
     }
+
+    fun isShowChargingMode(context: Context): Boolean = prefs(context).getBoolean("show_charging_mode", true)
+    fun setShowChargingMode(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_charging_mode", value).apply()
+
+    fun isShowRadarAlert(context: Context): Boolean = prefs(context).getBoolean("show_radar_alert", true)
+    fun setShowRadarAlert(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_radar_alert", value).apply()
+
+    fun isShowTpmsDeltaAlert(context: Context): Boolean = prefs(context).getBoolean("show_tpms_delta_alert", true)
+    fun setShowTpmsDeltaAlert(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_tpms_delta_alert", value).apply()
+
+    fun isShowHvDeltaT(context: Context): Boolean = prefs(context).getBoolean("show_hv_delta_t", true)
+    fun setShowHvDeltaT(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_hv_delta_t", value).apply()
 }

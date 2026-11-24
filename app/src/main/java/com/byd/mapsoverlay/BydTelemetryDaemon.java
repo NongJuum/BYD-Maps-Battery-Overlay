@@ -32,8 +32,11 @@ public final class BydTelemetryDaemon {
     private static volatile JSONObject snapshot = unavailable("Starting");
 
     private static volatile double callbackSoc = -1.0;
+    private static volatile long callbackSocTs = 0L;
     private static volatile int callbackRangeKm = -1;
+    private static volatile long callbackRangeTs = 0L;
     private static volatile float callbackRemainKwh = -1.0f;
+    private static volatile long callbackRemainTs = 0L;
 
     // Fast ADAS / Turn Light / Cluster Buzzle states
     private static volatile int fastBsdState = 0;
@@ -65,7 +68,9 @@ public final class BydTelemetryDaemon {
     private static volatile Object registeredAdasDevice;
     private static volatile Object registeredAcDevice;
     private static volatile int callbackAcSetpointTemp = -1;
+    private static volatile long callbackAcSetpointTs = 0L;
     private static volatile int callbackAcCabinTemp = -1;
+    private static volatile long callbackAcCabinTs = 0L;
     private static volatile long lastClientHeartbeatMs = SystemClock.elapsedRealtime();
     private static volatile long lastAutostartAttemptMs = 0L;
     private static volatile int callbackBsdState = 0;
@@ -77,8 +82,10 @@ public final class BydTelemetryDaemon {
             if (temp >= 14 && temp <= 40) {
                 if (area == 1 || area == 2) {
                     callbackAcSetpointTemp = temp;
+                    callbackAcSetpointTs = SystemClock.elapsedRealtime();
                 } else if (area == 3) {
                     callbackAcCabinTemp = temp;
+                    callbackAcCabinTs = SystemClock.elapsedRealtime();
                 }
             }
         }
@@ -106,11 +113,13 @@ public final class BydTelemetryDaemon {
         @Override public void onElecPercentageChanged(double percentage) {
             if (percentage >= 0.0 && percentage <= 100.0) {
                 callbackSoc = percentage;
+                callbackSocTs = SystemClock.elapsedRealtime();
             }
         }
         @Override public void onElecDrivingRangeChanged(int rangeKm) {
             if (rangeKm >= 0 && rangeKm <= 1500) {
                 callbackRangeKm = rangeKm;
+                callbackRangeTs = SystemClock.elapsedRealtime();
             }
         }
         @Override public void onEVRemainingBatteryPowerChanged(float remainingKwh) {
@@ -125,6 +134,7 @@ public final class BydTelemetryDaemon {
         private void acceptRemainingEnergy(float remainingKwh) {
             if (remainingKwh >= 0.0f && remainingKwh <= 200.0f) {
                 callbackRemainKwh = remainingKwh;
+                callbackRemainTs = SystemClock.elapsedRealtime();
             }
         }
     };
@@ -390,6 +400,8 @@ public final class BydTelemetryDaemon {
         Object tyre = null;
         Object ota = null;
         Object sensor = null;
+        Object chargingDev = null;
+        Object radarDev = null;
         long lastLog = 0;
 
         while (!Thread.currentThread().isInterrupted()) {
@@ -409,15 +421,19 @@ public final class BydTelemetryDaemon {
                 if (tyre == null) tyre = getDevice("android.hardware.bydauto.tyre.BYDAutoTyreDevice", context);
                 if (ota == null) ota = getDevice("android.hardware.bydauto.ota.BYDAutoOtaDevice", context);
                 if (sensor == null) sensor = getDevice("android.hardware.bydauto.sensor.BYDAutoSensorDevice", context);
+                if (chargingDev == null) chargingDev = getDevice("android.hardware.bydauto.charging.BYDAutoChargingDevice", context);
+                if (radarDev == null) radarDev = getDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", context);
 
                 JSONObject data = new JSONObject();
                 data.put("uid", android.os.Process.myUid());
                 data.put("source", "BYD SDK + BMS Collector via app_process");
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
 
+                long pollNowMs = SystemClock.elapsedRealtime();
                 Double polledSoc = number(statistic, "getElecPercentageValue");
                 if (polledSoc != null && polledSoc > 100.0 && polledSoc <= 1000.0) polledSoc /= 10.0;
-                Double soc = callbackSoc >= 0.0 ? callbackSoc : polledSoc;
+                boolean freshCbSoc = callbackSoc >= 0.0 && (pollNowMs - callbackSocTs <= 15_000L);
+                Double soc = freshCbSoc ? callbackSoc : (polledSoc != null ? polledSoc : (callbackSoc >= 0.0 ? callbackSoc : null));
 
                 Double statisticRemaining = number(statistic, "getStatisticRemainingBatteryPower");
                 Double lastConsumption = number(statistic, "getLastElecConPHMValue");
@@ -427,15 +443,17 @@ public final class BydTelemetryDaemon {
                 Double waterTemp = number(statistic, "getWaterTemperature");
 
                 Integer polledRange = integer(statistic, "getElecDrivingRangeValue");
-                Integer range = callbackRangeKm >= 0 ? callbackRangeKm : polledRange;
+                boolean freshCbRange = callbackRangeKm >= 0 && (pollNowMs - callbackRangeTs <= 15_000L);
+                Integer range = freshCbRange ? callbackRangeKm : (polledRange != null ? polledRange : (callbackRangeKm >= 0 ? callbackRangeKm : null));
 
                 Double polledRemain = numberAny(power, "getBatteryRemainPowerEV", "getRemainingBatteryPower", "getEVRemainingBatteryPower");
-                Double remain = callbackRemainKwh >= 0.0f ? (double) callbackRemainKwh : polledRemain;
+                boolean freshCbRemain = callbackRemainKwh >= 0.0f && (pollNowMs - callbackRemainTs <= 15_000L);
+                Double remain = freshCbRemain ? (double) callbackRemainKwh : (polledRemain != null ? polledRemain : (callbackRemainKwh >= 0.0f ? (double) callbackRemainKwh : null));
 
                 Double consumption = number(instrument, "getLast50KmPowerConsume");
                 if (consumption == null || consumption <= 0.0) consumption = lastConsumption;
 
-                // Parse BMS log (/data/local/tmp/byddatacollector.log) for HV Battery Temp, Cell Voltage, and 12V
+                // Parse BMS log (/data/local/tmp/byddatacollector.log) only when fresh (updated within 30s)
                 double hvTempMax = -100.0;
                 double hvTempMin = -100.0;
                 double hvTempAvg = -100.0;
@@ -443,29 +461,34 @@ public final class BydTelemetryDaemon {
                 double cellVoltMin = -1.0;
                 double aux12v = -1.0;
 
-                String tailLog = readTail("/data/local/tmp/byddatacollector.log", 4096);
-                if (tailLog != null && !tailLog.isEmpty()) {
-                    Matcher m = BMS_LOG_PATTERN.matcher(tailLog);
-                    while (m.find()) {
-                        try {
-                            double logSoc = Double.parseDouble(m.group(1));
-                            if ((soc == null || soc <= 0.0) && logSoc >= 0.0 && logSoc <= 100.0) {
-                                soc = logSoc;
-                            }
-                            aux12v = Double.parseDouble(m.group(2));
-                            hvTempMax = Double.parseDouble(m.group(3));
-                            hvTempMin = Double.parseDouble(m.group(4));
-                            hvTempAvg = Double.parseDouble(m.group(5));
-                            cellVoltMax = Double.parseDouble(m.group(6));
-                            cellVoltMin = Double.parseDouble(m.group(7));
-                        } catch (Throwable ignored) {}
+                File bmsLogFile = new File("/data/local/tmp/byddatacollector.log");
+                boolean isBmsLogFresh = bmsLogFile.exists()
+                        && (System.currentTimeMillis() - bmsLogFile.lastModified() <= 180_000L);
+                if (isBmsLogFresh) {
+                    String tailLog = readTail(bmsLogFile.getAbsolutePath(), 4096);
+                    if (tailLog != null && !tailLog.isEmpty()) {
+                        Matcher m = BMS_LOG_PATTERN.matcher(tailLog);
+                        while (m.find()) {
+                            try {
+                                double logSoc = Double.parseDouble(m.group(1));
+                                if ((soc == null || soc <= 0.0) && logSoc >= 0.0 && logSoc <= 100.0) {
+                                    soc = logSoc;
+                                }
+                                aux12v = Double.parseDouble(m.group(2));
+                                hvTempMax = Double.parseDouble(m.group(3));
+                                hvTempMin = Double.parseDouble(m.group(4));
+                                hvTempAvg = Double.parseDouble(m.group(5));
+                                cellVoltMax = Double.parseDouble(m.group(6));
+                                cellVoltMin = Double.parseDouble(m.group(7));
+                            } catch (Throwable ignored) {}
+                        }
                     }
                 }
 
-                // Fallback 12V from OTA device if not in log
-                if (aux12v <= 0.0) {
-                    Double ota12v = number(ota, "getBatteryVoltage");
-                    if (ota12v != null && ota12v > 5.0 && ota12v < 20.0) aux12v = ota12v;
+                // Prefer live 12V directly from BYD OTA hardware API; fall back to fresh BMS log if unavailable
+                Double ota12v = number(ota, "getBatteryVoltage");
+                if (ota12v != null && ota12v > 5.0 && ota12v < 20.0) {
+                    aux12v = ota12v;
                 }
 
                 // Fallback HV temp from AC sub battery temp or water temp
@@ -477,12 +500,18 @@ public final class BydTelemetryDaemon {
                         hvTempMin = subTemp;
                     } else if (waterTemp != null && waterTemp > -40.0 && waterTemp < 100.0) {
                         hvTempAvg = waterTemp;
+                        hvTempMax = waterTemp;
+                        hvTempMin = waterTemp;
                     }
                 }
 
                 // Real Cabin Indoor Sensor Temp + AC Setpoint + Humidity + Outside Temp
-                Integer acCabinTemp = callbackAcCabinTemp > 0 ? callbackAcCabinTemp : integerWithIntArg(ac, "getTemprature", 3);
-                Integer acSetpointTemp = callbackAcSetpointTemp > 0 ? callbackAcSetpointTemp : integerWithIntArg(ac, "getTemprature", 1);
+                Integer polledAcCabin = integerWithIntArg(ac, "getTemprature", 3);
+                Integer acCabinTemp = (callbackAcCabinTemp > 0 && (pollNowMs - callbackAcCabinTs <= 15_000L))
+                        ? callbackAcCabinTemp : (polledAcCabin != null ? polledAcCabin : (callbackAcCabinTemp > 0 ? callbackAcCabinTemp : null));
+                Integer polledAcSet = integerWithIntArg(ac, "getTemprature", 1);
+                Integer acSetpointTemp = (callbackAcSetpointTemp > 0 && (pollNowMs - callbackAcSetpointTs <= 15_000L))
+                        ? callbackAcSetpointTemp : (polledAcSet != null ? polledAcSet : (callbackAcSetpointTemp > 0 ? callbackAcSetpointTemp : null));
                 Double realCabinSensorTemp = number(sensor, "getTemperatureSensorValue");
                 Double cabinHumidity = number(sensor, "getHumiditySensorValue");
                 Integer outsideTemp = integer(instrument, "getOutCarTemperature");
@@ -501,7 +530,7 @@ public final class BydTelemetryDaemon {
                 } else if (acSetpointTemp != null && acSetpointTemp >= 14 && acSetpointTemp <= 35) {
                     cabinTemp = acSetpointTemp;
                 }
-                boolean hasValidRealCabinSensor = (cabinTemp != null);
+                boolean hasValidRealCabinSensor = (realCabinSensorTemp != null && realCabinSensorTemp >= 10.0 && realCabinSensorTemp <= 55.0);
 
                 // Speed & Gear
                 Double currentSpeed = number(speedDev, "getCurrentSpeed");
@@ -510,7 +539,7 @@ public final class BydTelemetryDaemon {
 
                 // TPMS Tire Pressure (1=FL, 2=FR, 3=RL, 4=RR on BYD SDK)
                 Integer tpmsFl = integerWithIntArg(tyre, "getTyrePressureValue", 1);
-                if (tpmsFl == null || tpmsFl < 0 || tpmsFl > 600) tpmsFl = integerWithIntArg(tyre, "getTyrePressureValue", 0);
+                if (tpmsFl == null || tpmsFl <= 0 || tpmsFl > 600) tpmsFl = integerWithIntArg(tyre, "getTyrePressureValue", 0);
                 Integer tpmsFr = integerWithIntArg(tyre, "getTyrePressureValue", 2);
                 Integer tpmsRl = integerWithIntArg(tyre, "getTyrePressureValue", 3);
                 Integer tpmsRr = integerWithIntArg(tyre, "getTyrePressureValue", 4);
@@ -570,6 +599,49 @@ public final class BydTelemetryDaemon {
                     data.put("tpms", tpmsObj);
                 }
 
+                // Charging state & power (BYDAutoChargingDevice; note: instantElecCon == -1 is BYD sentinel, chgGun==1 is unplugged)
+                Integer chgGun = integer(chargingDev, "getChargingGunState");
+                Integer chgState = integer(chargingDev, "getChargingState");
+                Double chgPower = number(chargingDev, "getChargingPower");
+                Integer chgRestMin = integer(chargingDev, "getChargingRestTime");
+                boolean gunPlugged = (chgGun != null && chgGun >= 2);
+                boolean isCharging = gunPlugged && (
+                        (chgState != null && (chgState == 1 || chgState == 2))
+                        || (chgPower != null && chgPower > 0.3 && chgPower < 250.0)
+                        || ((currentSpeed == null || currentSpeed < 1.0) && instantElecCon != null && instantElecCon < -1.5)
+                );
+                double liveChgKw = 0.0;
+                if (isCharging) {
+                    if (chgPower != null && chgPower > 0.1 && chgPower < 250.0) {
+                        liveChgKw = chgPower;
+                    } else if (instantElecCon != null && instantElecCon < -1.5) {
+                        liveChgKw = Math.abs(instantElecCon);
+                    }
+                }
+                data.put("isCharging", isCharging);
+                if (liveChgKw > 0.0) data.put("chargingPowerKw", liveChgKw);
+                if (chgRestMin != null && chgRestMin > 0 && chgRestMin < 2000) data.put("chargingRestMin", chgRestMin);
+                if (chgGun != null) data.put("chargingGunState", chgGun);
+
+                // Parking / Proximity Radar distances (cm, BYDAutoRadarDevice areas 0..5)
+                // 0=FL, 1=FR, 2=RL, 3=RR, 4=RCL, 5=RCR
+                if (radarDev != null) {
+                    Integer rFl = integerWithIntArg(radarDev, "getRadarObstacleDistance", 0);
+                    Integer rFr = integerWithIntArg(radarDev, "getRadarObstacleDistance", 1);
+                    Integer rRl = integerWithIntArg(radarDev, "getRadarObstacleDistance", 2);
+                    Integer rRr = integerWithIntArg(radarDev, "getRadarObstacleDistance", 3);
+                    Integer rRcl = integerWithIntArg(radarDev, "getRadarObstacleDistance", 4);
+                    Integer rRcr = integerWithIntArg(radarDev, "getRadarObstacleDistance", 5);
+                    JSONObject radarObj = new JSONObject();
+                    if (rFl != null && rFl > 0 && rFl < 255) radarObj.put("fl", rFl);
+                    if (rFr != null && rFr > 0 && rFr < 255) radarObj.put("fr", rFr);
+                    if (rRl != null && rRl > 0 && rRl < 255) radarObj.put("rl", rRl);
+                    if (rRr != null && rRr > 0 && rRr < 255) radarObj.put("rr", rRr);
+                    if (rRcl != null && rRcl > 0 && rRcl < 255) radarObj.put("rcl", rRcl);
+                    if (rRcr != null && rRcr > 0 && rRcr < 255) radarObj.put("rcr", rRcr);
+                    data.put("radar", radarObj);
+                }
+
                 // Include fast safety states
                 data.put("bsdState", fastBsdState);
                 data.put("turnFlashState", fastTurnFlashState);
@@ -588,27 +660,36 @@ public final class BydTelemetryDaemon {
                 data.put("isRightDanger", fastRightDanger);
                 data.put("bsdAlertActive", fastBsdAlertActive);
 
-                // Check Overdrive and Dashcam recording state (Read-only observation)
+                // Check Overdrive and Dashcam recording state (Read-only observation, with freshness check)
                 boolean isDashcamRecording = false;
                 try {
-                    String recLog = readTail("/data/local/tmp/recordingmodemanager.log", 2048);
-                    if (recLog != null) {
-                        int idx = recLog.lastIndexOf("Camera profile:");
-                        if (idx >= 0) {
-                            String profileLine = recLog.substring(idx);
-                            int eol = profileLine.indexOf('\n');
-                            if (eol > 0) profileLine = profileLine.substring(0, eol);
-                            if (profileLine.contains("recording:")) {
-                                isDashcamRecording = true;
+                    File recLogFile = new File("/data/local/tmp/recordingmodemanager.log");
+                    if (recLogFile.exists() && (System.currentTimeMillis() - recLogFile.lastModified() <= 120_000L)) {
+                        String recLog = readTail(recLogFile.getAbsolutePath(), 2048);
+                        if (recLog != null) {
+                            int idx = recLog.lastIndexOf("Camera profile:");
+                            if (idx >= 0) {
+                                String profileLine = recLog.substring(idx);
+                                int eol = profileLine.indexOf('\n');
+                                if (eol > 0) profileLine = profileLine.substring(0, eol);
+                                if (profileLine.contains("recording:")) {
+                                    isDashcamRecording = true;
+                                }
                             }
                         }
                     }
                     if (!isDashcamRecording) {
                         File lockFile = new File("/data/local/tmp/camera_daemon.lock");
-                        if (lockFile.exists()) {
-                            String camLog = readTail("/data/local/tmp/cameradaemon.log", 2048);
-                            if (camLog != null && (camLog.contains("recordingDesired=true") || camLog.contains("panoRecording=true"))) {
-                                isDashcamRecording = true;
+                        File camLogFile = new File("/data/local/tmp/cameradaemon.log");
+                        if (lockFile.exists() && camLogFile.exists()
+                                && (System.currentTimeMillis() - camLogFile.lastModified() <= 120_000L)) {
+                            String camLog = readTail(camLogFile.getAbsolutePath(), 2048);
+                            if (camLog != null) {
+                                int lastTrue = Math.max(camLog.lastIndexOf("recordingDesired=true"), camLog.lastIndexOf("panoRecording=true"));
+                                int lastFalse = Math.max(camLog.lastIndexOf("recordingDesired=false"), camLog.lastIndexOf("panoRecording=false"));
+                                if (lastTrue >= 0 && lastTrue > lastFalse) {
+                                    isDashcamRecording = true;
+                                }
                             }
                         }
                     }
@@ -627,19 +708,22 @@ public final class BydTelemetryDaemon {
                 if (validSoc && (nowWatchdog - lastClientHeartbeatMs > 15000L) && (nowWatchdog - lastAutostartAttemptMs > 15000L)) {
                     lastAutostartAttemptMs = nowWatchdog;
                     try {
-                        Process p = Runtime.getRuntime().exec(new String[]{
+                        Process p = new ProcessBuilder(
                             "am", "start-foreground-service",
                             "-a", "com.byd.mapsoverlay.START_OVERLAY",
                             "-p", targetPkg
-                        });
-                        p.waitFor();
-                        if (p.exitValue() != 0) {
-                            Runtime.getRuntime().exec(new String[]{
+                        ).redirectErrorStream(true).start();
+                        boolean finished = p.waitFor(3, java.util.concurrent.TimeUnit.SECONDS);
+                        int exitCode = finished ? p.exitValue() : -1;
+                        if (!finished) p.destroyForcibly();
+                        if (exitCode != 0) {
+                            Process p2 = new ProcessBuilder(
                                 "am", "start",
                                 "-n", targetPkg + "/com.byd.mapsoverlay.MainActivity",
                                 "--ez", "extra_autostart_only", "true",
                                 "--activity-no-animation"
-                            });
+                            ).redirectErrorStream(true).start();
+                            if (!p2.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) p2.destroyForcibly();
                         }
                     } catch (Throwable ignored) {}
                 }

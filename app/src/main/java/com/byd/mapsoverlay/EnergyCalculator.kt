@@ -6,6 +6,7 @@ import kotlin.math.max
 
 object EnergyCalculator {
     // ความจุแบตเตอรี่เต็ม 100% ตามจริง (kWh) จากรุ่นรถที่ผู้ใช้ตั้งค่าไว้ (หักค่าเสื่อม SOH แล้ว) หรือจาก BMS
+    @Volatile
     var dynamicBatteryCapacityKwh: Double = 49.2
         private set
 

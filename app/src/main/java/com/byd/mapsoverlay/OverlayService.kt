@@ -58,6 +58,8 @@ class OverlayService : Service() {
     private var viewRangeBar: MiniRangeBarView? = null
     private var viewPowerBar: MiniPowerBarView? = null
     private var view12vDot: MiniStatusDotView? = null
+    private var tvSmartBanner: TextView? = null
+    private var lastSmartBannerMode: Int = 0 // 0=normal, 1=charging, 2=radar
 
     // Containers
     private var containerSoc: View? = null
@@ -186,6 +188,7 @@ class OverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_UPDATE_DISTANCE -> Unit
             ACTION_RESET_POSITION -> resetPosition()
             ACTION_UPDATE_CONFIG -> {
                 if (OverlayAccessibilityService.instance != null &&
@@ -442,6 +445,10 @@ class OverlayService : Service() {
                 android.util.Log.w("OverlayService", "Layout type $layoutType rejected: ${e.message}")
             }
         }
+        if (windowParams == null) {
+            overlayView = null
+            return
+        }
 
         // Allow dragging from anywhere on the floating pill (only in floating mode)
         v.setOnTouchListener(object : View.OnTouchListener {
@@ -477,7 +484,9 @@ class OverlayService : Service() {
                             val maxY = (screenHeight - (overlayView?.height ?: 60)).coerceAtLeast(0)
                             currentParams.x = (initialX + dx).coerceIn(0, maxX)
                             currentParams.y = (initialY + dy).coerceIn(0, maxY)
-                            windowManager?.updateViewLayout(overlayView, currentParams)
+                            try {
+                                windowManager?.updateViewLayout(overlayView, currentParams)
+                            } catch (_: Throwable) {}
                         }
                         return true
                     }
@@ -931,12 +940,16 @@ class OverlayService : Service() {
             hvTempVal < 15.0 -> "❄️ "
             else -> "🌡️ "
         }
-        tvHvTemp?.text = "$hvIcon${bydBridge.getFormattedHvBattTemp(hvTempMode)}"
+        val hvDeltaT = if (VehicleOverlayConfig.isShowHvDeltaT(this) && bydBridge.hvBattTempMaxC > 0.0 && bydBridge.hvBattTempMinC > 0.0) {
+            Math.round(bydBridge.hvBattTempMaxC - bydBridge.hvBattTempMinC).toInt().coerceAtLeast(0)
+        } else 0
+        val hvDeltaSuffix = if (hvDeltaT >= 2) " (Δ${hvDeltaT}°)" else ""
+        tvHvTemp?.text = "$hvIcon${bydBridge.getFormattedHvBattTemp(hvTempMode)}$hvDeltaSuffix"
         val hvTempColor = when {
             !hasHvTemp -> currentThemeTextColor
             hvTempVal >= 55.0 -> android.graphics.Color.parseColor("#FF5252") // Critical LFP
             hvTempVal >= 45.0 -> android.graphics.Color.parseColor("#FF9100") // High / Derating
-            hvTempVal >= 40.0 -> android.graphics.Color.parseColor("#FFD54F") // Warm / Active Cooling
+            hvTempVal >= 40.0 || hvDeltaT >= 8 -> android.graphics.Color.parseColor("#FFD54F") // Warm / Uneven Cooling
             hvTempVal < 15.0 -> android.graphics.Color.parseColor("#40C4FF") // Cold LFP
             else -> currentThemeTextColor // Optimal (15-39°C)
         }
@@ -1008,11 +1021,20 @@ class OverlayService : Service() {
         updatePulseAlert(tvHvTemp, hvTempVal >= 55.0)
 
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
-        tvTpms?.text = bydBridge.getFormattedTpms(tpmsUnit)
         val tpmsListKpa = listOf(bydBridge.tpmsFlKpa, bydBridge.tpmsFrKpa, bydBridge.tpmsRlKpa, bydBridge.tpmsRrKpa)
         val hasLowTire = tpmsListKpa.any { it > 0 && (it * 0.145038) < 35.0 }
-        tvTpms?.setTextColor(if (hasLowTire) android.graphics.Color.parseColor("#FF5252") else currentThemeTextColor)
-        updatePulseAlert(tvTpms, hasLowTire)
+        val flFrDelta = if (bydBridge.tpmsFlKpa > 0 && bydBridge.tpmsFrKpa > 0) kotlin.math.abs(bydBridge.tpmsFlKpa - bydBridge.tpmsFrKpa) else 0
+        val rlRrDelta = if (bydBridge.tpmsRlKpa > 0 && bydBridge.tpmsRrKpa > 0) kotlin.math.abs(bydBridge.tpmsRlKpa - bydBridge.tpmsRrKpa) else 0
+        val maxAxleDelta = if (VehicleOverlayConfig.isShowTpmsDeltaAlert(this)) maxOf(flFrDelta, rlRrDelta) else 0
+        val hasTpmsAlert = hasLowTire || maxAxleDelta >= 25
+        val tpmsBaseText = bydBridge.getFormattedTpms(tpmsUnit)
+        tvTpms?.text = when {
+            maxAxleDelta >= 25 -> "⚠️ $tpmsBaseText (Δ${maxAxleDelta})"
+            hasLowTire -> "⚠️ $tpmsBaseText"
+            else -> tpmsBaseText
+        }
+        tvTpms?.setTextColor(if (hasTpmsAlert) android.graphics.Color.parseColor("#FF5252") else currentThemeTextColor)
+        updatePulseAlert(tvTpms, hasTpmsAlert)
         if (bydBridge.totalMileageKm > 0) {
             tvOdo?.text = String.format("%.0f km", bydBridge.totalMileageKm)
         } else {
@@ -1058,6 +1080,117 @@ class OverlayService : Service() {
                     containerStatusCamera?.setBackgroundResource(R.drawable.bg_badge_dvr)
                 }
                 tvStatusCamera?.setTextColor(android.graphics.Color.parseColor("#90A4AE"))
+            }
+        }
+
+        updateSmartBannerAndGlow(soc)
+    }
+
+    private fun ensureSmartBanner(): TextView? {
+        val root = overlayView as? LinearLayout ?: return null
+        if (tvSmartBanner == null) {
+            val d = resources.displayMetrics.density
+            tvSmartBanner = TextView(this).apply {
+                textSize = 13f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setSingleLine(true)
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((8f * d).toInt(), (2f * d).toInt(), (8f * d).toInt(), (2f * d).toInt())
+                visibility = View.GONE
+            }
+            val lp = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = (8f * d).toInt()
+            }
+            root.addView(tvSmartBanner, 0, lp)
+        }
+        return tvSmartBanner
+    }
+
+    private fun updateSmartBannerAndGlow(soc: Double) {
+        val root = overlayView as? LinearLayout ?: return
+        val banner = ensureSmartBanner() ?: return
+        val d = resources.displayMetrics.density
+
+        val gear = bydBridge.currentGear.uppercase()
+        val spd = bydBridge.vehicleSpeedKmH
+        val fl = bydBridge.radarFlCm
+        val fr = bydBridge.radarFrCm
+        val rl = bydBridge.radarRlCm
+        val rr = bydBridge.radarRrCm
+
+        fun fmtCm(cm: Int): String = if (cm in 1..50) "${cm}cm" else ">50cm"
+
+        val radarEnabled = VehicleOverlayConfig.isShowRadarAlert(this)
+        val chargingEnabled = VehicleOverlayConfig.isShowChargingMode(this)
+        val isRearClose = radarEnabled && gear == "R" && (rl in 1..30 || rr in 1..30)
+        val isFrontClose = radarEnabled && gear != "P" && gear != "R" && spd <= 15 && (fl in 1..30 || fr in 1..30)
+
+        when {
+            isRearClose || isFrontClose -> {
+                banner.visibility = View.VISIBLE
+                banner.text = if (isRearClose) {
+                    "🔴 REAR L:${fmtCm(rl)} / R:${fmtCm(rr)}"
+                } else {
+                    "🔴 FRONT L:${fmtCm(fl)} / R:${fmtCm(fr)}"
+                }
+                banner.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+                banner.background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 8f * d
+                    setColor(android.graphics.Color.parseColor("#D50000"))
+                }
+                if (lastSmartBannerMode != 2) {
+                    lastSmartBannerMode = 2
+                    root.background = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = 16f * d
+                        setColor(android.graphics.Color.argb(215, 24, 12, 16))
+                        setStroke((3f * d).toInt().coerceAtLeast(2), android.graphics.Color.parseColor("#FF1744"))
+                    }
+                }
+                updatePulseAlert(banner, true)
+            }
+            chargingEnabled && bydBridge.isCharging -> {
+                val kw = bydBridge.chargingPowerKw
+                val capKwh = if (bydBridge.estimatedCapacityKwh > 10.0) bydBridge.estimatedCapacityKwh else 44.9
+                val eta80 = if (soc < 80.0 && kw > 0.5) (((80.0 - soc) / 100.0) * capKwh / kw * 60.0).toInt().coerceAtLeast(1) else 0
+                val eta100 = if (bydBridge.chargingRestMin > 0) {
+                    bydBridge.chargingRestMin
+                } else if (soc < 100.0 && kw > 0.5) {
+                    (((100.0 - soc) / 100.0) * capKwh / kw * 60.0).toInt().coerceAtLeast(1)
+                } else 0
+
+                val sb = StringBuilder("⚡ ")
+                sb.append(if (kw > 0.0) String.format("+%.1f kW", kw) else "CHARGING")
+                if (eta80 > 0) sb.append(" • 80% ~${eta80}m")
+                if (eta100 > 0) sb.append(" • 100% ~${eta100}m")
+
+                banner.visibility = View.VISIBLE
+                banner.text = sb.toString()
+                banner.setTextColor(android.graphics.Color.parseColor("#69F0AE"))
+                banner.background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 8f * d
+                    setColor(android.graphics.Color.argb(55, 0, 230, 118))
+                    setStroke((1f * d).toInt().coerceAtLeast(1), android.graphics.Color.parseColor("#00E676"))
+                }
+                if (lastSmartBannerMode != 1) {
+                    lastSmartBannerMode = 1
+                    root.background = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = 16f * d
+                        setColor(android.graphics.Color.argb(205, 10, 26, 22))
+                        setStroke((2f * d).toInt().coerceAtLeast(1), android.graphics.Color.parseColor("#00E676"))
+                    }
+                }
+                updatePulseAlert(banner, false)
+            }
+            else -> {
+                if (lastSmartBannerMode != 0) {
+                    lastSmartBannerMode = 0
+                    banner.visibility = View.GONE
+                    updatePulseAlert(banner, false)
+                    applyUserFieldPreferences()
+                }
             }
         }
     }

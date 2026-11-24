@@ -186,7 +186,8 @@ class SystemStatusManager(
         } catch (_: Throwable) {}
         try { connectivityManager?.unregisterNetworkCallback(networkCallback) } catch (_: Throwable) {}
         try { context.unregisterReceiver(systemReceiver) } catch (_: Throwable) {}
-        mainHandler.removeCallbacks(periodicRunnable)
+        activeCameras.clear()
+        mainHandler.removeCallbacksAndMessages(null)
     }
 
     fun refreshAllStatus() {
