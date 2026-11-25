@@ -737,6 +737,7 @@ public final class BydTelemetryDaemon {
                 if (radarDev == null) radarDev = getDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", context);
 
                 JSONObject data = new JSONObject();
+                data.put("daemonVersion", 4);
                 data.put("uid", android.os.Process.myUid());
                 data.put("source", "BYD SDK + BMS Collector via app_process");
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());

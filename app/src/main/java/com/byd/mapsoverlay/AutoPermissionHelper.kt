@@ -27,6 +27,7 @@ object AutoPermissionHelper {
     private const val DAEMON_PORT = 19890
     private const val DAEMON_NAME = "bydtelemetry"
     private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
+    private const val REQUIRED_DAEMON_VERSION = 4
     private const val RETRY_INTERVAL_MS = 60_000L
 
     private val launchInFlight = AtomicBoolean(false)
@@ -78,10 +79,18 @@ object AutoPermissionHelper {
 
     private fun isTelemetryDaemonReachable(): Boolean {
         return try {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress("127.0.0.1", DAEMON_PORT), 1000)
+            val conn = java.net.URL("http://127.0.0.1:$DAEMON_PORT/telemetry").openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 800
+            conn.readTimeout = 800
+            conn.requestMethod = "GET"
+            try {
+                if (conn.responseCode != 200) return false
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(body)
+                json.optInt("daemonVersion", 0) >= REQUIRED_DAEMON_VERSION
+            } finally {
+                conn.disconnect()
             }
-            true
         } catch (_: Exception) {
             false
         }
@@ -136,6 +145,22 @@ object AutoPermissionHelper {
                     appops set $targetPkg START_FOREGROUND allow 2>/dev/null || true
                     appops set $targetPkg SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
                     appops set $targetPkg WAKE_LOCK allow 2>/dev/null || true
+                    cmd appops set $targetPkg AUTO_START allow 2>/dev/null || true
+                    cmd appops set $targetPkg BOOT_COMPLETED allow 2>/dev/null || true
+                    content call --uri content://com.byd.appstartup/whitelist --method add --arg '$targetPkg' 2>/dev/null || true
+                    ACC_SVC="$targetPkg/com.byd.mapsoverlay.OverlayAccessibilityService"
+                    CUR_ACC=${'$'}(settings get secure enabled_accessibility_services 2>/dev/null)
+                    case ":${'$'}CUR_ACC:" in
+                      *":${'$'}ACC_SVC:"*) ;;
+                      *)
+                        if [ "${'$'}CUR_ACC" = "null" ] || [ -z "${'$'}CUR_ACC" ]; then
+                          settings put secure enabled_accessibility_services "${'$'}ACC_SVC" 2>/dev/null || true
+                        else
+                          settings put secure enabled_accessibility_services "${'$'}CUR_ACC:${'$'}ACC_SVC" 2>/dev/null || true
+                        fi
+                        ;;
+                    esac
+                    settings put secure accessibility_enabled 1 2>/dev/null || true
                     dumpsys deviceidle whitelist +$targetPkg 2>/dev/null || true
                     settings put global byd_data_cache_whitelist $targetPkg 1 2>/dev/null || true
                     CUR=${'$'}(settings get global ssc_whitelist 2>/dev/null); [ "${'$'}CUR" = null ] && CUR=; case ",${'$'}CUR," in *,$targetPkg,*) ;; *) settings put global ssc_whitelist "${'$'}{CUR:+${'$'}CUR,}$targetPkg" 2>/dev/null;; esac
@@ -146,10 +171,10 @@ object AutoPermissionHelper {
                       echo APK_NOT_FOUND
                       exit 21
                     fi
-                    if pidof $DAEMON_NAME >/dev/null 2>&1; then
-                      echo ALREADY_RUNNING
-                      exit 0
-                    fi
+                    for DPID in ${'$'}(pidof $DAEMON_NAME 2>/dev/null); do
+                      kill -9 ${'$'}DPID >/dev/null 2>&1 || true
+                    done
+                    sleep 0.3
                     ( CLASSPATH="${'$'}APK_PATH" app_process /system/bin --nice-name=$DAEMON_NAME $DAEMON_CLASS $targetPkg ) </dev/null >/data/local/tmp/$DAEMON_NAME.log 2>&1 &
                     sleep 1
                     if pidof $DAEMON_NAME >/dev/null 2>&1; then
@@ -236,14 +261,37 @@ object AutoPermissionHelper {
                           BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
                           BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
                           BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
+                          BYDAUTO_AC_COMMON BYDAUTO_AC_GET BYDAUTO_AC_SET \
+                          BYDAUTO_SENSOR_COMMON BYDAUTO_SENSOR_GET BYDAUTO_SENSOR_SET \
+                          BYDAUTO_ADAS_COMMON BYDAUTO_ADAS_GET \
+                          BYDAUTO_LIGHT_COMMON BYDAUTO_LIGHT_GET \
+                          BYDAUTO_REMINDER_COMMON BYDAUTO_REMINDER_GET \
+                          BYDAUTO_TYRE_COMMON BYDAUTO_TYRE_GET \
                           BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET BYDAUTO_RADAR_SET \
                           BYDAUTO_AUDIO_COMMON BYDAUTO_AUDIO_GET \
+                          READ_PHONE_STATE ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION CAMERA \
                           BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA \
                           WRITE_SECURE_SETTINGS WRITE_SETTINGS STATUS_BAR STATUS_BAR_SERVICE; do
                           pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true
                         done
                         pm grant $targetPkg com.byd.permission.BYDAUTO_COMMON >/dev/null 2>&1 || true
                         pm grant $targetPkg com.byd.car.server.PROVIDER >/dev/null 2>&1 || true
+                        cmd appops set $targetPkg AUTO_START allow 2>/dev/null || true
+                        cmd appops set $targetPkg BOOT_COMPLETED allow 2>/dev/null || true
+                        content call --uri content://com.byd.appstartup/whitelist --method add --arg '$targetPkg' 2>/dev/null || true
+                        ACC_SVC="$targetPkg/com.byd.mapsoverlay.OverlayAccessibilityService"
+                        CUR_ACC=${'$'}(settings get secure enabled_accessibility_services 2>/dev/null)
+                        case ":${'$'}CUR_ACC:" in
+                          *":${'$'}ACC_SVC:"*) ;;
+                          *)
+                            if [ "${'$'}CUR_ACC" = "null" ] || [ -z "${'$'}CUR_ACC" ]; then
+                              settings put secure enabled_accessibility_services "${'$'}ACC_SVC" 2>/dev/null || true
+                            else
+                              settings put secure enabled_accessibility_services "${'$'}CUR_ACC:${'$'}ACC_SVC" 2>/dev/null || true
+                            fi
+                            ;;
+                        esac
+                        settings put secure accessibility_enabled 1 2>/dev/null || true
                         VERIFIED=${'$'}(settings get secure enabled_notification_listeners)
                         OVERLAY=${'$'}(appops get $targetPkg SYSTEM_ALERT_WINDOW)
                         APK_PATH=${'$'}(pm path $targetPkg | sed -n 's/^package://p' | head -n 1)
