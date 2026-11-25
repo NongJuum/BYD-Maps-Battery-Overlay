@@ -22,7 +22,9 @@ class BydAppWidgetProvider : AppWidgetProvider() {
                 for (id in ids) {
                     updateWidget(context, manager, id)
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w("BydAppWidget", "updateAllWidgets failed", e)
+            }
         }
 
         private fun updateWidget(context: Context, manager: AppWidgetManager, widgetId: Int) {

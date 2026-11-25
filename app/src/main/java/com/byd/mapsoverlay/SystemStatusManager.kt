@@ -118,6 +118,7 @@ class SystemStatusManager(
         override fun run() {
             if (!isMonitoring) return
             refreshAllStatus()
+            mainHandler.removeCallbacks(this)
             mainHandler.postDelayed(this, 3000)
         }
     }

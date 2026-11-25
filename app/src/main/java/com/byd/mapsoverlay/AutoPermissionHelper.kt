@@ -27,7 +27,7 @@ object AutoPermissionHelper {
     private const val DAEMON_PORT = 19890
     private const val DAEMON_NAME = "bydtelemetry"
     private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
-    private const val REQUIRED_DAEMON_VERSION = 7
+    private const val REQUIRED_DAEMON_VERSION = 8
     private const val RETRY_INTERVAL_MS = 60_000L
 
     private val launchInFlight = AtomicBoolean(false)
@@ -123,7 +123,7 @@ object AutoPermissionHelper {
                       BYDAUTO_AC_COMMON BYDAUTO_AC_GET BYDAUTO_AC_SET \
                       BYDAUTO_SENSOR_COMMON BYDAUTO_SENSOR_GET BYDAUTO_SENSOR_SET \
                       BYDAUTO_ADAS_COMMON BYDAUTO_ADAS_GET \
-                      BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET BYDAUTO_RADAR_SET \
+                      BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET \
                       BYDAUTO_AUDIO_COMMON BYDAUTO_AUDIO_GET \
                       BYDAUTO_LIGHT_COMMON BYDAUTO_LIGHT_GET \
                       BYDAUTO_REMINDER_COMMON BYDAUTO_REMINDER_GET \
@@ -267,7 +267,7 @@ object AutoPermissionHelper {
                           BYDAUTO_LIGHT_COMMON BYDAUTO_LIGHT_GET \
                           BYDAUTO_REMINDER_COMMON BYDAUTO_REMINDER_GET \
                           BYDAUTO_TYRE_COMMON BYDAUTO_TYRE_GET \
-                          BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET BYDAUTO_RADAR_SET \
+                          BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET \
                           BYDAUTO_AUDIO_COMMON BYDAUTO_AUDIO_GET \
                           READ_PHONE_STATE ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION CAMERA \
                           BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA \

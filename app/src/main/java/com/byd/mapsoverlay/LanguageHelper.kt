@@ -27,7 +27,7 @@ object LanguageHelper {
 
     fun setLanguage(context: Context, langCode: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_LANG, langCode).apply()
+        prefs.edit().putString(KEY_LANG, langCode).commit()
 
         try {
             val localeList = LocaleListCompat.forLanguageTags(langCode)

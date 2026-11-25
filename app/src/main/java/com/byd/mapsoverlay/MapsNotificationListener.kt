@@ -21,6 +21,7 @@ class MapsNotificationListener : NotificationListenerService() {
             } catch (e: Exception) {
                 Log.w(tag, "Poll active notifications error", e)
             }
+            pollHandler.removeCallbacks(this)
             pollHandler.postDelayed(this, 3000)
         }
     }

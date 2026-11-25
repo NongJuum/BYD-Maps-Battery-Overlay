@@ -374,8 +374,7 @@ class BydVehicleBridge(
 
     private fun fetchTelemetryDaemonStatus() {
         try {
-            val autoWakeFlag = if (VehicleOverlayConfig.isRadarAutoWake(context) && VehicleOverlayConfig.isShowRadarAlert(context)) 1 else 0
-            val url = URL("http://127.0.0.1:19890/telemetry?autoWake=$autoWakeFlag")
+            val url = URL("http://127.0.0.1:19890/telemetry")
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = 500
             conn.readTimeout = 500
