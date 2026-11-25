@@ -5,6 +5,7 @@ import android.content.ContextWrapper;
 import android.os.SystemClock;
 import android.hardware.bydauto.ac.AbsBYDAutoAcListener;
 import android.hardware.bydauto.adas.AbsBYDAutoADASListener;
+import android.hardware.bydauto.radar.AbsBYDAutoRadarListener;
 import android.hardware.bydauto.statistic.AbsBYDAutoStatisticListener;
 
 import org.json.JSONObject;
@@ -75,6 +76,31 @@ public final class BydTelemetryDaemon {
     private static volatile long lastAutostartAttemptMs = 0L;
     private static volatile int callbackBsdState = 0;
     private static volatile long callbackBsdTimestampMs = 0L;
+
+    // Fast 200ms 12V Start-Dip & 9-Zone Radar states
+    private static volatile double fastAux12v = -1.0;
+    private static volatile double fastAux12vMinDip = -1.0;
+    private static volatile double preStartMin12v = -1.0;
+    private static volatile boolean wasDcDcActive = false;
+    private static volatile long dcDcOffSinceMs = 0L;
+    private static volatile boolean seededDipFromLog = false;
+    private static volatile JSONObject fastRadarSnapshot = new JSONObject();
+    private static final int[] cbRadarDist = new int[16];
+    private static final int[] cbRadarProbe = new int[16];
+
+    private static final AbsBYDAutoRadarListener RADAR_LISTENER =
+            new AbsBYDAutoRadarListener() {
+        @Override public void onRadarObstacleDistanceChanged(int area, int value) {
+            if (area >= 0 && area < cbRadarDist.length && value > 0 && value < 255) {
+                cbRadarDist[area] = value;
+            }
+        }
+        @Override public void onRadarProbeStateChanged(int area, int state) {
+            if (area >= 0 && area < cbRadarProbe.length && state >= 0) {
+                cbRadarProbe[area] = state;
+            }
+        }
+    };
 
     private static final AbsBYDAutoAcListener AC_LISTENER =
             new AbsBYDAutoAcListener() {
@@ -148,6 +174,10 @@ public final class BydTelemetryDaemon {
                     ? args[0] : "com.byd.mapsoverlay.beta";
             Context context = createBydContext(targetPkg);
             if (context == null) throw new IllegalStateException("Could not create BYD package context");
+
+            Thread fastWatcher = new Thread(() -> fastRadarAnd12vLoop(context), "BydFastRadar12vWatcher");
+            fastWatcher.setDaemon(true);
+            fastWatcher.start();
 
             Thread poller = new Thread(() -> pollLoop(context, targetPkg), "BydTelemetryPoller");
             poller.setDaemon(true);
@@ -390,6 +420,288 @@ public final class BydTelemetryDaemon {
         }
     }
 
+    private static synchronized void update12vDipStateMachine(double raw12v) {
+        if (raw12v <= 5.0 || raw12v >= 20.0) return;
+        double rounded = Math.round(raw12v * 10.0) / 10.0;
+        fastAux12v = rounded;
+
+        if (!seededDipFromLog) {
+            seededDipFromLog = true;
+            try {
+                String tail = readTail("/data/local/tmp/byddatacollector.log", 8192);
+                if (tail != null && !tail.isEmpty()) {
+                    Matcher m = BMS_LOG_PATTERN.matcher(tail);
+                    double lastLowBeforeDcDc = -1.0;
+                    double runningMinLow = -1.0;
+                    while (m.find()) {
+                        double lv = Math.round(Double.parseDouble(m.group(2)) * 10.0) / 10.0;
+                        if (lv > 5.0 && lv < 13.35) {
+                            if (runningMinLow <= 0.0 || lv < runningMinLow) runningMinLow = lv;
+                            lastLowBeforeDcDc = runningMinLow;
+                        } else if (lv >= 13.4) {
+                            runningMinLow = -1.0;
+                        }
+                    }
+                    if (lastLowBeforeDcDc > 5.0 && lastLowBeforeDcDc < 13.35) {
+                        preStartMin12v = lastLowBeforeDcDc;
+                        fastAux12vMinDip = lastLowBeforeDcDc;
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        if (rounded < 13.35) {
+            if (wasDcDcActive) {
+                if (fastAux12vMinDip > 0.0 && rounded < fastAux12vMinDip) {
+                    fastAux12vMinDip = rounded;
+                }
+                long now = SystemClock.elapsedRealtime();
+                if (dcDcOffSinceMs == 0L) {
+                    dcDcOffSinceMs = now;
+                } else if (now - dcDcOffSinceMs >= 8_000L) {
+                    wasDcDcActive = false;
+                    preStartMin12v = rounded;
+                    fastAux12vMinDip = rounded;
+                }
+            } else {
+                if (preStartMin12v <= 0.0 || rounded < preStartMin12v) {
+                    preStartMin12v = rounded;
+                }
+                fastAux12vMinDip = preStartMin12v;
+            }
+        } else {
+            dcDcOffSinceMs = 0L;
+            if (!wasDcDcActive) {
+                wasDcDcActive = true;
+                if (preStartMin12v > 0.0 && preStartMin12v < 13.35) {
+                    fastAux12vMinDip = preStartMin12v;
+                }
+            }
+        }
+    }
+
+    private static int minValidDist(Integer... vals) {
+        int best = 0;
+        for (Integer v : vals) {
+            if (v != null && v > 0 && v < 255) {
+                if (best == 0 || v < best) best = v;
+            }
+        }
+        return best;
+    }
+
+    private static int maxValidProbe(Integer... vals) {
+        int best = 0;
+        for (Integer v : vals) {
+            if (v != null && v > 0 && v < 20) {
+                if (v > best) best = v;
+            }
+        }
+        return best;
+    }
+
+    private static int reflectIntConstant(Class<?> cls, String name, int fallback) {
+        if (cls == null) return fallback;
+        try {
+            return cls.getField(name).getInt(null);
+        } catch (Throwable t) {
+            return fallback;
+        }
+    }
+
+    private static int[] intArrayNoArg(Object target, String methodName) {
+        if (target == null) return null;
+        try {
+            Object v = target.getClass().getMethod(methodName).invoke(target);
+            return (v instanceof int[]) ? (int[]) v : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static void registerRadarListener(Object radarDev) {
+        if (radarDev == null) return;
+        try {
+            for (Method m : radarDev.getClass().getMethods()) {
+                if (m.getName().equals("registerListener") && m.getParameterTypes().length == 1) {
+                    m.invoke(radarDev, RADAR_LISTENER);
+                    log("Registered AbsBYDAutoRadarListener");
+                    return;
+                }
+            }
+        } catch (Throwable t) {
+            log("registerRadarListener warn: " + t.getMessage());
+        }
+    }
+
+    private static void fastRadarAnd12vLoop(Context context) {
+        Object ota = null;
+        Object radarDev = null;
+        Object audioDev = null;
+        Object speedDev = null;
+        Object gearbox = null;
+        java.util.Map<String, Integer> fids = null;
+        int stateRed = 4;
+        int stateYellow = 3;
+
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                if (ota == null) ota = getDevice("android.hardware.bydauto.ota.BYDAutoOtaDevice", context);
+                if (radarDev == null) {
+                    radarDev = getDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", context);
+                    if (radarDev != null) {
+                        registerRadarListener(radarDev);
+                        stateRed = reflectIntConstant(radarDev.getClass(), "RADAR_PROBE_STATE_RED", 4);
+                        stateYellow = reflectIntConstant(radarDev.getClass(), "RADAR_PROBE_STATE_YELLOW", 3);
+                    }
+                }
+                if (audioDev == null) audioDev = getDevice("android.hardware.bydauto.audio.BYDAutoAudioDevice", context);
+                if (speedDev == null) speedDev = getDevice("android.hardware.bydauto.speed.BYDAutoSpeedDevice", context);
+                if (gearbox == null) gearbox = getDevice("android.hardware.bydauto.gearbox.BYDAutoGearboxDevice", context);
+                if (fids == null) fids = discoverSafetyFeatureIds();
+
+                // 1. Fast 200ms 12V battery voltage & true start-dip capture
+                Double live12v = number(ota, "getBatteryVoltage");
+                if (live12v != null && live12v > 5.0 && live12v < 20.0) {
+                    update12vDipStateMachine(live12v);
+                }
+
+                // 2. Fast 200ms 9-zone ultrasonic radar distances & probe states
+                if (radarDev != null) {
+                    int[] allDist = intArrayNoArg(radarDev, "getAllRadarDistance");
+                    int[] allProbe = intArrayNoArg(radarDev, "getAllRadarProbeStates");
+
+                    Integer dFlCorner = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_LEFT_FRONT", 0));
+                    Integer dFlMid = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_FRONT_LEFT_MID", 0));
+                    Integer dFrCorner = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_RIGHT_FRONT", 0));
+                    Integer dFrMid = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_FRONT_RIGHT_MID", 0));
+                    Integer dRlCorner = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_LEFT_REAR", 0));
+                    Integer dRlSide = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_LEFT", 0));
+                    Integer dRrCorner = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_RIGHT_REAR", 0));
+                    Integer dRrSide = getFeatureValid(radarDev, resolveFid(fids, "RADAR_OBSTACLE_DISTANCE_RIGHT", 0));
+                    Integer dRearMid = getFeatureValid(radarDev, resolveFid(fids, "RADAR_MR_OBSTACLE_DIS", 0));
+
+                    Integer a1 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 1);
+                    Integer a2 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 2);
+                    Integer a3 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 3);
+                    Integer a4 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 4);
+                    Integer a5 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 5);
+                    Integer a6 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 6);
+                    Integer a7 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 7);
+                    Integer a8 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 8);
+                    Integer a9 = integerWithIntArg(radarDev, "getRadarObstacleDistance", 9);
+
+                    int flCm = minValidDist(dFlCorner, dFlMid, a1, a7, cbRadarDist[1], cbRadarDist[7],
+                            (allDist != null && allDist.length > 0) ? allDist[0] : null,
+                            (allDist != null && allDist.length > 6) ? allDist[6] : null);
+                    int frCm = minValidDist(dFrCorner, dFrMid, a2, a8, cbRadarDist[2], cbRadarDist[8],
+                            (allDist != null && allDist.length > 1) ? allDist[1] : null,
+                            (allDist != null && allDist.length > 7) ? allDist[7] : null);
+                    int rlCm = minValidDist(dRlCorner, dRlSide, dRearMid, a3, a5, a9, cbRadarDist[3], cbRadarDist[5], cbRadarDist[9],
+                            (allDist != null && allDist.length > 2) ? allDist[2] : null,
+                            (allDist != null && allDist.length > 4) ? allDist[4] : null,
+                            (allDist != null && allDist.length > 8) ? allDist[8] : null);
+                    int rrCm = minValidDist(dRrCorner, dRrSide, dRearMid, a4, a6, a9, cbRadarDist[4], cbRadarDist[6], cbRadarDist[9],
+                            (allDist != null && allDist.length > 3) ? allDist[3] : null,
+                            (allDist != null && allDist.length > 5) ? allDist[5] : null,
+                            (allDist != null && allDist.length > 8) ? allDist[8] : null);
+
+                    int pFl = maxValidProbe(
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_LEFT_FRONT", 0)),
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_FRONT_LEFT_MID", 0)),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 1),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 7),
+                            cbRadarProbe[1], cbRadarProbe[7],
+                            (allProbe != null && allProbe.length > 0) ? allProbe[0] : null,
+                            (allProbe != null && allProbe.length > 6) ? allProbe[6] : null);
+                    int pFr = maxValidProbe(
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_RIGHT_FRONT", 0)),
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_FRONT_RIGHT_MID", 0)),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 2),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 8),
+                            cbRadarProbe[2], cbRadarProbe[8],
+                            (allProbe != null && allProbe.length > 1) ? allProbe[1] : null,
+                            (allProbe != null && allProbe.length > 7) ? allProbe[7] : null);
+                    int pRl = maxValidProbe(
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_LEFT_REAR", 0)),
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_LEFT", 0)),
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_MR_SONDE_STATUS", 0)),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 3),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 5),
+                            cbRadarProbe[3], cbRadarProbe[5],
+                            (allProbe != null && allProbe.length > 2) ? allProbe[2] : null,
+                            (allProbe != null && allProbe.length > 4) ? allProbe[4] : null,
+                            (allProbe != null && allProbe.length > 8) ? allProbe[8] : null);
+                    int pRr = maxValidProbe(
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_RIGHT_REAR", 0)),
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_PROBE_STATE_RIGHT", 0)),
+                            getFeatureValid(radarDev, resolveFid(fids, "RADAR_MR_SONDE_STATUS", 0)),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 4),
+                            integerWithIntArg(radarDev, "getRadarProbeState", 6),
+                            cbRadarProbe[4], cbRadarProbe[6],
+                            (allProbe != null && allProbe.length > 3) ? allProbe[3] : null,
+                            (allProbe != null && allProbe.length > 5) ? allProbe[5] : null,
+                            (allProbe != null && allProbe.length > 8) ? allProbe[8] : null);
+
+                    Integer sndLf = getFeatureValid(audioDev, resolveFid(fids, "AUDIO_RADAR_SOUND_LF_STATE", 0));
+                    Integer sndRf = getFeatureValid(audioDev, resolveFid(fids, "AUDIO_RADAR_SOUND_RF_STATE", 0));
+                    Integer sndLr = getFeatureValid(audioDev, resolveFid(fids, "AUDIO_RADAR_SOUND_LR_STATE", 0));
+                    Integer sndRr = getFeatureValid(audioDev, resolveFid(fids, "AUDIO_RADAR_SOUND_RR_STATE", 0));
+
+                    boolean flRed = (flCm >= 1 && flCm <= 35) || (pFl >= stateRed) || (sndLf != null && sndLf >= 3);
+                    boolean frRed = (frCm >= 1 && frCm <= 35) || (pFr >= stateRed) || (sndRf != null && sndRf >= 3);
+                    boolean rlRed = (rlCm >= 1 && rlCm <= 35) || (pRl >= stateRed) || (sndLr != null && sndLr >= 3);
+                    boolean rrRed = (rrCm >= 1 && rrCm <= 35) || (pRr >= stateRed) || (sndRr != null && sndRr >= 3);
+
+                    if (flRed && (flCm <= 0 || flCm >= 150)) flCm = 28;
+                    else if (pFl == stateYellow && (flCm <= 0 || flCm >= 150)) flCm = 45;
+                    if (frRed && (frCm <= 0 || frCm >= 150)) frCm = 28;
+                    else if (pFr == stateYellow && (frCm <= 0 || frCm >= 150)) frCm = 45;
+                    if (rlRed && (rlCm <= 0 || rlCm >= 150)) rlCm = 28;
+                    else if (pRl == stateYellow && (rlCm <= 0 || rlCm >= 150)) rlCm = 45;
+                    if (rrRed && (rrCm <= 0 || rrCm >= 150)) rrCm = 28;
+                    else if (pRr == stateYellow && (rrCm <= 0 || rrCm >= 150)) rrCm = 45;
+
+                    JSONObject rObj = new JSONObject();
+                    if (flCm > 0) rObj.put("fl", flCm);
+                    if (frCm > 0) rObj.put("fr", frCm);
+                    if (rlCm > 0) rObj.put("rl", rlCm);
+                    if (rrCm > 0) rObj.put("rr", rrCm);
+                    rObj.put("flRed", flRed);
+                    rObj.put("frRed", frRed);
+                    rObj.put("rlRed", rlRed);
+                    rObj.put("rrRed", rrRed);
+                    rObj.put("pFl", pFl);
+                    rObj.put("pFr", pFr);
+                    rObj.put("pRl", pRl);
+                    rObj.put("pRr", pRr);
+                    fastRadarSnapshot = rObj;
+                }
+
+                Double spd = number(speedDev, "getCurrentSpeed");
+                Integer gear = integer(gearbox, "getGearboxAutoModeType");
+                if (gear == null) gear = integer(gearbox, "getCurrentGear");
+
+                JSONObject cur = snapshot;
+                if (cur != null && !"UNAVAILABLE".equals(cur.optString("status"))) {
+                    synchronized (BydTelemetryDaemon.class) {
+                        cur.put("updatedAtMs", SystemClock.elapsedRealtime());
+                        if (fastAux12v > 0.0) cur.put("aux12v", fastAux12v);
+                        if (fastAux12vMinDip > 0.0 && fastAux12vMinDip < 13.4) cur.put("aux12vMinDip", fastAux12vMinDip);
+                        if (fastRadarSnapshot != null && fastRadarSnapshot.length() > 0) cur.put("radar", fastRadarSnapshot);
+                        if (spd != null && spd >= 0 && spd <= 300) cur.put("speedKmh", spd.intValue());
+                        if (gear != null) cur.put("gearCode", gear);
+                    }
+                }
+            } catch (Throwable ignored) {}
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     private static void pollLoop(Context context, String targetPkg) {
         Object statistic = null;
         Object power = null;
@@ -575,7 +887,14 @@ public final class BydTelemetryDaemon {
                     data.put("cellVoltMaxV", cellVoltMax);
                     data.put("cellVoltMinV", cellVoltMin);
                 }
-                if (aux12v > 0.0) data.put("aux12v", aux12v);
+                if (fastAux12v > 0.0) aux12v = fastAux12v;
+                if (aux12v > 0.0) {
+                    data.put("aux12v", aux12v);
+                    update12vDipStateMachine(aux12v);
+                }
+                if (fastAux12vMinDip > 0.0 && fastAux12vMinDip < 13.4) {
+                    data.put("aux12vMinDip", fastAux12vMinDip);
+                }
                 if (cabinTemp != null && cabinTemp >= 1.0 && cabinTemp <= 70) data.put("cabinTempC", cabinTemp);
                 if (hasValidRealCabinSensor) {
                     data.put("realCabinSensorTempC", realCabinSensorTemp);
@@ -623,23 +942,10 @@ public final class BydTelemetryDaemon {
                 if (chgRestMin != null && chgRestMin > 0 && chgRestMin < 2000) data.put("chargingRestMin", chgRestMin);
                 if (chgGun != null) data.put("chargingGunState", chgGun);
 
-                // Parking / Proximity Radar distances (cm, BYDAutoRadarDevice areas 0..5)
-                // 0=FL, 1=FR, 2=RL, 3=RR, 4=RCL, 5=RCR
-                if (radarDev != null) {
-                    Integer rFl = integerWithIntArg(radarDev, "getRadarObstacleDistance", 0);
-                    Integer rFr = integerWithIntArg(radarDev, "getRadarObstacleDistance", 1);
-                    Integer rRl = integerWithIntArg(radarDev, "getRadarObstacleDistance", 2);
-                    Integer rRr = integerWithIntArg(radarDev, "getRadarObstacleDistance", 3);
-                    Integer rRcl = integerWithIntArg(radarDev, "getRadarObstacleDistance", 4);
-                    Integer rRcr = integerWithIntArg(radarDev, "getRadarObstacleDistance", 5);
-                    JSONObject radarObj = new JSONObject();
-                    if (rFl != null && rFl > 0 && rFl < 255) radarObj.put("fl", rFl);
-                    if (rFr != null && rFr > 0 && rFr < 255) radarObj.put("fr", rFr);
-                    if (rRl != null && rRl > 0 && rRl < 255) radarObj.put("rl", rRl);
-                    if (rRr != null && rRr > 0 && rRr < 255) radarObj.put("rr", rRr);
-                    if (rRcl != null && rRcl > 0 && rRcl < 255) radarObj.put("rcl", rRcl);
-                    if (rRcr != null && rRcr > 0 && rRcr < 255) radarObj.put("rcr", rRcr);
-                    data.put("radar", radarObj);
+                // Parking / Proximity Radar distances & probe states (9-zone fast snapshot)
+                JSONObject rSnap = fastRadarSnapshot;
+                if (rSnap != null && rSnap.length() > 0) {
+                    data.put("radar", rSnap);
                 }
 
                 // Include fast safety states

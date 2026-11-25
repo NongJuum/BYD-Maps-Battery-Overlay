@@ -124,9 +124,7 @@ class OverlayService : Service() {
                 "com.byd.intent.action.POWER_ON",
                 "com.byd.intent.action.ACC_ON" -> {
                     android.util.Log.i("OverlayService", "Car wake event received: $act -> Restoring telemetry and overlay")
-                    val isPowerWake = act != Intent.ACTION_SCREEN_ON && act != Intent.ACTION_USER_PRESENT && act != Intent.ACTION_USER_UNLOCKED
                     mainHandler.post {
-                        if (isPowerWake) bydBridge.resetDipVoltage()
                         bydBridge.startListening()
                         systemStatusManager?.startMonitoring()
                         val isStockBar = VehicleOverlayConfig.isStockBarMode(this@OverlayService)
@@ -210,7 +208,6 @@ class OverlayService : Service() {
                 overlayView?.visibility = View.GONE
             }
             ACTION_CAR_WAKE, ACTION_SHOW_OVERLAY -> {
-                if (intent?.action == ACTION_CAR_WAKE) bydBridge.resetDipVoltage()
                 bydBridge.startListening()
                 systemStatusManager?.startMonitoring()
                 val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
@@ -554,6 +551,7 @@ class OverlayService : Service() {
     }
 
     private fun applyUserFieldPreferences() {
+        lastSmartBannerMode = 0
         val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
         val showSoc = VehicleOverlayConfig.isShowSoc(this)
         val showKwh = VehicleOverlayConfig.isShowRemainKwh(this)
@@ -1088,31 +1086,40 @@ class OverlayService : Service() {
 
     private fun ensureSmartBanner(): TextView? {
         val root = overlayView as? LinearLayout ?: return null
+        val d = resources.displayMetrics.density
         if (tvSmartBanner == null) {
-            val d = resources.displayMetrics.density
             tvSmartBanner = TextView(this).apply {
-                textSize = 13f
+                textSize = 12.5f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setSingleLine(true)
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding((8f * d).toInt(), (2f * d).toInt(), (8f * d).toInt(), (2f * d).toInt())
                 visibility = View.GONE
             }
+        }
+        val banner = tvSmartBanner ?: return null
+        val spacerIdx = spacerStockLeft?.let { root.indexOfChild(it) } ?: -1
+        val desiredIdx = if (spacerIdx >= 0) spacerIdx + 1 else 0
+        val currentIdx = root.indexOfChild(banner)
+        if (currentIdx != desiredIdx) {
+            if (currentIdx >= 0) root.removeView(banner)
             val lp = android.widget.LinearLayout.LayoutParams(
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 marginEnd = (8f * d).toInt()
             }
-            root.addView(tvSmartBanner, 0, lp)
+            root.addView(banner, desiredIdx.coerceIn(0, root.childCount), lp)
         }
-        return tvSmartBanner
+        return banner
     }
 
     private fun updateSmartBannerAndGlow(soc: Double) {
         val root = overlayView as? LinearLayout ?: return
         val banner = ensureSmartBanner() ?: return
         val d = resources.displayMetrics.density
+        val isStockBar = VehicleOverlayConfig.isStockBarMode(this)
+        val rootRadius = if (isStockBar) 12f * d else 16f * d
 
         val gear = bydBridge.currentGear.uppercase()
         val spd = bydBridge.vehicleSpeedKmH
@@ -1125,8 +1132,10 @@ class OverlayService : Service() {
 
         val radarEnabled = VehicleOverlayConfig.isShowRadarAlert(this)
         val chargingEnabled = VehicleOverlayConfig.isShowChargingMode(this)
-        val isRearClose = radarEnabled && gear == "R" && (rl in 1..30 || rr in 1..30)
-        val isFrontClose = radarEnabled && gear != "P" && gear != "R" && spd <= 15 && (fl in 1..30 || fr in 1..30)
+        val isRearClose = radarEnabled && gear == "R" &&
+                (bydBridge.radarRlRed || bydBridge.radarRrRed || rl in 1..35 || rr in 1..35)
+        val isFrontClose = radarEnabled && gear != "P" && gear != "R" && spd <= 15 &&
+                (bydBridge.radarFlRed || bydBridge.radarFrRed || fl in 1..35 || fr in 1..35)
 
         when {
             isRearClose || isFrontClose -> {
@@ -1138,16 +1147,17 @@ class OverlayService : Service() {
                 }
                 banner.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
                 banner.background = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = 8f * d
+                    cornerRadius = 6f * d
                     setColor(android.graphics.Color.parseColor("#D50000"))
                 }
                 if (lastSmartBannerMode != 2) {
                     lastSmartBannerMode = 2
                     root.background = android.graphics.drawable.GradientDrawable().apply {
-                        cornerRadius = 16f * d
-                        setColor(android.graphics.Color.argb(215, 24, 12, 16))
-                        setStroke((3f * d).toInt().coerceAtLeast(2), android.graphics.Color.parseColor("#FF1744"))
+                        cornerRadius = rootRadius
+                        setColor(android.graphics.Color.argb(230, 36, 10, 14))
+                        setStroke((2.5f * d).toInt().coerceAtLeast(2), android.graphics.Color.parseColor("#FF1744"))
                     }
+                    root.requestLayout()
                 }
                 updatePulseAlert(banner, true)
             }
@@ -1170,17 +1180,18 @@ class OverlayService : Service() {
                 banner.text = sb.toString()
                 banner.setTextColor(android.graphics.Color.parseColor("#69F0AE"))
                 banner.background = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = 8f * d
-                    setColor(android.graphics.Color.argb(55, 0, 230, 118))
+                    cornerRadius = 6f * d
+                    setColor(android.graphics.Color.argb(65, 0, 230, 118))
                     setStroke((1f * d).toInt().coerceAtLeast(1), android.graphics.Color.parseColor("#00E676"))
                 }
                 if (lastSmartBannerMode != 1) {
                     lastSmartBannerMode = 1
                     root.background = android.graphics.drawable.GradientDrawable().apply {
-                        cornerRadius = 16f * d
-                        setColor(android.graphics.Color.argb(205, 10, 26, 22))
+                        cornerRadius = rootRadius
+                        setColor(android.graphics.Color.argb(220, 8, 28, 22))
                         setStroke((2f * d).toInt().coerceAtLeast(1), android.graphics.Color.parseColor("#00E676"))
                     }
+                    root.requestLayout()
                 }
                 updatePulseAlert(banner, false)
             }

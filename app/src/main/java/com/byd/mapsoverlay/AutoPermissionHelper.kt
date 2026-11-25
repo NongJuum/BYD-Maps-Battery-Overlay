@@ -114,6 +114,8 @@ object AutoPermissionHelper {
                       BYDAUTO_AC_COMMON BYDAUTO_AC_GET BYDAUTO_AC_SET \
                       BYDAUTO_SENSOR_COMMON BYDAUTO_SENSOR_GET BYDAUTO_SENSOR_SET \
                       BYDAUTO_ADAS_COMMON BYDAUTO_ADAS_GET \
+                      BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET BYDAUTO_RADAR_SET \
+                      BYDAUTO_AUDIO_COMMON BYDAUTO_AUDIO_GET \
                       BYDAUTO_LIGHT_COMMON BYDAUTO_LIGHT_GET \
                       BYDAUTO_REMINDER_COMMON BYDAUTO_REMINDER_GET \
                       BYDAUTO_TYRE_COMMON BYDAUTO_TYRE_GET \
@@ -234,6 +236,8 @@ object AutoPermissionHelper {
                           BYDAUTO_BMS_COMMON BYDAUTO_BMS_GET \
                           BYDAUTO_OTA_COMMON BYDAUTO_OTA_GET \
                           BYDAUTO_SETTING_COMMON BYDAUTO_SETTING_GET \
+                          BYDAUTO_RADAR_COMMON BYDAUTO_RADAR_GET BYDAUTO_RADAR_SET \
+                          BYDAUTO_AUDIO_COMMON BYDAUTO_AUDIO_GET \
                           BYD DEVICE_ACC DEVICE_POWER ACCESS_APPOPSDATA \
                           WRITE_SECURE_SETTINGS WRITE_SETTINGS STATUS_BAR STATUS_BAR_SERVICE; do
                           pm grant $targetPkg android.permission.${'$'}PERMISSION >/dev/null 2>&1 || true

@@ -106,6 +106,14 @@ class BydVehicleBridge(
         private set
     @Volatile var radarRrCm: Int = 0
         private set
+    @Volatile var radarFlRed: Boolean = false
+        private set
+    @Volatile var radarFrRed: Boolean = false
+        private set
+    @Volatile var radarRlRed: Boolean = false
+        private set
+    @Volatile var radarRrRed: Boolean = false
+        private set
 
     fun getFormattedTpms(unit: String): String {
         val isPsi = unit.lowercase() == "psi"
@@ -162,7 +170,7 @@ class BydVehicleBridge(
         executor?.scheduleWithFixedDelay({
             try {
                 tickCount++
-                if (tickCount % 5 == 1) {
+                if (tickCount % 15 == 1) {
                     applyUserVehicleProfile()
                     if (!isDaemonConnected) {
                         AutoPermissionHelper.ensureTelemetryDaemon(context)
@@ -174,7 +182,7 @@ class BydVehicleBridge(
             } catch (t: Throwable) {
                 Log.w(tag, "Telemetry cycle catch: ${t.message}")
             }
-        }, 0, 1000, TimeUnit.MILLISECONDS)
+        }, 0, 350, TimeUnit.MILLISECONDS)
     }
 
     fun stopListening() {
@@ -396,6 +404,7 @@ class BydVehicleBridge(
                 val cMax = json.optDouble("cellVoltMaxV", -1.0)
                 val cMin = json.optDouble("cellVoltMinV", -1.0)
                 val aux12 = json.optDouble("aux12v", -1.0)
+                val aux12MinDip = json.optDouble("aux12vMinDip", -1.0)
 
                 val cabinT = json.optInt("cabinTempC", -100)
                 val realCabinT = json.optDouble("realCabinSensorTempC", -100.0)
@@ -436,7 +445,10 @@ class BydVehicleBridge(
                 if (aux12 in 6.0..18.0) {
                     val rounded12v = (aux12 * 10.0).roundToInt() / 10.0
                     aux12vVoltage = rounded12v
-                    if (aux12vMinDipV <= 0.0 || rounded12v < aux12vMinDipV) {
+                    if (aux12MinDip in 5.0..13.39) {
+                        val daemonDip = (aux12MinDip * 10.0).roundToInt() / 10.0
+                        if (daemonDip != aux12vMinDipV) aux12vMinDipV = daemonDip
+                    } else if (rounded12v < 13.35 && (aux12vMinDipV <= 0.0 || rounded12v < aux12vMinDipV)) {
                         aux12vMinDipV = rounded12v
                     }
                     changed = true
@@ -505,7 +517,7 @@ class BydVehicleBridge(
                     changed = true
                 }
 
-                // Proximity Radar (cm)
+                // Proximity Radar (cm & red-zone alerts)
                 val radarObj = json.optJSONObject("radar")
                 val rFl = radarObj?.optInt("fl", 0) ?: 0
                 val rFr = radarObj?.optInt("fr", 0) ?: 0
@@ -515,11 +527,20 @@ class BydVehicleBridge(
                 val rRcr = radarObj?.optInt("rcr", 0) ?: 0
                 val rRl = listOf(rRlRaw, rRcl).filter { it > 0 }.minOrNull() ?: 0
                 val rRr = listOf(rRrRaw, rRcr).filter { it > 0 }.minOrNull() ?: 0
-                if (rFl != radarFlCm || rFr != radarFrCm || rRl != radarRlCm || rRr != radarRrCm) {
+                val flRed = radarObj?.optBoolean("flRed", false) ?: false
+                val frRed = radarObj?.optBoolean("frRed", false) ?: false
+                val rlRed = radarObj?.optBoolean("rlRed", false) ?: false
+                val rrRed = radarObj?.optBoolean("rrRed", false) ?: false
+                if (rFl != radarFlCm || rFr != radarFrCm || rRl != radarRlCm || rRr != radarRrCm ||
+                    flRed != radarFlRed || frRed != radarFrRed || rlRed != radarRlRed || rrRed != radarRrRed) {
                     radarFlCm = rFl
                     radarFrCm = rFr
                     radarRlCm = rRl
                     radarRrCm = rRr
+                    radarFlRed = flRed
+                    radarFrRed = frRed
+                    radarRlRed = rlRed
+                    radarRrRed = rrRed
                     changed = true
                 }
 
