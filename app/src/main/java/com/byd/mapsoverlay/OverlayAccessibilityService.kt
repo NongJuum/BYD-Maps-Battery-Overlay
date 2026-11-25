@@ -15,9 +15,13 @@ class OverlayAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         try {
-            startService(Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_UPDATE_CONFIG
-            })
+            AutoPermissionHelper.ensureTelemetryDaemon(this)
+            val intent = Intent(this, OverlayService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
         } catch (_: Throwable) {}
     }
 

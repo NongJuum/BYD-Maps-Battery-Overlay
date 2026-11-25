@@ -133,6 +133,9 @@ public final class BydTelemetryDaemon {
     private static final Pattern BMS_LOG_PATTERN = Pattern.compile(
             "SOC=([0-9.]+)%\\s+12V=([0-9.]+)V\\s+Temp=([0-9.]+)/([0-9.]+)/([0-9.]+).*?CellV=([0-9.]+)/([0-9.]+)V"
     );
+    private static final Pattern CAM_12V_PATTERN = Pattern.compile(
+            "Battery updated:\\s*([0-9.]+)V"
+    );
 
     private static final AbsBYDAutoStatisticListener STATISTIC_LISTENER =
             new AbsBYDAutoStatisticListener() {
@@ -420,6 +423,39 @@ public final class BydTelemetryDaemon {
         }
     }
 
+    private static Double readFreshLog12v() {
+        long now = System.currentTimeMillis();
+        try {
+            File camLog = new File("/data/local/tmp/cameradaemon.log");
+            if (camLog.exists() && (now - camLog.lastModified() <= 75_000L)) {
+                String tail = readTail(camLog.getAbsolutePath(), 2048);
+                if (tail != null && !tail.isEmpty()) {
+                    Matcher m = CAM_12V_PATTERN.matcher(tail);
+                    double last = -1.0;
+                    while (m.find()) {
+                        last = Double.parseDouble(m.group(1));
+                    }
+                    if (last > 5.0 && last < 20.0) return last;
+                }
+            }
+        } catch (Throwable ignored) {}
+        try {
+            File bmsLog = new File("/data/local/tmp/byddatacollector.log");
+            if (bmsLog.exists() && (now - bmsLog.lastModified() <= 150_000L)) {
+                String tail = readTail(bmsLog.getAbsolutePath(), 4096);
+                if (tail != null && !tail.isEmpty()) {
+                    Matcher m = BMS_LOG_PATTERN.matcher(tail);
+                    double last = -1.0;
+                    while (m.find()) {
+                        last = Double.parseDouble(m.group(2));
+                    }
+                    if (last > 5.0 && last < 20.0) return last;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
     private static synchronized void update12vDipStateMachine(double raw12v) {
         if (raw12v <= 5.0 || raw12v >= 20.0) return;
         double rounded = Math.round(raw12v * 10.0) / 10.0;
@@ -428,21 +464,21 @@ public final class BydTelemetryDaemon {
         if (!seededDipFromLog) {
             seededDipFromLog = true;
             try {
-                String tail = readTail("/data/local/tmp/byddatacollector.log", 8192);
+                String tail = readTail("/data/local/tmp/byddatacollector.log", 131072);
                 if (tail != null && !tail.isEmpty()) {
                     Matcher m = BMS_LOG_PATTERN.matcher(tail);
                     double lastLowBeforeDcDc = -1.0;
                     double runningMinLow = -1.0;
                     while (m.find()) {
                         double lv = Math.round(Double.parseDouble(m.group(2)) * 10.0) / 10.0;
-                        if (lv > 5.0 && lv < 13.35) {
+                        if (lv > 5.0 && lv <= 13.05) {
                             if (runningMinLow <= 0.0 || lv < runningMinLow) runningMinLow = lv;
                             lastLowBeforeDcDc = runningMinLow;
                         } else if (lv >= 13.4) {
                             runningMinLow = -1.0;
                         }
                     }
-                    if (lastLowBeforeDcDc > 5.0 && lastLowBeforeDcDc < 13.35) {
+                    if (lastLowBeforeDcDc > 5.0 && lastLowBeforeDcDc <= 13.05) {
                         preStartMin12v = lastLowBeforeDcDc;
                         fastAux12vMinDip = lastLowBeforeDcDc;
                     }
@@ -450,7 +486,7 @@ public final class BydTelemetryDaemon {
             } catch (Throwable ignored) {}
         }
 
-        if (rounded < 13.35) {
+        if (rounded <= 13.05) {
             if (wasDcDcActive) {
                 if (fastAux12vMinDip > 0.0 && rounded < fastAux12vMinDip) {
                     fastAux12vMinDip = rounded;
@@ -469,11 +505,11 @@ public final class BydTelemetryDaemon {
                 }
                 fastAux12vMinDip = preStartMin12v;
             }
-        } else {
+        } else if (rounded >= 13.4) {
             dcDcOffSinceMs = 0L;
             if (!wasDcDcActive) {
                 wasDcDcActive = true;
-                if (preStartMin12v > 0.0 && preStartMin12v < 13.35) {
+                if (preStartMin12v > 0.0 && preStartMin12v <= 13.05) {
                     fastAux12vMinDip = preStartMin12v;
                 }
             }
@@ -560,8 +596,17 @@ public final class BydTelemetryDaemon {
                 if (gearbox == null) gearbox = getDevice("android.hardware.bydauto.gearbox.BYDAutoGearboxDevice", context);
                 if (fids == null) fids = discoverSafetyFeatureIds();
 
-                // 1. Fast 200ms 12V battery voltage & true start-dip capture
-                Double live12v = number(ota, "getBatteryVoltage");
+                // 1. Live 12V battery voltage: NEVER use frozen ota.getBatteryVoltage() as primary!
+                Double otaPwrV = number(ota, "getBatteryPowerVoltage");
+                Double log12v = readFreshLog12v();
+                Double live12v = null;
+                if (otaPwrV != null && otaPwrV > 5.0 && otaPwrV < 20.0 && (log12v == null || Math.abs(otaPwrV - log12v) <= 0.4)) {
+                    live12v = otaPwrV;
+                } else if (log12v != null) {
+                    live12v = log12v;
+                } else if (otaPwrV != null && otaPwrV > 5.0 && otaPwrV < 20.0) {
+                    live12v = otaPwrV;
+                }
                 if (live12v != null && live12v > 5.0 && live12v < 20.0) {
                     update12vDipStateMachine(live12v);
                 }
@@ -737,7 +782,7 @@ public final class BydTelemetryDaemon {
                 if (radarDev == null) radarDev = getDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", context);
 
                 JSONObject data = new JSONObject();
-                data.put("daemonVersion", 4);
+                data.put("daemonVersion", 6);
                 data.put("uid", android.os.Process.myUid());
                 data.put("source", "BYD SDK + BMS Collector via app_process");
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
@@ -798,11 +843,26 @@ public final class BydTelemetryDaemon {
                     }
                 }
 
-                // Prefer live 12V directly from BYD OTA hardware API; fall back to fresh BMS log if unavailable
-                Double ota12v = number(ota, "getBatteryVoltage");
-                if (ota12v != null && ota12v > 5.0 && ota12v < 20.0) {
-                    aux12v = ota12v;
+                // Live 12V priority: fresh collector/camera log or live getBatteryPowerVoltage; ota.getBatteryVoltage() is last-resort boot snapshot
+                Double fresh12v = readFreshLog12v();
+                Double otaPwr12v = number(ota, "getBatteryPowerVoltage");
+                Double otaBoot12v = number(ota, "getBatteryVoltage");
+                if (fresh12v != null) {
+                    aux12v = fresh12v;
+                } else if (otaPwr12v != null && otaPwr12v > 5.0 && otaPwr12v < 20.0) {
+                    aux12v = otaPwr12v;
+                } else if (aux12v <= 0.0 && otaBoot12v != null && otaBoot12v > 5.0 && otaBoot12v < 20.0) {
+                    aux12v = otaBoot12v;
                 }
+                JSONObject hwDiag = new JSONObject();
+                if (otaPwr12v != null) hwDiag.put("otaPowerVolt", otaPwr12v);
+                if (otaBoot12v != null) hwDiag.put("otaBootVolt", otaBoot12v);
+                if (fresh12v != null) hwDiag.put("freshLog12v", fresh12v);
+                if (radarDev != null) {
+                    Integer revSw = integer(radarDev, "getReverseRadarSwitchState");
+                    if (revSw != null) hwDiag.put("radarSwitchState", revSw);
+                }
+                data.put("hwDiag", hwDiag);
 
                 // Fallback HV temp from AC sub battery temp or water temp
                 if (hvTempAvg <= -50.0) {

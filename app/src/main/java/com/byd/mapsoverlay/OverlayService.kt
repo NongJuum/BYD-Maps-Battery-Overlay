@@ -1006,16 +1006,25 @@ class OverlayService : Service() {
         val v12 = bydBridge.aux12vVoltage
         val minDip = bydBridge.aux12vMinDipV
         val dipStr = if (minDip > 0.0) String.format(" [%.1fV]", minDip) else ""
-        val isDegraded = (minDip > 0.0 && minDip < 9.5) || (v12 in 1.0..9.0)
-        view12vDot?.setHealthy(!isDegraded)
-        if (isDegraded) {
-            tv12v?.text = if (v12 > 0.0) String.format("⚠️ %.1fV%s", v12, dipStr) else "⚠️ --V$dipStr"
-            tv12v?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
-        } else {
-            tv12v?.text = if (v12 > 0.0) String.format("%.1fV%s", v12, dipStr) else "--V"
-            tv12v?.setTextColor(currentThemeTextColor)
+        val activeDriveGear = bydBridge.currentGear.uppercase() in listOf("D", "R", "N", "S")
+        val is12vCritical = (minDip in 5.0..11.99) || (v12 in 5.0..11.79) || (activeDriveGear && v12 in 5.0..13.09)
+        val is12vFair = !is12vCritical && ((minDip in 12.0..12.39) || (!activeDriveGear && v12 in 11.8..12.29))
+        view12vDot?.setHealthy(!is12vCritical)
+        when {
+            is12vCritical -> {
+                tv12v?.text = if (v12 > 0.0) String.format("⚠️ %.1fV%s", v12, dipStr) else "⚠️ --V$dipStr"
+                tv12v?.setTextColor(android.graphics.Color.parseColor("#FF5252"))
+            }
+            is12vFair -> {
+                tv12v?.text = if (v12 > 0.0) String.format("%.1fV%s", v12, dipStr) else "--V"
+                tv12v?.setTextColor(android.graphics.Color.parseColor("#FFD54F"))
+            }
+            else -> {
+                tv12v?.text = if (v12 > 0.0) String.format("%.1fV%s", v12, dipStr) else "--V"
+                tv12v?.setTextColor(currentThemeTextColor)
+            }
         }
-        updatePulseAlert(tv12v, isDegraded)
+        updatePulseAlert(tv12v, is12vCritical)
         updatePulseAlert(tvHvTemp, hvTempVal >= 55.0)
 
         val tpmsUnit = VehicleOverlayConfig.getTpmsUnit(this)
