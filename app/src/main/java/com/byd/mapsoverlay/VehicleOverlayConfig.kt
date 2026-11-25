@@ -200,4 +200,7 @@ object VehicleOverlayConfig {
 
     fun isShowHvDeltaT(context: Context): Boolean = prefs(context).getBoolean("show_hv_delta_t", true)
     fun setShowHvDeltaT(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_hv_delta_t", value).apply()
+
+    fun isRadarAutoWake(context: Context): Boolean = prefs(context).getBoolean("radar_auto_wake", true)
+    fun setRadarAutoWake(context: Context, value: Boolean) = prefs(context).edit().putBoolean("radar_auto_wake", value).apply()
 }

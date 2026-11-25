@@ -85,6 +85,11 @@ public final class BydTelemetryDaemon {
     private static volatile long dcDcOffSinceMs = 0L;
     private static volatile boolean seededDipFromLog = false;
     private static volatile JSONObject fastRadarSnapshot = new JSONObject();
+    private static volatile Object sharedRadarDev = null;
+    private static volatile boolean radarAutoWakeEnabled = true;
+    private static volatile boolean radarAutoWokenByUs = false;
+    private static volatile long lastRadarAutoWakeAttemptMs = 0L;
+    private static volatile int lastRadarAutoWakeRet = -999;
     private static final int[] cbRadarDist = new int[16];
     private static final int[] cbRadarProbe = new int[16];
 
@@ -586,6 +591,7 @@ public final class BydTelemetryDaemon {
                 if (radarDev == null) {
                     radarDev = getDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", context);
                     if (radarDev != null) {
+                        sharedRadarDev = radarDev;
                         registerRadarListener(radarDev);
                         stateRed = reflectIntConstant(radarDev.getClass(), "RADAR_PROBE_STATE_RED", 4);
                         stateYellow = reflectIntConstant(radarDev.getClass(), "RADAR_PROBE_STATE_YELLOW", 3);
@@ -727,6 +733,27 @@ public final class BydTelemetryDaemon {
                 Integer gear = integer(gearbox, "getGearboxAutoModeType");
                 if (gear == null) gear = integer(gearbox, "getCurrentGear");
 
+                // Auto-wake front ultrasonic radar in D/S when creeping <= 10 km/h
+                if (radarDev != null && gear != null) {
+                    boolean inForwardDrive = (gear == 4 || gear == 5); // 4=D, 5=S/M on BYD
+                    double curSpd = spd != null ? spd : 0.0;
+                    long nowWake = SystemClock.elapsedRealtime();
+                    if (radarAutoWakeEnabled && inForwardDrive && curSpd <= 10.0) {
+                        Integer sw = integer(radarDev, "getReverseRadarSwitchState");
+                        if (sw != null && sw == 0 && (nowWake - lastRadarAutoWakeAttemptMs >= 4_000L)) {
+                            lastRadarAutoWakeAttemptMs = nowWake;
+                            Integer ret = integerWithIntArg(radarDev, "setReverseRadarSwitchState", 1);
+                            lastRadarAutoWakeRet = ret != null ? ret : -998;
+                            if (ret != null && ret == 0) radarAutoWokenByUs = true;
+                        }
+                    } else if (radarAutoWokenByUs && (!inForwardDrive || curSpd >= 16.0 || !radarAutoWakeEnabled)) {
+                        radarAutoWokenByUs = false;
+                        if (gear != 2) { // Never turn off if driver shifted into R (2)
+                            integerWithIntArg(radarDev, "setReverseRadarSwitchState", 0);
+                        }
+                    }
+                }
+
                 JSONObject cur = snapshot;
                 if (cur != null && !"UNAVAILABLE".equals(cur.optString("status"))) {
                     synchronized (BydTelemetryDaemon.class) {
@@ -782,7 +809,7 @@ public final class BydTelemetryDaemon {
                 if (radarDev == null) radarDev = getDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", context);
 
                 JSONObject data = new JSONObject();
-                data.put("daemonVersion", 6);
+                data.put("daemonVersion", 7);
                 data.put("uid", android.os.Process.myUid());
                 data.put("source", "BYD SDK + BMS Collector via app_process");
                 data.put("updatedAtMs", SystemClock.elapsedRealtime());
@@ -861,6 +888,7 @@ public final class BydTelemetryDaemon {
                 if (radarDev != null) {
                     Integer revSw = integer(radarDev, "getReverseRadarSwitchState");
                     if (revSw != null) hwDiag.put("radarSwitchState", revSw);
+                    hwDiag.put("lastRadarAutoWakeRet", lastRadarAutoWakeRet);
                 }
                 data.put("hwDiag", hwDiag);
 
@@ -1361,12 +1389,39 @@ public final class BydTelemetryDaemon {
         try (Socket c = client) {
             c.setSoTimeout(1500);
             BufferedReader reader = new BufferedReader(new InputStreamReader(c.getInputStream()));
+            String reqLine = reader.readLine();
             String line;
             while ((line = reader.readLine()) != null && !line.isEmpty()) {}
 
+            if (reqLine != null) {
+                if (reqLine.contains("autoWake=0")) radarAutoWakeEnabled = false;
+                else if (reqLine.contains("autoWake=1")) radarAutoWakeEnabled = true;
+            }
+
             String jsonStr;
-            synchronized (BydTelemetryDaemon.class) {
-                jsonStr = snapshot.toString();
+            if (reqLine != null && reqLine.contains("/test-radar-wake")) {
+                JSONObject testRes = new JSONObject();
+                Object rd = sharedRadarDev;
+                Integer before = integer(rd, "getReverseRadarSwitchState");
+                Integer set1Ret = integerWithIntArg(rd, "setReverseRadarSwitchState", 1);
+                try { Thread.sleep(400); } catch (Throwable ignored) {}
+                Integer after = integer(rd, "getReverseRadarSwitchState");
+                int[] distAfter = intArrayNoArg(rd, "getAllRadarDistance");
+                int[] probeAfter = intArrayNoArg(rd, "getAllRadarProbeStates");
+                testRes.put("beforeSwitch", before);
+                testRes.put("set1ReturnCode", set1Ret);
+                testRes.put("afterSwitch", after);
+                if (distAfter != null) testRes.put("distAfter", java.util.Arrays.toString(distAfter));
+                if (probeAfter != null) testRes.put("probeAfter", java.util.Arrays.toString(probeAfter));
+                // Restore back to 0 if parked so nothing stays active while parked
+                if (before != null && before == 0) {
+                    integerWithIntArg(rd, "setReverseRadarSwitchState", 0);
+                }
+                jsonStr = testRes.toString();
+            } else {
+                synchronized (BydTelemetryDaemon.class) {
+                    jsonStr = snapshot.toString();
+                }
             }
             byte[] body = jsonStr.getBytes("UTF-8");
             OutputStream out = c.getOutputStream();

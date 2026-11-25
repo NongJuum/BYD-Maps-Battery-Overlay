@@ -27,7 +27,7 @@ object AutoPermissionHelper {
     private const val DAEMON_PORT = 19890
     private const val DAEMON_NAME = "bydtelemetry"
     private const val DAEMON_CLASS = "com.byd.mapsoverlay.BydTelemetryDaemon"
-    private const val REQUIRED_DAEMON_VERSION = 6
+    private const val REQUIRED_DAEMON_VERSION = 7
     private const val RETRY_INTERVAL_MS = 60_000L
 
     private val launchInFlight = AtomicBoolean(false)

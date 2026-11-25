@@ -1025,6 +1025,9 @@ class MainActivity : AppCompatActivity() {
         addToggle("🌡️ แสดงผลต่างอุณหภูมิแบต (HV ΔT)", VehicleOverlayConfig.isShowHvDeltaT(this)) {
             VehicleOverlayConfig.setShowHvDeltaT(this, it)
         }
+        addToggle("🔊 ปลุกเซ็นเซอร์หน้าอัตโนมัติตอนไหลช้า (D <= 10 km/h)", VehicleOverlayConfig.isRadarAutoWake(this)) {
+            VehicleOverlayConfig.setRadarAutoWake(this, it)
+        }
     }
 
     override fun onDestroy() {
