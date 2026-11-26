@@ -1475,20 +1475,25 @@ class OverlayService : Service() {
         if (savedMonth != curMonth) {
             monthlyBytes = 0L
         } else if (lastBootBytes >= 0L) {
-            monthlyBytes += if (curBootBytes >= lastBootBytes) {
+            val delta = if (curBootBytes >= lastBootBytes) {
                 curBootBytes - lastBootBytes
             } else {
                 curBootBytes
             }
+            if (delta == 0L && !shouldSave) {
+                val mb = monthlyBytes / (1024.0 * 1024.0)
+                return if (mb >= 1024.0) String.format("%.2fGB", mb / 1024.0)
+                else String.format("%.0fMB", mb)
+            }
+            monthlyBytes += delta
         }
 
-        if (savedMonth != curMonth || lastBootBytes < 0L || shouldSave) {
-            prefs.edit()
-                .putString("${prefix}_month_key", curMonth)
-                .putLong("${prefix}_monthly_bytes", monthlyBytes)
-                .putLong("${prefix}_last_boot_bytes", curBootBytes)
-                .apply()
-        }
+        // Always update last_boot_bytes when delta != 0 so it never double-counts between saves!
+        prefs.edit()
+            .putString("${prefix}_month_key", curMonth)
+            .putLong("${prefix}_monthly_bytes", monthlyBytes)
+            .putLong("${prefix}_last_boot_bytes", curBootBytes)
+            .apply()
 
         val mb = monthlyBytes / (1024.0 * 1024.0)
         return if (mb >= 1024.0) String.format("%.2fGB", mb / 1024.0)
