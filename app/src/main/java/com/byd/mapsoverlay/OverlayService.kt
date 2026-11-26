@@ -1058,7 +1058,7 @@ class OverlayService : Service() {
         val socTempC = getSocTempC()
         val tempStr = if (socTempC > 0) " (${socTempC}°C)" else ""
         val (cellDataStr, wifiDataStr) = getDataUsageStrings()
-        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%% · 📶 %s · 📡 %s", getCpuUsagePercent(), tempStr, getRamUsagePercent(), cellDataStr, wifiDataStr)
+        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%% · 📱 %s · 📶 %s", getCpuUsagePercent(), tempStr, getRamUsagePercent(), cellDataStr, wifiDataStr)
         val gearStr = bydBridge.currentGear
         if (gearStr != lastGearStr) {
             lastGearStr = gearStr
