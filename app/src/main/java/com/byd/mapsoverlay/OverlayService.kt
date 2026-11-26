@@ -1057,7 +1057,8 @@ class OverlayService : Service() {
         }
         val socTempC = getSocTempC()
         val tempStr = if (socTempC > 0) " (${socTempC}°C)" else ""
-        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%%", getCpuUsagePercent(), tempStr, getRamUsagePercent())
+        val cellDataStr = getMobileDataUsageStr()
+        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%% · 📶 %s", getCpuUsagePercent(), tempStr, getRamUsagePercent(), cellDataStr)
         val gearStr = bydBridge.currentGear
         if (gearStr != lastGearStr) {
             lastGearStr = gearStr
@@ -1392,6 +1393,20 @@ class OverlayService : Service() {
             } catch (_: Throwable) {}
         }
         return -1
+    }
+
+    private fun getMobileDataUsageStr(): String {
+        return try {
+            val rx = android.net.TrafficStats.getMobileRxBytes()
+            val tx = android.net.TrafficStats.getMobileTxBytes()
+            if (rx < 0 || tx < 0) return "--"
+            val totalBytes = rx + tx
+            val mb = totalBytes / (1024.0 * 1024.0)
+            if (mb >= 1024.0) String.format("%.2fGB", mb / 1024.0)
+            else String.format("%.0fMB", mb)
+        } catch (_: Throwable) {
+            "--"
+        }
     }
 
     companion object {
