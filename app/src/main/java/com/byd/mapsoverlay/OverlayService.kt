@@ -1057,8 +1057,8 @@ class OverlayService : Service() {
         }
         val socTempC = getSocTempC()
         val tempStr = if (socTempC > 0) " (${socTempC}°C)" else ""
-        val cellDataStr = getMobileDataUsageStr()
-        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%% · 📶 %s", getCpuUsagePercent(), tempStr, getRamUsagePercent(), cellDataStr)
+        val (cellDataStr, wifiDataStr) = getDataUsageStrings()
+        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%% · 📶 %s · 📡 %s", getCpuUsagePercent(), tempStr, getRamUsagePercent(), cellDataStr, wifiDataStr)
         val gearStr = bydBridge.currentGear
         if (gearStr != lastGearStr) {
             lastGearStr = gearStr
@@ -1395,49 +1395,67 @@ class OverlayService : Service() {
         return -1
     }
 
-    private var lastMobileSaveMs: Long = 0L
+    private var lastDataSaveMs: Long = 0L
 
-    private fun getMobileDataUsageStr(): String {
+    private fun getDataUsageStrings(): Pair<String, String> {
         return try {
-            val rx = android.net.TrafficStats.getMobileRxBytes()
-            val tx = android.net.TrafficStats.getMobileTxBytes()
-            if (rx < 0 || tx < 0) return "--"
-            val curBootBytes = rx + tx
+            val mobRx = android.net.TrafficStats.getMobileRxBytes()
+            val mobTx = android.net.TrafficStats.getMobileTxBytes()
+            val totRx = android.net.TrafficStats.getTotalRxBytes()
+            val totTx = android.net.TrafficStats.getTotalTxBytes()
+            val curMobBytes = if (mobRx >= 0 && mobTx >= 0) mobRx + mobTx else -1L
+            val curWifiBytes = if (totRx >= 0 && totTx >= 0 && curMobBytes >= 0) {
+                ((totRx + totTx) - curMobBytes).coerceAtLeast(0L)
+            } else -1L
 
             val cal = java.util.Calendar.getInstance()
             val curMonth = "${cal.get(java.util.Calendar.YEAR)}-${cal.get(java.util.Calendar.MONTH) + 1}"
-
             val prefs = getSharedPreferences("byd_mobile_data_prefs", Context.MODE_PRIVATE)
-            val savedMonth = prefs.getString("month_key", "") ?: ""
-            var monthlyBytes = prefs.getLong("monthly_bytes", 0L)
-            val lastBootBytes = prefs.getLong("last_boot_bytes", -1L)
-
-            if (savedMonth != curMonth) {
-                monthlyBytes = 0L
-            } else if (lastBootBytes >= 0L) {
-                monthlyBytes += if (curBootBytes >= lastBootBytes) {
-                    curBootBytes - lastBootBytes
-                } else {
-                    curBootBytes // Car rebooted
-                }
-            }
-
             val now = android.os.SystemClock.elapsedRealtime()
-            if (savedMonth != curMonth || lastBootBytes < 0L || now - lastMobileSaveMs >= 15000L) {
-                lastMobileSaveMs = now
-                prefs.edit()
-                    .putString("month_key", curMonth)
-                    .putLong("monthly_bytes", monthlyBytes)
-                    .putLong("last_boot_bytes", curBootBytes)
-                    .apply()
-            }
+            val shouldSave = (now - lastDataSaveMs >= 15000L)
+            if (shouldSave) lastDataSaveMs = now
 
-            val mb = monthlyBytes / (1024.0 * 1024.0)
-            if (mb >= 1024.0) String.format("%.2fGB", mb / 1024.0)
-            else String.format("%.0fMB", mb)
+            val mobStr = formatMonthlyBytes(prefs, "mob", curMonth, curMobBytes, shouldSave)
+            val wifiStr = formatMonthlyBytes(prefs, "wifi", curMonth, curWifiBytes, shouldSave)
+            Pair(mobStr, wifiStr)
         } catch (_: Throwable) {
-            "--"
+            Pair("--", "--")
         }
+    }
+
+    private fun formatMonthlyBytes(
+        prefs: android.content.SharedPreferences,
+        prefix: String,
+        curMonth: String,
+        curBootBytes: Long,
+        shouldSave: Boolean
+    ): String {
+        if (curBootBytes < 0L) return "--"
+        val savedMonth = prefs.getString("${prefix}_month_key", "") ?: ""
+        var monthlyBytes = prefs.getLong("${prefix}_monthly_bytes", 0L)
+        val lastBootBytes = prefs.getLong("${prefix}_last_boot_bytes", -1L)
+
+        if (savedMonth != curMonth) {
+            monthlyBytes = 0L
+        } else if (lastBootBytes >= 0L) {
+            monthlyBytes += if (curBootBytes >= lastBootBytes) {
+                curBootBytes - lastBootBytes
+            } else {
+                curBootBytes
+            }
+        }
+
+        if (savedMonth != curMonth || lastBootBytes < 0L || shouldSave) {
+            prefs.edit()
+                .putString("${prefix}_month_key", curMonth)
+                .putLong("${prefix}_monthly_bytes", monthlyBytes)
+                .putLong("${prefix}_last_boot_bytes", curBootBytes)
+                .apply()
+        }
+
+        val mb = monthlyBytes / (1024.0 * 1024.0)
+        return if (mb >= 1024.0) String.format("%.2fGB", mb / 1024.0)
+        else String.format("%.0fMB", mb)
     }
 
     companion object {
