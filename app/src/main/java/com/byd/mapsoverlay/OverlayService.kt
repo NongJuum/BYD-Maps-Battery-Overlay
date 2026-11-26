@@ -52,6 +52,7 @@ class OverlayService : Service() {
     private var tv12v: TextView? = null
     private var tvTpms: TextView? = null
     private var tvOdo: TextView? = null
+    private var tvCpuRam: TextView? = null
     private var tvGear: TextView? = null
     private var tvSpeed: TextView? = null
     private var viewSocBar: MiniBatteryView? = null
@@ -75,6 +76,11 @@ class OverlayService : Service() {
     private var container12v: View? = null
     private var containerTpms: View? = null
     private var containerOdo: View? = null
+    private var containerCpuRam: View? = null
+    private var lastCpuTotal: Long = 0L
+    private var lastCpuIdle: Long = 0L
+    private var cachedCpuPct: Int = 0
+    private var lastCpuReadMs: Long = 0L
     private var containerGearSpeed: View? = null
 
     // System Status Views (Stock Bar Right Section)
@@ -316,6 +322,7 @@ class OverlayService : Service() {
         tv12v = v.findViewById(R.id.tv_v2_12v)
         tvTpms = v.findViewById(R.id.tv_v2_tpms)
         tvOdo = v.findViewById(R.id.tv_v2_odo)
+        tvCpuRam = v.findViewById(R.id.tv_v2_cpu_ram)
         tvGear = v.findViewById(R.id.tv_v2_gear)
         tvSpeed = v.findViewById(R.id.tv_v2_speed)
         viewSocBar = v.findViewById(R.id.view_v2_soc_bar)
@@ -337,6 +344,7 @@ class OverlayService : Service() {
         container12v = v.findViewById(R.id.container_v2_12v)
         containerTpms = v.findViewById(R.id.container_v2_tpms)
         containerOdo = v.findViewById(R.id.container_v2_odo)
+        containerCpuRam = v.findViewById(R.id.container_v2_cpu_ram)
         containerGearSpeed = v.findViewById(R.id.container_v2_gear_speed)
 
         // Bind System Status Views
@@ -727,7 +735,7 @@ class OverlayService : Service() {
         val textValueViews = listOf(
             tvSoc, tvKwh, tvDashRange, tvRealRange, tvHvTemp, tvCellVolt,
             tvConsumption, tvInstPower, tvOutTemp, tvSoh, tv12v, tvTpms,
-            tvOdo, tvSpeed, tvGear
+            tvOdo, tvCpuRam, tvSpeed, tvGear
         )
         for (tv in textValueViews) {
             tv?.setTextColor(primaryTextColor)
@@ -818,7 +826,7 @@ class OverlayService : Service() {
         val allTv = listOf(
             tvSoc, tvKwh, tvRealRange, tvDashRange, tvHvTemp, tvCellVolt,
             tvConsumption, tvInstPower, tvOutTemp, tvSoh,
-            tv12v, tvTpms, tvOdo, tvGear, tvSpeed
+            tv12v, tvTpms, tvOdo, tvCpuRam, tvGear, tvSpeed
         )
         val statusTv = listOf(
             tvStatusCamera, tvStatusGps, tvStatusBt, tvStatusWifi, tvStatusSim
@@ -1047,6 +1055,7 @@ class OverlayService : Service() {
         } else {
             tvOdo?.text = "-- km"
         }
+        tvCpuRam?.text = String.format("CPU %d%% · RAM %d%%", getCpuUsagePercent(), getRamUsagePercent())
         val gearStr = bydBridge.currentGear
         if (gearStr != lastGearStr) {
             lastGearStr = gearStr
@@ -1324,6 +1333,46 @@ class OverlayService : Service() {
             if (view.animation != null) {
                 view.clearAnimation()
             }
+        }
+    }
+
+    private fun getCpuUsagePercent(): Int {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastCpuReadMs < 1500L) return cachedCpuPct
+        lastCpuReadMs = now
+        try {
+            val line = java.io.RandomAccessFile("/proc/stat", "r").use { it.readLine() } ?: return cachedCpuPct
+            val toks = line.trim().split(Regex("\\s+"))
+            if (toks.size >= 5 && toks[0] == "cpu") {
+                val user = toks[1].toLongOrNull() ?: 0L
+                val nice = toks[2].toLongOrNull() ?: 0L
+                val sys = toks[3].toLongOrNull() ?: 0L
+                val idle = toks[4].toLongOrNull() ?: 0L
+                val iowait = if (toks.size > 5) toks[5].toLongOrNull() ?: 0L else 0L
+                val irq = if (toks.size > 6) toks[6].toLongOrNull() ?: 0L else 0L
+                val softirq = if (toks.size > 7) toks[7].toLongOrNull() ?: 0L else 0L
+                val total = user + nice + sys + idle + iowait + irq + softirq
+                val totalIdle = idle + iowait
+                if (lastCpuTotal > 0L && total > lastCpuTotal) {
+                    val dTotal = total - lastCpuTotal
+                    val dIdle = totalIdle - lastCpuIdle
+                    cachedCpuPct = (((dTotal - dIdle) * 100L) / dTotal).toInt().coerceIn(0, 100)
+                }
+                lastCpuTotal = total
+                lastCpuIdle = totalIdle
+            }
+        } catch (_: Throwable) {}
+        return cachedCpuPct
+    }
+
+    private fun getRamUsagePercent(): Int {
+        return try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val mi = android.app.ActivityManager.MemoryInfo()
+            am.getMemoryInfo(mi)
+            if (mi.totalMem > 0L) (((mi.totalMem - mi.availMem) * 100L) / mi.totalMem).toInt().coerceIn(0, 100) else 0
+        } catch (_: Throwable) {
+            0
         }
     }
 
