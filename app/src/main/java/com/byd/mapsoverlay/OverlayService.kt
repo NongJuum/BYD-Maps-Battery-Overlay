@@ -1007,9 +1007,8 @@ class OverlayService : Service() {
         val minDip = bydBridge.aux12vMinDipV
         val dipStr = if (minDip > 0.0) String.format(" [%.1fV]", minDip) else ""
         val activeDriveGear = bydBridge.currentGear.uppercase() in listOf("D", "R", "N", "S")
-        val isDcDcCharging = v12 >= 13.2
-        val is12vCritical = (!isDcDcCharging && minDip in 5.0..11.49) || (v12 in 5.0..11.49) || (activeDriveGear && v12 in 5.0..13.09)
-        val is12vFair = !is12vCritical && ((!isDcDcCharging && minDip in 11.5..12.19) || (!activeDriveGear && v12 in 11.5..12.29))
+        val is12vCritical = (v12 in 5.0..11.79) || (activeDriveGear && v12 in 5.0..13.09)
+        val is12vFair = !is12vCritical && (!activeDriveGear && v12 in 11.80..12.19)
         view12vDot?.setHealthy(!is12vCritical)
         when {
             is12vCritical -> {
