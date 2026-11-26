@@ -1395,13 +1395,44 @@ class OverlayService : Service() {
         return -1
     }
 
+    private var lastMobileSaveMs: Long = 0L
+
     private fun getMobileDataUsageStr(): String {
         return try {
             val rx = android.net.TrafficStats.getMobileRxBytes()
             val tx = android.net.TrafficStats.getMobileTxBytes()
             if (rx < 0 || tx < 0) return "--"
-            val totalBytes = rx + tx
-            val mb = totalBytes / (1024.0 * 1024.0)
+            val curBootBytes = rx + tx
+
+            val cal = java.util.Calendar.getInstance()
+            val curMonth = "${cal.get(java.util.Calendar.YEAR)}-${cal.get(java.util.Calendar.MONTH) + 1}"
+
+            val prefs = getSharedPreferences("byd_mobile_data_prefs", Context.MODE_PRIVATE)
+            val savedMonth = prefs.getString("month_key", "") ?: ""
+            var monthlyBytes = prefs.getLong("monthly_bytes", 0L)
+            val lastBootBytes = prefs.getLong("last_boot_bytes", -1L)
+
+            if (savedMonth != curMonth) {
+                monthlyBytes = 0L
+            } else if (lastBootBytes >= 0L) {
+                monthlyBytes += if (curBootBytes >= lastBootBytes) {
+                    curBootBytes - lastBootBytes
+                } else {
+                    curBootBytes // Car rebooted
+                }
+            }
+
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (savedMonth != curMonth || lastBootBytes < 0L || now - lastMobileSaveMs >= 15000L) {
+                lastMobileSaveMs = now
+                prefs.edit()
+                    .putString("month_key", curMonth)
+                    .putLong("monthly_bytes", monthlyBytes)
+                    .putLong("last_boot_bytes", curBootBytes)
+                    .apply()
+            }
+
+            val mb = monthlyBytes / (1024.0 * 1024.0)
             if (mb >= 1024.0) String.format("%.2fGB", mb / 1024.0)
             else String.format("%.0fMB", mb)
         } catch (_: Throwable) {
