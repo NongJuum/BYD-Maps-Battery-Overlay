@@ -591,6 +591,7 @@ class OverlayService : Service() {
         container12v?.visibility = if (show12v) View.VISIBLE else View.GONE
         containerTpms?.visibility = if (showTpms) View.VISIBLE else View.GONE
         containerOdo?.visibility = if (showOdo) View.VISIBLE else View.GONE
+        containerCpuRam?.visibility = if (VehicleOverlayConfig.isShowCpuRam(this)) View.VISIBLE else View.GONE
         containerGearSpeed?.visibility = if (showGearSpeed) View.VISIBLE else View.GONE
         tvGear?.visibility = if (showGear) View.VISIBLE else View.GONE
         tvSpeed?.visibility = if (showSpeed) View.VISIBLE else View.GONE

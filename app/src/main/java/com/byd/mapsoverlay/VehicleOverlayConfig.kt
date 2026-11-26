@@ -193,6 +193,9 @@ object VehicleOverlayConfig {
     fun setShowChargingMode(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_charging_mode", value).apply()
 
     fun isShowRadarAlert(context: Context): Boolean = prefs(context).getBoolean("show_radar_alert", true)
+
+    fun isShowCpuRam(context: Context): Boolean = prefs(context).getBoolean("show_cpu_ram", true)
+    fun setShowCpuRam(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_cpu_ram", value).apply()
     fun setShowRadarAlert(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_radar_alert", value).apply()
 
     fun isShowTpmsDeltaAlert(context: Context): Boolean = prefs(context).getBoolean("show_tpms_delta_alert", true)

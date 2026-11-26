@@ -1025,6 +1025,9 @@ class MainActivity : AppCompatActivity() {
         addToggle("🌡️ แสดงผลต่างอุณหภูมิแบต (HV ΔT)", VehicleOverlayConfig.isShowHvDeltaT(this)) {
             VehicleOverlayConfig.setShowHvDeltaT(this, it)
         }
+        addToggle("🖥️ แสดง CPU / RAM / อุณหภูมิ / เน็ต", VehicleOverlayConfig.isShowCpuRam(this)) {
+            VehicleOverlayConfig.setShowCpuRam(this, it)
+        }
     }
 
     override fun onDestroy() {
