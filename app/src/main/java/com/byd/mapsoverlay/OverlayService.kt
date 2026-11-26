@@ -1364,7 +1364,16 @@ class OverlayService : Service() {
                 lastCpuTotal = total
                 lastCpuIdle = totalIdle
             }
-        } catch (_: Throwable) {}
+        } catch (_: Throwable) {
+            // Fallback for Android 8+ SELinux blocking /proc/stat: estimate load from CPU0 frequency scaling
+            try {
+                val cur = java.io.RandomAccessFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r").use { it.readLine() }?.trim()?.toLongOrNull() ?: 0L
+                val max = java.io.RandomAccessFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r").use { it.readLine() }?.trim()?.toLongOrNull() ?: 0L
+                if (cur > 0L && max > 0L) {
+                    cachedCpuPct = ((cur * 100L) / max).toInt().coerceIn(1, 100)
+                }
+            } catch (_: Throwable) {}
+        }
         return cachedCpuPct
     }
 
@@ -1399,14 +1408,30 @@ class OverlayService : Service() {
 
     private fun getDataUsageStrings(): Pair<String, String> {
         return try {
-            val mobRx = android.net.TrafficStats.getMobileRxBytes()
-            val mobTx = android.net.TrafficStats.getMobileTxBytes()
-            val totRx = android.net.TrafficStats.getTotalRxBytes()
-            val totTx = android.net.TrafficStats.getTotalTxBytes()
-            val curMobBytes = if (mobRx >= 0 && mobTx >= 0) mobRx + mobTx else -1L
-            val curWifiBytes = if (totRx >= 0 && totTx >= 0 && curMobBytes >= 0) {
-                ((totRx + totTx) - curMobBytes).coerceAtLeast(0L)
-            } else -1L
+            var curMobBytes = 0L
+            var curWifiBytes = 0L
+            var foundAny = false
+            java.io.BufferedReader(java.io.FileReader("/proc/net/dev")).use { br ->
+                br.forEachLine { line ->
+                    val colonIdx = line.indexOf(':')
+                    if (colonIdx > 0) {
+                        val iface = line.substring(0, colonIdx).trim()
+                        val parts = line.substring(colonIdx + 1).trim().split(Regex("\\s+"))
+                        if (parts.size >= 9) {
+                            val rx = parts[0].toLongOrNull() ?: 0L
+                            val tx = parts[8].toLongOrNull() ?: 0L
+                            if (iface == "wlan0") {
+                                curWifiBytes += rx + tx
+                                foundAny = true
+                            } else if (iface.startsWith("rmnet_data")) {
+                                curMobBytes += rx + tx
+                                foundAny = true
+                            }
+                        }
+                    }
+                }
+            }
+            if (!foundAny) return Pair("--", "--")
 
             val cal = java.util.Calendar.getInstance()
             val curMonth = "${cal.get(java.util.Calendar.YEAR)}-${cal.get(java.util.Calendar.MONTH) + 1}"
@@ -1415,8 +1440,8 @@ class OverlayService : Service() {
             val shouldSave = (now - lastDataSaveMs >= 15000L)
             if (shouldSave) lastDataSaveMs = now
 
-            val mobStr = formatMonthlyBytes(prefs, "mob", curMonth, curMobBytes, shouldSave)
-            val wifiStr = formatMonthlyBytes(prefs, "wifi", curMonth, curWifiBytes, shouldSave)
+            val mobStr = formatMonthlyBytes(prefs, "mob_v2", curMonth, curMobBytes, shouldSave)
+            val wifiStr = formatMonthlyBytes(prefs, "wifi_v2", curMonth, curWifiBytes, shouldSave)
             Pair(mobStr, wifiStr)
         } catch (_: Throwable) {
             Pair("--", "--")
