@@ -1055,7 +1055,9 @@ class OverlayService : Service() {
         } else {
             tvOdo?.text = "-- km"
         }
-        tvCpuRam?.text = String.format("CPU %d%% · RAM %d%%", getCpuUsagePercent(), getRamUsagePercent())
+        val socTempC = getSocTempC()
+        val tempStr = if (socTempC > 0) " · ${socTempC}°C" else ""
+        tvCpuRam?.text = String.format("CPU %d%% · RAM %d%%%s", getCpuUsagePercent(), getRamUsagePercent(), tempStr)
         val gearStr = bydBridge.currentGear
         if (gearStr != lastGearStr) {
             lastGearStr = gearStr
@@ -1374,6 +1376,22 @@ class OverlayService : Service() {
         } catch (_: Throwable) {
             0
         }
+    }
+
+    private fun getSocTempC(): Int {
+        val paths = arrayOf(
+            "/sys/class/thermal/thermal_zone12/temp",
+            "/sys/class/thermal/thermal_zone15/temp",
+            "/sys/class/thermal/thermal_zone0/temp"
+        )
+        for (p in paths) {
+            try {
+                val raw = java.io.RandomAccessFile(p, "r").use { it.readLine() }?.trim()?.toIntOrNull() ?: continue
+                val deg = if (raw > 1000) raw / 1000 else raw
+                if (deg in 10..120) return deg
+            } catch (_: Throwable) {}
+        }
+        return -1
     }
 
     companion object {
