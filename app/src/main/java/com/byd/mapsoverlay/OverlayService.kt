@@ -591,7 +591,8 @@ class OverlayService : Service() {
         container12v?.visibility = if (show12v) View.VISIBLE else View.GONE
         containerTpms?.visibility = if (showTpms) View.VISIBLE else View.GONE
         containerOdo?.visibility = if (showOdo) View.VISIBLE else View.GONE
-        containerCpuRam?.visibility = if (VehicleOverlayConfig.isShowCpuRam(this)) View.VISIBLE else View.GONE
+        val anySys = VehicleOverlayConfig.isShowCpu(this) || VehicleOverlayConfig.isShowRam(this) || VehicleOverlayConfig.isShowNet(this)
+        containerCpuRam?.visibility = if (anySys) View.VISIBLE else View.GONE
         containerGearSpeed?.visibility = if (showGearSpeed) View.VISIBLE else View.GONE
         tvGear?.visibility = if (showGear) View.VISIBLE else View.GONE
         tvSpeed?.visibility = if (showSpeed) View.VISIBLE else View.GONE
@@ -1056,10 +1057,20 @@ class OverlayService : Service() {
         } else {
             tvOdo?.text = "-- km"
         }
-        val socTempC = getSocTempC()
-        val tempStr = if (socTempC > 0) " (${socTempC}°C)" else ""
-        val (cellDataStr, wifiDataStr) = getDataUsageStrings()
-        tvCpuRam?.text = String.format("🖥️ CPU: %d%%%s · RAM: %d%% · 📱 %s · 📶 %s", getCpuUsagePercent(), tempStr, getRamUsagePercent(), cellDataStr, wifiDataStr)
+        val sysParts = mutableListOf<String>()
+        if (VehicleOverlayConfig.isShowCpu(this)) {
+            val socTempC = getSocTempC()
+            val tempStr = if (socTempC > 0) " (${socTempC}°C)" else ""
+            sysParts.add(String.format("🖥️ CPU: %d%%%s", getCpuUsagePercent(), tempStr))
+        }
+        if (VehicleOverlayConfig.isShowRam(this)) {
+            sysParts.add(String.format("RAM: %d%%", getRamUsagePercent()))
+        }
+        if (VehicleOverlayConfig.isShowNet(this)) {
+            val (cellDataStr, wifiDataStr) = getDataUsageStrings()
+            sysParts.add("📱 $cellDataStr · 📶 $wifiDataStr")
+        }
+        tvCpuRam?.text = sysParts.joinToString(" · ")
         val gearStr = bydBridge.currentGear
         if (gearStr != lastGearStr) {
             lastGearStr = gearStr

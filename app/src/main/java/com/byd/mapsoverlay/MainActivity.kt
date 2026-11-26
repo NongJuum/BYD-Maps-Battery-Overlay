@@ -1025,8 +1025,14 @@ class MainActivity : AppCompatActivity() {
         addToggle("🌡️ แสดงผลต่างอุณหภูมิแบต (HV ΔT)", VehicleOverlayConfig.isShowHvDeltaT(this)) {
             VehicleOverlayConfig.setShowHvDeltaT(this, it)
         }
-        addToggle("🖥️ แสดง CPU / RAM / อุณหภูมิ / เน็ต", VehicleOverlayConfig.isShowCpuRam(this)) {
-            VehicleOverlayConfig.setShowCpuRam(this, it)
+        addToggle("🖥️ แสดง CPU & อุณหภูมิ (CPU % / °C)", VehicleOverlayConfig.isShowCpu(this)) {
+            VehicleOverlayConfig.setShowCpu(this, it)
+        }
+        addToggle("🧠 แสดงหน่วยความจำ (RAM %)", VehicleOverlayConfig.isShowRam(this)) {
+            VehicleOverlayConfig.setShowRam(this, it)
+        }
+        addToggle("📶 แสดงปริมาณเน็ต (Cellular / Wi-Fi)", VehicleOverlayConfig.isShowNet(this)) {
+            VehicleOverlayConfig.setShowNet(this, it)
         }
     }
 

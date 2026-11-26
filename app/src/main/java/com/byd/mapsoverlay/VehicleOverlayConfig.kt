@@ -194,8 +194,14 @@ object VehicleOverlayConfig {
 
     fun isShowRadarAlert(context: Context): Boolean = prefs(context).getBoolean("show_radar_alert", true)
 
-    fun isShowCpuRam(context: Context): Boolean = prefs(context).getBoolean("show_cpu_ram", true)
-    fun setShowCpuRam(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_cpu_ram", value).apply()
+    fun isShowCpu(context: Context): Boolean = prefs(context).getBoolean("show_cpu", true)
+    fun setShowCpu(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_cpu", value).apply()
+
+    fun isShowRam(context: Context): Boolean = prefs(context).getBoolean("show_ram", true)
+    fun setShowRam(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_ram", value).apply()
+
+    fun isShowNet(context: Context): Boolean = prefs(context).getBoolean("show_net", true)
+    fun setShowNet(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_net", value).apply()
     fun setShowRadarAlert(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_radar_alert", value).apply()
 
     fun isShowTpmsDeltaAlert(context: Context): Boolean = prefs(context).getBoolean("show_tpms_delta_alert", true)
