@@ -398,11 +398,11 @@ class OverlayService : Service() {
         }
 
         val candidateTypes = mutableListOf<Int>()
-        if (accService != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            candidateTypes.add(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
-        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             candidateTypes.add(@Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR)
+            if (accService != null) {
+                candidateTypes.add(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+            }
             candidateTypes.add(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
         } else {
             candidateTypes.add(@Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_SYSTEM_ERROR)
