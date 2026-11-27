@@ -1352,6 +1352,8 @@ class OverlayService : Service() {
     }
 
     private fun getCpuUsagePercent(): Int {
+        val dCpu = bydBridge.daemonCpuPct
+        if (dCpu >= 0) return dCpu
         val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastCpuReadMs < 1500L) return cachedCpuPct
         lastCpuReadMs = now

@@ -77,6 +77,7 @@ class BydVehicleBridge(
     var totalMileageKm: Double = 0.0
     @Volatile var daemonMobBytes: Long = -1L
     @Volatile var daemonWifiBytes: Long = -1L
+    @Volatile var daemonCpuPct: Int = -1
         private set
     var tpmsFlKpa: Int = 0
         private set
@@ -419,6 +420,8 @@ class BydVehicleBridge(
                 val wifiB = json.optLong("wifiBytes", -1L)
                 if (mobB >= 0L) daemonMobBytes = mobB
                 if (wifiB >= 0L) daemonWifiBytes = wifiB
+                val cpuP = json.optInt("cpuPct", -1)
+                if (cpuP >= 0) daemonCpuPct = cpuP
                 val instKw = json.optDouble("instantElecConKw", -999.0)
 
                 var changed = false

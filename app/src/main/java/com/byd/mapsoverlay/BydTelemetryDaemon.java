@@ -170,6 +170,9 @@ public final class BydTelemetryDaemon {
 
     private BydTelemetryDaemon() {}
 
+    private static volatile long lastDaemonCpuTotal = 0L;
+    private static volatile long lastDaemonCpuIdle = 0L;
+
     public static void main(String[] args) {
         log("Starting; uid=" + android.os.Process.myUid());
         try {
@@ -914,6 +917,34 @@ public final class BydTelemetryDaemon {
                     if (foundNet) {
                         data.put("mobBytes", mobBytes);
                         data.put("wifiBytes", wifiBytes);
+                    }
+                } catch (Throwable ignored) {}
+
+                try {
+                    try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("/proc/stat"))) {
+                        String line = br.readLine();
+                        if (line != null && line.startsWith("cpu ")) {
+                            String[] toks = line.trim().split("\\s+");
+                            if (toks.length >= 5) {
+                                long user = Long.parseLong(toks[1]);
+                                long nice = Long.parseLong(toks[2]);
+                                long sys = Long.parseLong(toks[3]);
+                                long idle = Long.parseLong(toks[4]);
+                                long iowait = toks.length > 5 ? Long.parseLong(toks[5]) : 0L;
+                                long irq = toks.length > 6 ? Long.parseLong(toks[6]) : 0L;
+                                long softirq = toks.length > 7 ? Long.parseLong(toks[7]) : 0L;
+                                long total = user + nice + sys + idle + iowait + irq + softirq;
+                                long totalIdle = idle + iowait;
+                                if (lastDaemonCpuTotal > 0L && total > lastDaemonCpuTotal) {
+                                    long dTotal = total - lastDaemonCpuTotal;
+                                    long dIdle = totalIdle - lastDaemonCpuIdle;
+                                    int pct = (int) Math.max(0, Math.min(100, ((dTotal - dIdle) * 100L) / dTotal));
+                                    data.put("cpuPct", pct);
+                                }
+                                lastDaemonCpuTotal = total;
+                                lastDaemonCpuIdle = totalIdle;
+                            }
+                        }
                     }
                 } catch (Throwable ignored) {}
 
