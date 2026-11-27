@@ -1420,30 +1420,9 @@ class OverlayService : Service() {
 
     private fun getDataUsageStrings(): Pair<String, String> {
         return try {
-            var curMobBytes = 0L
-            var curWifiBytes = 0L
-            var foundAny = false
-            java.io.BufferedReader(java.io.FileReader("/proc/net/dev")).use { br ->
-                br.forEachLine { line ->
-                    val colonIdx = line.indexOf(':')
-                    if (colonIdx > 0) {
-                        val iface = line.substring(0, colonIdx).trim()
-                        val parts = line.substring(colonIdx + 1).trim().split(Regex("\\s+"))
-                        if (parts.size >= 9) {
-                            val rx = parts[0].toLongOrNull() ?: 0L
-                            val tx = parts[8].toLongOrNull() ?: 0L
-                            if (iface == "wlan0") {
-                                curWifiBytes += rx + tx
-                                foundAny = true
-                            } else if (iface.startsWith("rmnet_data")) {
-                                curMobBytes += rx + tx
-                                foundAny = true
-                            }
-                        }
-                    }
-                }
-            }
-            if (!foundAny) return Pair("--", "--")
+            val curMobBytes = bydBridge.daemonMobBytes
+            val curWifiBytes = bydBridge.daemonWifiBytes
+            if (curMobBytes < 0L && curWifiBytes < 0L) return Pair("--", "--")
 
             val cal = java.util.Calendar.getInstance()
             val curMonth = "${cal.get(java.util.Calendar.YEAR)}-${cal.get(java.util.Calendar.MONTH) + 1}"

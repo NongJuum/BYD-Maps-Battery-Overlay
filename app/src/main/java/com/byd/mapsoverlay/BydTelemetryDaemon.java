@@ -887,6 +887,36 @@ public final class BydTelemetryDaemon {
                 if (instantElecCon != null) data.put("instantElecConKw", instantElecCon);
                 if (totalMileage != null && totalMileage >= 0) data.put("totalMileageKm", totalMileage);
 
+                try {
+                    long mobBytes = 0L, wifiBytes = 0L;
+                    boolean foundNet = false;
+                    try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("/proc/net/dev"))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            int colon = line.indexOf(':');
+                            if (colon > 0) {
+                                String iface = line.substring(0, colon).trim();
+                                String[] parts = line.substring(colon + 1).trim().split("\\s+");
+                                if (parts.length >= 9) {
+                                    long rx = 0L, tx = 0L;
+                                    try { rx = Long.parseLong(parts[0]); tx = Long.parseLong(parts[8]); } catch (Throwable ignored) {}
+                                    if ("wlan0".equals(iface)) {
+                                        wifiBytes += rx + tx;
+                                        foundNet = true;
+                                    } else if (iface.startsWith("rmnet_data")) {
+                                        mobBytes += rx + tx;
+                                        foundNet = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (foundNet) {
+                        data.put("mobBytes", mobBytes);
+                        data.put("wifiBytes", wifiBytes);
+                    }
+                } catch (Throwable ignored) {}
+
                 if (hvTempAvg > -50.0) {
                     data.put("hvBattTempAvgC", hvTempAvg);
                     data.put("hvBattTempMaxC", hvTempMax);

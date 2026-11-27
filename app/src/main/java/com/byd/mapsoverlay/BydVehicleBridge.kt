@@ -75,6 +75,8 @@ class BydVehicleBridge(
     var instantPowerKw: Double = 0.0
         private set
     var totalMileageKm: Double = 0.0
+    @Volatile var daemonMobBytes: Long = -1L
+    @Volatile var daemonWifiBytes: Long = -1L
         private set
     var tpmsFlKpa: Int = 0
         private set
@@ -413,6 +415,10 @@ class BydVehicleBridge(
                 val spd = json.optInt("speedKmh", -1)
                 val gearC = json.optInt("gearCode", -1)
                 val odo = json.optDouble("totalMileageKm", -1.0)
+                val mobB = json.optLong("mobBytes", -1L)
+                val wifiB = json.optLong("wifiBytes", -1L)
+                if (mobB >= 0L) daemonMobBytes = mobB
+                if (wifiB >= 0L) daemonWifiBytes = wifiB
                 val instKw = json.optDouble("instantElecConKw", -999.0)
 
                 var changed = false
